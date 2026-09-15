@@ -29,6 +29,32 @@ pipeline_stages:
     label: Report
 
 # ------------------------------------------------------------
+# M1 — engineering configuration (no scientific thresholds).
+# ------------------------------------------------------------
+m1:
+  # Where real raw products are allowed to be referenced from.
+  allowed_raw_locations:
+    - raw/ohrc
+    - raw/tmc2
+    - raw/iirs
+    - raw/lroc
+  # Derived preview geometry.
+  preview_max_width: 640
+  preview_dir_rel: derived/visualizations/previews
+  preview_png_mode: "L"
+  # Metadata records (relative to data root).
+  pairs_json_rel: metadata/pairs.json
+  pairs_csv_rel: metadata/pairs.csv
+  validation_record_rel: metadata/pair_validation.json
+  # Parser behaviour.
+  parser_require_pds4_label: true
+  unknown_fill: UNKNOWN
+  hash_algorithm: sha256
+  # Logging (operation scope for traceability).
+  logging:
+    pair_scope: pair_id
+
+# ------------------------------------------------------------
 # Engineering defaults — placeholders to be replaced by real
 # experiment-tuned parameters in later milestones. They carry no
 # scientific meaning yet.

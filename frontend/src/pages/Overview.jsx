@@ -4,16 +4,6 @@ import Pipeline, { PIPELINE } from "../components/Pipeline.jsx";
 import { Badge, EmptyState, Icon, Modal, PageSkeleton, StatusDot } from "../components/ui.jsx";
 import { apiGet } from "../api.js";
 
-const M0_PIPELINE_STATES = {
-  data: "ready",
-  validate: "locked",
-  preprocess: "locked",
-  match: "locked",
-  trust: "locked",
-  register: "locked",
-  report: "locked",
-};
-
 function useMeta(online) {
   const [meta, setMeta] = useState(null);
   const [error, setError] = useState(null);
@@ -29,6 +19,21 @@ function useMeta(online) {
     };
   }, [online, meta]);
   return { meta, error };
+}
+
+function useDataStatus() {
+  const [status, setStatus] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiGet("/data/status")
+      .then((s) => alive && setStatus(s))
+      .catch((e) => alive && setError(e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return { status, error };
 }
 
 function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
@@ -53,23 +58,22 @@ function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
 
 export default function Overview({ backend, onNavigate }) {
   const { meta, error: metaError } = useMeta(backend?.online === true);
+  const { status, error: statusError } = useDataStatus();
   const [modalStage, setModalStage] = useState(null);
   const [lockModal, setLockModal] = useState(false);
-
-  const pipeline = PIPELINE.map((s) => ({ ...s, state: M0_PIPELINE_STATES[s.id] }));
 
   if (!meta) {
     const offline = backend?.online === false;
     return (
       <div className="space-y-6">
         <div className="space-y-4">
-          <Badge tone="gold">M0 · Foundation build</Badge>
+          <Badge tone="gold">CHANDRASUTRA · SIH26166 · Milestone M1</Badge>
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-100">
-            Trustworthy adaptive lunar image correspondence & registration
+            Trustworthy Lunar Image Intelligence
           </h2>
           <p className="max-w-2xl text-sm leading-relaxed text-muted">
-            A reliability-first platform over heterogeneous Chandrayaan-2 imagery: validated data,
-            condition-aware strategy selection, independent verification and principled abstention.
+            Real Chandrayaan-2 OHRC &amp; TMC-2 image pairs, immutable raw data, hashed products,
+            documented overlap and strict validation — before any matching is trusted.
           </p>
         </div>
         <PageSkeleton rows={4} />
@@ -87,12 +91,28 @@ export default function Overview({ backend, onNavigate }) {
   }
 
   const settings = meta.settings || {};
-  const dirs = meta.data_directories || [];
-  const expectedNonRaw = dirs.filter((d) => !d.is_raw).length;
-  const nonRawPresent = dirs.filter((d) => !d.is_raw && d.exists).length;
-  const dirsPresent = dirs.filter((d) => d.exists).length;
-  const foundationReady = nonRawPresent === expectedNonRaw;
-  const readyLabel = foundationReady ? "Foundation layout ready" : "Foundation layout staged";
+  const s = status || {};
+  const pairsRegistered = s.pairs_registered ?? 0;
+  const pairsValid = s.pairs_valid ?? 0;
+  const confirmed = s.pairs_confirmed_overlap ?? 0;
+  const candidates = s.pairs_candidate ?? 0;
+  const rawPresent = s.raw_products_present ?? 0;
+  const avgCompleteness = Math.round((s.metadata_completeness?.average_fraction ?? 0) * 100);
+  const firstPair = s.first_pair_status ?? null;
+
+  const pipeline = PIPELINE.map((stage) => ({
+    ...stage,
+    state:
+      stage.id === "data"
+        ? "ready"
+        : stage.id === "validate"
+          ? pairsRegistered > 0
+            ? pairsValid > 0 ? "complete" : "warning"
+            : "ready"
+          : "locked",
+  }));
+
+  const anchor = backend?.online ? "green" : "gray";
 
   return (
     <div className="space-y-6">
@@ -100,28 +120,29 @@ export default function Overview({ backend, onNavigate }) {
       <section className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="gold">Milestone M0 — Foundation</Badge>
-            <Badge tone="blue">Real data: M1</Badge>
+            <Badge tone="gold">Milestone M1 — Real Data &amp; Metadata</Badge>
+            <Badge tone={pairsValid > 0 ? "ok" : "blue"}>
+              {pairsValid > 0 ? `${pairsValid} validated pair${pairsValid > 1 ? "s" : ""}` : "Awaiting validated pair"}
+            </Badge>
           </div>
           <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-[1.7rem]">
-            Trustworthy adaptive <span className="text-lunar-400 text-glow">lunar image</span>{" "}
-            correspondence & registration
+            Trustworthy <span className="text-lunar-400 text-glow">lunar image</span> intelligence
           </h2>
           <p className="text-sm leading-relaxed text-muted">
-            A reliability-first scientific platform over heterogeneous Chandrayaan-2 imagery
-            (OHRC · TMC-2): validated data, condition-aware matcher strategy, independent
-            verification, measurable diagnostics and principled abstention.
+            Real Chandrayaan-2 OHRC × TMC-2 image pairs are registered with hashed, immutable raw
+            files, PDS4 metadata and documented overlap evidence. Matching runs only on pairs that
+            pass validation — M2 uses them, nothing is simulated in M1.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-3">
           <button onClick={() => onNavigate("data")} className="btn-primary">
-            <Icon.Database className="h-4 w-4" /> Explore data readiness
+            <Icon.Database className="h-4 w-4" /> {pairsRegistered > 0 ? "Open data workspace" : "Load & register pair"}
           </button>
           <button
             onClick={() => setLockModal(true)}
             className="btn-ghost"
             disabled={!meta}
-            title="Requires a registered pair (M1)"
+            title="Requires a registered, overlap-confirmed pair"
           >
             <Icon.Activity className="h-4 w-4" /> Begin analysis
           </button>
@@ -135,24 +156,29 @@ export default function Overview({ backend, onNavigate }) {
           value={backend?.online ? "Operational" : "Offline"}
           tone={backend?.online ? "ok" : "danger"}
           pulse={backend?.online}
-          sub={`${settings.app_env ?? "development"} · v${meta.version ?? "—"}`}
+          sub={`${settings.app_env ?? "development"} · v${meta.version ?? "—"} · M1`}
         />
         <StatCard
-          label="Data readiness"
-          value={readyLabel}
-          tone={foundationReady ? "ok" : "warn"}
-          sub={`${dirsPresent}/${dirs.length} logical directories present · raw awaiting M1`}
+          label="Data source"
+          value={rawPresent > 0 ? `${rawPresent} products` : "Empty (auth)"}
+          tone={rawPresent > 0 ? "ok" : "warn"}
+          sub={
+            rawPresent > 0
+              ? "PRADAN products on disk, ready to register"
+              : "PRADAN downloads need registration + admin approval"
+          }
         />
         <StatCard
           label="Registered pairs"
-          value="0"
-          sub="First OHRC–TMC-2 pair arrives in M1"
+          value={`${pairsValid}/${pairsRegistered}`}
+          tone={pairsValid > 0 ? "ok" : pairsRegistered > 0 ? "warn" : "neutral"}
+          sub={`${pairsRegistered} registered · ${candidates} candidate${candidates === 1 ? "" : "s"} (unconfirmed overlap)`}
         />
         <StatCard
-          label="AI insights"
-          value={settings.ai?.configured ? "Ready" : "Not configured"}
-          tone={settings.ai?.configured ? "ok" : "warn"}
-          sub={`${settings.ai?.service ?? "Gemini"} · explanatory layer only`}
+          label="Benchmark-ready"
+          value={confirmed > 0 ? `${confirmed} pair${confirmed > 1 ? "s" : ""}` : "0"}
+          tone={confirmed > 0 ? "ok" : "neutral"}
+          sub={`${avgCompleteness}% avg metadata completeness · matching is NOT_RUN in M1`}
         />
       </section>
 
@@ -162,15 +188,16 @@ export default function Overview({ backend, onNavigate }) {
           <div>
             <h3 className="text-sm font-bold text-slate-100">Scientific pipeline</h3>
             <p className="text-xs text-muted">
-              Stages unlock as real data and processing arrive. Nothing below is simulated.
+              Data is ready; Validate reflects the real registered-pair state; processing stages stay
+              locked until M2+ executes on real data.
             </p>
           </div>
           <Badge tone={backend?.online ? "ok" : "danger"}>
             <StatusDot state={backend?.online ? "ok" : "danger"} pulse={backend?.online} />
-            {backend?.online ? "Pipeline dormant" : "Backend offline"}
+            {pairsValid > 0 ? "M1 data validated" : "Awaiting validated pair"}
           </Badge>
         </div>
-        <Pipeline stages={pipeline} onStageClick={(s) => setModalStage(s)} />
+        <Pipeline stages={pipeline} onStageClick={(st) => setModalStage(st)} />
       </section>
 
       {/* Two-column lower */}
@@ -179,21 +206,22 @@ export default function Overview({ backend, onNavigate }) {
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-100">System status</h3>
-              <span className="h-1.5 w-1.5 rounded-full bg-ok shadow-[0_0_8px_rgba(61,220,151,0.9)]" />
+              <span className={`h-1.5 w-1.5 rounded-full ${anchor === "green" ? "bg-ok shadow-[0_0_8px_rgba(61,220,151,0.9)]" : "bg-danger"}`} />
             </div>
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <MetaRow k="Application" v={meta.application} />
+              <MetaRow k="Project" v={meta.project_identifier} mono />
               <MetaRow k="Version" v={meta.version} />
-              <MetaRow k="Environment" v={settings.app_env} mono />
-              <MetaRow k="Debug mode" v={String(Boolean(settings.app_debug))} />
-              <MetaRow k="Auth foundation" v={settings.auth?.configured ? "configured" : "not configured"} />
-              <MetaRow k="AI service" v={settings.ai?.configured ? "configured" : "not configured"} />
+              <MetaRow k="Milestone" v={meta.milestone ?? "M1"} />
+              <MetaRow k="Tagline" v={meta.tagline} />
               <MetaRow k="Data root" v={settings.data_root} mono />
-              <MetaRow k="CORS origins" v={(settings.cors_origins || []).join("  ·  ")} mono />
+              <MetaRow k="Raw policy" v={s.raw_policy ?? "immutable"} />
+              <MetaRow k="Source" v={s.source ? `${s.source.archive} · ${s.source.mission}` : "PRADAN"} />
+              <MetaRow k="Last validation" v={s.last_validation_utc ? s.last_validation_utc.replace("T", " ").replace("+00:00", " UTC") : "never"} mono />
             </dl>
-            {metaError && (
+            {(metaError || statusError) && (
               <p className="mt-3 flex items-center gap-2 text-xs text-danger">
-                <Icon.Alert /> {String(metaError?.message ?? metaError)}
+                <Icon.Alert /> {String(metaError?.message ?? statusError?.message ?? "data unavailable")}
               </p>
             )}
           </div>
@@ -201,34 +229,64 @@ export default function Overview({ backend, onNavigate }) {
 
         <div className="space-y-4 lg:col-span-2">
           <div className="card p-5">
-            <h3 className="mb-3 text-sm font-bold text-slate-100">Recent activity</h3>
-            <EmptyState
-              icon={<Icon.Chart className="h-5 w-5" />}
-              title="No experiment run yet"
-              message="No correspondence or registration result exists in M0 — the pipeline is intentionally dormant until real data integration (M1)."
-            />
+            <h3 className="mb-3 text-sm font-bold text-slate-100">Real data progress</h3>
+            {pairsRegistered === 0 ? (
+              <EmptyState
+                icon={<Icon.Info className="h-5 w-5" />}
+                title="No pair registered yet"
+                message={s.pairs_note ?? "Official downloads from PRADAN require an approved account. Place .img + .xml products under data/raw and register them in the Data workspace."}
+                action={
+                  <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => onNavigate("data")}>
+                    Open data workspace
+                  </button>
+                }
+              />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg border border-white/[0.07] bg-space-900/50 p-3">
+                  <div>
+                    <p className="font-mono text-sm font-bold text-lunar-300">{firstPair?.pair_id ?? "—"}</p>
+                    <p className="text-[11px] text-muted">
+                      {s.pairs_valid} valid · {s.pairs_confirmed_overlap} confirmed overlap
+                    </p>
+                  </div>
+                  <Badge tone={firstPair?.validation_status === "VALID" ? "ok" : "neutral"}>
+                    {firstPair?.validation_status ?? "—"}
+                  </Badge>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted">
+                  Every registration writes a metadata record (pairs.json/CSV) and re-verifies SHA-256
+                  hashes on validation. Raw files are never modified.
+                </p>
+              </div>
+            )}
           </div>
+
           <div className="card p-5">
             <h3 className="mb-3 text-sm font-bold text-slate-100">Integration status</h3>
             <ul className="space-y-2.5 text-sm">
               <li className="flex items-center justify-between gap-3">
-                <span className="text-muted">Chandrayaan-2 data source (ISSDC PRADAN)</span>
-                <Badge tone="warn">Documented</Badge>
+                <span className="text-muted">Chandrayaan-2 source (ISSDC PRADAN)</span>
+                <Badge tone="blue">Documented</Badge>
               </li>
               <li className="flex items-center justify-between gap-3">
                 <span className="text-muted">OHRC–TMC-2 pair registered</span>
-                <Badge tone="neutral">0 pairs</Badge>
+                <Badge tone={pairsRegistered > 0 ? "ok" : "neutral"}>{pairsRegistered} pair{pairsRegistered === 1 ? "" : "s"}</Badge>
               </li>
               <li className="flex items-center justify-between gap-3">
-                <span className="text-muted">Condition-aware strategy</span>
+                <span className="text-muted">Raw integrity (hashed, immutable)</span>
+                <Badge tone={pairsValid > 0 ? "ok" : "warn"}>{pairsValid > 0 ? "Verified" : "Awaiting pair"}</Badge>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Overlap evidence</span>
+                <Badge tone={confirmed > 0 ? "ok" : "neutral"}>{confirmed > 0 ? "Confirmed" : "Unconfirmed"}</Badge>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Preprocessing / matching</span>
                 <Badge tone="neutral">M2+</Badge>
               </li>
               <li className="flex items-center justify-between gap-3">
-                <span className="text-muted">Trust Gate reliability</span>
-                <Badge tone="neutral">M3+</Badge>
-              </li>
-              <li className="flex items-center justify-between gap-3">
-                <span className="text-muted">Gemini explanatory layer</span>
+                <span className="text-muted">AI explanatory layer</span>
                 <Badge tone={settings.ai?.configured ? "ok" : "warn"}>
                   {settings.ai?.configured ? "Ready" : "Not configured"}
                 </Badge>
@@ -250,12 +308,14 @@ export default function Overview({ backend, onNavigate }) {
       >
         <p>
           Stage <strong className="text-slate-100">{modalStage?.label}</strong> is{" "}
-          {modalStage?.state === "ready" ? "ready at the foundation level" : "locked"}.
+          {modalStage?.state === "locked" ? "locked" : modalStage?.state === "complete" ? "complete" : "ready"}.
         </p>
         <p className="mt-2">
-          {modalStage?.state === "ready"
-            ? "The data architecture exists and the official source is documented. Actual ingestion begins in M1."
-            : "This stage executes only on real, validated pairs. It will be enabled by its milestone — no processing is simulated in M0."}
+          {modalStage?.state === "locked"
+            ? "This stage executes only on real, validated pairs and is enabled by a later milestone (M2+). No processing is simulated in M1."
+            : modalStage?.state === "complete"
+              ? "Validated against the registered pair(s) — raw integrity and metadata checks pass."
+              : "The data architecture exists and official source (ISSDC PRADAN) is documented. Ingestion needs approved real products on disk."}
         </p>
       </Modal>
 
@@ -269,15 +329,16 @@ export default function Overview({ backend, onNavigate }) {
               Cancel
             </button>
             <button className="btn-primary" onClick={() => { setLockModal(false); onNavigate("data"); }}>
-              Go to data readiness
+              Go to data workspace
             </button>
           </>
         }
       >
         <p>An analysis requires at least one registered, overlap-confirmed OHRC–TMC-2 pair.</p>
         <p className="mt-2">
-          M0 registers no pairs on purpose. The first documented pair is acquired from ISSDC PRADAN
-          in M1 — this is not faked today.
+          {confirmed > 0
+            ? "A benchmark-ready pair exists, but scientific matching is deliberately NOT_RUN in M1."
+            : `${pairsRegistered} pair(s) are registered but overlap is not yet confirmed with documented evidence. Nothing is faked.`}
         </p>
       </Modal>
     </div>

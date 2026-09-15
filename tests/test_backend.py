@@ -9,7 +9,7 @@ import backend.app.main as main_mod
 
 def test_application_imports():
     assert main_mod.app is not None
-    assert main_mod.app.title.startswith("SIH26166")
+    assert main_mod.app.title.startswith("CHANDRASUTRA")
 
 
 def test_root_routes_registered():
@@ -28,7 +28,9 @@ def test_health_endpoint(client_factory):
         assert resp.status_code == 200
         body = resp.json()
         assert body["status"] == "ok"
-        assert body["application"] == "SIH26166"
+        assert body["application"] == "CHANDRASUTRA"
+        assert body["project"] == "SIH26166"
+        assert body["milestone"] == "M1"
         assert "version" in body
         assert "environment" in body
         assert "timestamp" in body
@@ -60,9 +62,10 @@ def test_data_status_reports_no_pairs(client_factory):
         assert resp.status_code == 200
         body = resp.json()
         assert body["pairs_registered"] == 0
-        assert body["milestone"] == "M0"
+        assert body["milestone"] == "M1"
         assert body["summary"]["total"] >= 4
         assert "directories" in body
+        assert body["source"]["archive"] == "PRADAN"
 
 
 def test_ai_status_not_configured_without_key(client_factory):

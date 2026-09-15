@@ -90,45 +90,98 @@ export default function Settings() {
         <div className="card p-5">
           <h3 className="mb-3 text-sm font-bold text-slate-100">Capabilities</h3>
           <ul className="space-y-3 text-sm">
+<li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Authentication</span>
+                {s.auth?.configured ? (
+                  <Badge tone="ok">configured</Badge>
+                ) : (
+                  <Badge tone="warn">not configured</Badge>
+                )}
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">AI / Gemini</span>
+                {s.ai?.configured ? (
+                  <Badge tone="ok">configured</Badge>
+                ) : (
+                  <Badge tone="warn">not configured</Badge>
+                )}
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">AI service</span>
+                <Badge tone="blue">{s.ai?.service ?? "—"}</Badge>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Token algorithm</span>
+                <span className="font-mono text-xs text-slate-200">{s.auth?.algorithm ?? "—"}</span>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Milestone</span>
+                <Badge tone="gold">{meta.milestone ?? "M1"} — Real Data &amp; Metadata</Badge>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Scientific matching</span>
+                <Badge tone="neutral">NOT_RUN in M1</Badge>
+              </li>
+            </ul>
+            <div className="mt-4 rounded-lg border border-white/[0.06] bg-space-900/50 p-3 text-xs leading-relaxed text-muted">
+              <p className="flex items-center gap-1.5 text-warn">
+                <Icon.Info className="h-3.5 w-3.5" /> Engineering note
+              </p>
+              <p className="mt-1">
+                No scientifically tuned thresholds exist yet. M1 handles real data and metadata;
+                preprocessing, matching and configuration IDs arrive in M2+.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="card p-5">
+          <h3 className="mb-3 text-sm font-bold text-slate-100">M1 — data &amp; metadata configuration</h3>
+          <div className="overflow-x-auto">
+            <table className="table-base">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <Row k="allowed_raw_locations" v={(meta.m1_config?.allowed_raw_locations || []).join(", ")} />
+                <Row k="pairs.json" v={meta.m1_config?.pairs_json_rel} />
+                <Row k="pairs.csv" v={meta.m1_config?.pairs_csv_rel} />
+                <Row k="validation record" v={meta.m1_config?.validation_record_rel} />
+                <Row k="parser_require_pds4_label" v={String(meta.m1_config?.parser_require_pds4_label)} />
+                <Row k="unknown_fill" v={meta.m1_config?.unknown_fill} />
+                <Row k="hash_algorithm" v={meta.m1_config?.hash_algorithm} />
+                <Row k="preview_max_width" v={String(meta.m1_config?.preview_max_width)} />
+                <Row k="preview_dir" v={meta.m1_config?.preview_dir_rel} />
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[11px] text-muted">Loaded from <code className="font-mono text-slate-300">configs/app.yaml</code> (m1 section).</p>
+        </div>
+
+        <div className="card p-5">
+          <h3 className="mb-3 text-sm font-bold text-slate-100">Data &amp; pair semantics</h3>
+          <ul className="space-y-2.5 text-sm">
             <li className="flex items-center justify-between gap-3">
-              <span className="text-muted">Authentication</span>
-              {s.auth?.configured ? (
-                <Badge tone="ok">configured</Badge>
-              ) : (
-                <Badge tone="warn">not configured · M0</Badge>
-              )}
+              <span className="text-muted">Raw products</span>
+              <Badge tone="blue">immutable · hashed</Badge>
             </li>
             <li className="flex items-center justify-between gap-3">
-              <span className="text-muted">AI / Gemini</span>
-              {s.ai?.configured ? (
-                <Badge tone="ok">configured</Badge>
-              ) : (
-                <Badge tone="warn">not configured</Badge>
-              )}
+              <span className="text-muted">Pair IDs</span>
+              <span className="font-mono text-xs text-slate-200">CS-P001, CS-P002, …</span>
             </li>
             <li className="flex items-center justify-between gap-3">
-              <span className="text-muted">AI service</span>
-              <Badge tone="blue">{s.ai?.service ?? "—"}</Badge>
+              <span className="text-muted">Known-overlap evidence</span>
+              <Badge tone={meta.settings?.app_env ? "warn" : "neutral"}>requires documentation</Badge>
             </li>
             <li className="flex items-center justify-between gap-3">
-              <span className="text-muted">Token algorithm</span>
-              <span className="font-mono text-xs text-slate-200">{s.auth?.algorithm ?? "—"}</span>
-            </li>
-            <li className="flex items-center justify-between gap-3">
-              <span className="text-muted">Strategy: scientific pipeline</span>
-              <Badge tone="gold">deferred to M1+</Badge>
+              <span className="text-muted">Source</span>
+              <Badge tone="blue">ISSDC PRADAN</Badge>
             </li>
           </ul>
-          <div className="mt-4 rounded-lg border border-white/[0.06] bg-space-900/50 p-3 text-xs leading-relaxed text-muted">
-            <p className="flex items-center gap-1.5 text-warn">
-              <Icon.Info className="h-3.5 w-3.5" /> Engineering note
-            </p>
-            <p className="mt-1">
-              M0 contains no scientifically tuned thresholds. Pipeline parameters in{" "}
-              <code className="font-mono text-slate-300">configs/app.yaml</code> are placeholders to
-              be replaced by experiment-tuned values with Configuration IDs.
-            </p>
-          </div>
         </div>
       </div>
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from ..config import Settings, rfc3339_now, to_jsonable
+from ..config import Settings, m1_config, rfc3339_now, to_jsonable
 from ..data import data_directory_status
 from .deps import get_settings
 
@@ -16,7 +16,10 @@ def health(settings: Settings = Depends(get_settings)) -> dict:
     """Structured health payload. Never leaks secrets."""
     return {
         "status": "ok",
-        "application": settings.app_name,
+        "application": settings.product_name,
+        "project": settings.app_name,
+        "tagline": settings.tagline,
+        "milestone": settings.milestone,
         "version": settings.app_version,
         "environment": settings.app_env,
         "timestamp": rfc3339_now(),
@@ -29,11 +32,15 @@ def health(settings: Settings = Depends(get_settings)) -> dict:
 def meta(settings: Settings = Depends(get_settings)) -> dict:
     """Non-secret application metadata, safe for the UI."""
     return {
-        "application": settings.app_name,
+        "application": settings.product_name,
+        "project_identifier": settings.app_name,
+        "tagline": settings.tagline,
+        "milestone": settings.milestone,
         "version": settings.app_version,
         "environment": settings.app_env,
         "debug": settings.app_debug,
         "data_root": str(settings.data_root_path),
+        "m1_config": m1_config(),
         "settings": settings.public_dict(),
         "data_directories": [to_jsonable(d) for d in data_directory_status(settings)],
     }

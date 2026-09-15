@@ -24,10 +24,10 @@ export function Logo({ compact = false }) {
       {!compact && (
         <div className="leading-tight">
           <p className="text-sm font-extrabold tracking-tight text-slate-100">
-            SIH<span className="text-lunar-400">26166</span>
+            CHANDRA<span className="text-lunar-400">SUTRA</span>
           </p>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
-            Lunar Registration
+            Lunar Image Intelligence
           </p>
         </div>
       )}

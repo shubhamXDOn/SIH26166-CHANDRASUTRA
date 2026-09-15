@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -43,9 +44,12 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "SIH26166"
+    product_name: str = "CHANDRASUTRA"
+    tagline: str = "Trustworthy Lunar Image Intelligence"
+    milestone: str = "M1"
     app_env: str = "development"  # development | production
     app_debug: bool = True
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
 
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
@@ -84,6 +88,9 @@ class Settings(BaseSettings):
         """Non-secret view of the runtime settings, safe to send to the UI."""
         return {
             "app_name": self.app_name,
+            "product_name": self.product_name,
+            "tagline": self.tagline,
+            "milestone": self.milestone,
             "app_env": self.app_env,
             "app_debug": self.app_debug,
             "app_version": self.app_version,
@@ -114,6 +121,7 @@ class PipelineConfig(BaseModel):
     source: str = ""
     pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
     engineering_defaults_placeholder: dict[str, Any] = Field(default_factory=dict)
+    m1: dict[str, Any] = Field(default_factory=dict)
 
     def model_dump_public(self) -> dict[str, Any]:
         data = self.model_dump()
@@ -143,7 +151,44 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
 
     raw.setdefault("pipeline_stages", [])
     raw.setdefault("engineering_defaults_placeholder", {})
+    raw.setdefault("m1", {})
     return PipelineConfig(source=str(config_path), **raw)
+
+
+_M1_DEFAULTS: dict[str, Any] = {
+    "allowed_raw_locations": ["raw/ohrc", "raw/tmc2", "raw/iirs", "raw/lroc"],
+    "preview_max_width": 640,
+    "preview_dir_rel": "derived/visualizations/previews",
+    "preview_png_mode": "L",
+    "pairs_json_rel": "metadata/pairs.json",
+    "pairs_csv_rel": "metadata/pairs.csv",
+    "validation_record_rel": "metadata/pair_validation.json",
+    "parser_require_pds4_label": True,
+    "unknown_fill": "UNKNOWN",
+    "hash_algorithm": "sha256",
+}
+
+
+@lru_cache(maxsize=1)
+def m1_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M1 settings from configs/app.yaml.
+
+    Cached per process; falls back to documented defaults when the YAML is
+    unavailable so the services stay usable, and never raises on parse.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m1") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+    merged = dict(_M1_DEFAULTS)
+    merged.update(section or {})
+    merged["source"] = str(config_path)
+    return merged
 
 
 def rfc3339_now() -> str:

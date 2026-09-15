@@ -54,11 +54,13 @@ def create_app(settings: Settings | None = None, *, config_file: Path | None = N
         logger.info("Application shutting down.", extra={"operation": "shutdown"})
 
     app = FastAPI(
-        title=f"{settings.app_name} — Trustworthy lunar image correspondence & registration",
+        title=f"{settings.product_name} — {settings.tagline}",
         version=settings.app_version,
         description=(
-            "Adaptive-reliability platform for heterogeneous lunar imagery. "
-            "M0 foundation build — scientific pipeline milestones begin at M1."
+            "CHANDRASUTRA (SIH26166) — adaptive-reliability platform for "
+            "heterogeneous lunar imagery. M1: real data & metadata — the first "
+            "documented OHRC–TMC-2 pair loads, validates and is fully traceable. "
+            "Matching and registration are NOT yet implemented."
         ),
         docs_url="/api/docs" if settings.app_debug else None,
         redoc_url=None,

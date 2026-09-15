@@ -1,4 +1,4 @@
-"""SIH26166 — M0 environment smoke test.
+"""SIH26166 — Milestone M1 environment smoke test.
 
 Validates, end to end:
     * Python environment
@@ -6,7 +6,11 @@ Validates, end to end:
     * configuration (YAML + runtime settings)
     * data directory architecture
     * FastAPI startup over a real HTTP socket
-    * /api/health response
+    * /api/health + /api/meta responses
+    * M1 endpoints: /api/data/status, /api/data/sensors,
+      /api/pairs, /api/pairs/next-id, /api/pairs/scan,
+      /api/pairs/probe (traversal rejection), 404 behaviour
+    * frontend render + frontend->backend connectivity
 
 Usage:
     .venv\\Scripts\\python.exe smoke_test.py
@@ -16,6 +20,7 @@ Exits non-zero if anything fails. NEVER reports PASS on failure.
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import subprocess
@@ -38,7 +43,7 @@ def record(name: str, ok: bool, detail: str) -> None:
 
 
 def main() -> int:
-    print(f"SIH26166 M0 smoke test  |  repo root: {REPO_ROOT}")
+    print(f"CHANDRASUTRA (SIH26166) M1 smoke test  |  repo root: {REPO_ROOT}")
     print(f"  Python           : {sys.version.split()[0]}  ({sys.executable})\n")
 
     # ---- 1. Python version ------------------------------------------------
@@ -93,6 +98,9 @@ def main() -> int:
 
     # ---- 5. backend startup + health over HTTP -----------------------------
     record_backend_http()
+
+    # ---- 5b. M1 endpoints over HTTP ----------------------------------------
+    record_m1_backend()
 
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
@@ -223,6 +231,107 @@ def record_backend_http() -> None:
                 proc.wait(timeout=8)
             except subprocess.TimeoutExpired:
                 proc.kill()
+
+
+def record_m1_backend() -> None:
+    """Boot the real app and probe the M1 endpoints honestly (clean repo)."""
+    import re
+
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M1_PORT": str(port)},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m1-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        meta = _get_json(f"{base}/meta")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M1"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record(
+            "m1-config",
+            (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
+            f"m1_config keys={sorted((((meta or {}).get('m1_config') or {}).keys()))}",
+        )
+        record("m1-product", (meta or {}).get("application") == "CHANDRASUTRA", f"application={(meta or {}).get('application')}")
+
+        status = _get_json(f"{base}/data/status")
+        record("m1-data-status", bool(status), f"milestone={ (status or {}).get('milestone') } source={ (status or {}).get('source', {}).get('archive') }")
+        record(
+            "m1-pairs-honest-zero",
+            int((status or {}).get("pairs_registered", -1)) == 0 and (status or {}).get("first_pair_status") is None,
+            "clean repo reports 0 registered pairs (no fabrication)",
+        )
+
+        sensors = _get_json(f"{base}/data/sensors")
+        phase_a = ((sensors or {}).get("phase_a") or [])
+        ids = sorted(p.get("id") for p in phase_a)
+        record("m1-sensors", ids == ["ohrc", "tmc2"], f"phase_a ids={ids}")
+
+        pairs = _get_json(f"{base}/pairs")
+        record("m1-pairs-list", isinstance((pairs or {}).get("pairs"), list), f"count={(pairs or {}).get('count')}")
+
+        nxt = _get_json(f"{base}/pairs/next-id")
+        record("m1-next-id", bool(re.match(r"^CS-P\d{3,}$", (nxt or {}).get("pair_id", ""))), f"next-id={(nxt or {}).get('pair_id')}")
+
+        scan = _get_json(f"{base}/pairs/scan")
+        dirs = {d.get("id") for d in (scan or {}).get("raw_dirs", [])}
+        record("m1-scan", {"raw/ohrc", "raw/tmc2"}.issubset(dirs), f"raw_dirs ids={sorted(dirs)}")
+
+        traversal = _get_status(f"{base}/pairs/probe?path=..%2F..%2Fetc%2Fpasswd")
+        record("m1-traversal-guard", traversal in (400, 403, 422, 404), f"traversal probe rejected with HTTP {traversal}")
+
+        missing = _get_status(f"{base}/pairs/CS-P999/preview/b")
+        record("m1-unknown-pair-404", missing == 404, f"unknown pair preview -> HTTP {missing}")
+
+        missing_val = _get_status(f"{base}/pairs/CS-P999/validate")
+        record("m1-validate-404", missing_val == 404, f"unknown pair validate -> HTTP {missing_val}")
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m1-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def _get_json(url: str) -> dict | None:
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
+            payload = resp.read().decode("utf-8")
+        return json.loads(payload)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _get_status(url: str) -> int:
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
+            return resp.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except (urllib.error.URLError, OSError):
+        return -1
 
 
 def _wait_for_health(url: str, timeout: float) -> bool:

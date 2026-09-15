@@ -30,7 +30,8 @@ export default function AIInsights() {
         <p className="text-sm leading-relaxed text-muted">
           An <strong className="text-slate-200">explanatory</strong> layer around the scientific
           pipeline. It explains what the system found; it never authorizes a registration and never
-          produces scientific numbers.
+          produces scientific numbers. In M1 — with real data registered but matching not yet run —
+          there is nothing for the AI to explain, so the panel stays honestly empty.
         </p>
       </section>
 
@@ -92,7 +93,7 @@ export default function AIInsights() {
           <EmptyState
             icon={<Icon.Spark className="h-5 w-5" />}
             title="No explanation available"
-            message="Explanations are generated only for real analysis artifacts once Gemini integration lands and a passphrase key is configured."
+            message="Explanations are generated only for real, validated pair artifacts once matching runs (M2+) and a Gemini passphrase key is configured. Nothing is prewritten."
             action={
               <Badge tone="neutral">
                 Awaiting real results + Gemini configuration

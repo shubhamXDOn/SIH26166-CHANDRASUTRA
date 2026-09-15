@@ -1,4 +1,4 @@
-# SIH26166 — Trustworthy Lunar Image Correspondence & Registration
+# CHANDRASUTRA — Trustworthy Lunar Image Intelligence (SIH26166)
 
 **Smart India Hackathon 2026 · Problem SIH26166**
 
@@ -7,9 +7,12 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M0 — Foundation.** This is a foundation build only.
-> The scientific pipeline is deliberately dormant until real data integration (M1).
-> Nothing below is fabricated; no experiment has run yet.
+> **Current milestone: M1 — Real Data & Metadata.** The pair registry, PDS4
+> metadata intake, validation and the functional Data workspace are **DONE**.
+> Acquisition of the first real OHRC–TMC-2 pair is **BLOCKED** on official
+> PRADAN account approval (no anonymous downloads); nothing is fabricated —
+> with zero real files on disk the registry honestly reports zero pairs.
+> Scientific matching starts at M2.
 
 ---
 
@@ -68,13 +71,14 @@ ABSTAIN when evidence is insufficient).
 
 | Milestone | Scope                                         | Status |
 | --------- | --------------------------------------------- | ------ |
-| M0        | Reproducible env, app shell, foundations      | **DONE** (this milestone) |
-| M1        | Real OHRC–TMC-2 data intake, validation       | pending |
+| M0        | Reproducible env, app shell, foundations      | **DONE** (committed) |
+| M1        | Real OHRC–TMC-2 data intake & metadata        | **DONE (engineering)** — real download BLOCKED on PRADAN approval, see `reports/M1_REPORT.md` |
 | M2+       | Preprocessing, condition analysis, matchers   | pending |
 | M3+       | Trust Gate, spatial reliability, registration | pending |
 | M4–M12    | Metrics, benchmarks, AI assistance, hardening | pending |
 
-See `reports/M0_REPORT.md` for the full M0 delivery report.
+Milestone reports: `reports/M0_REPORT.md` (foundation) and
+`reports/M1_REPORT.md` (real data & metadata).
 
 ## Setup (backend)
 
@@ -103,18 +107,24 @@ are optional until their future milestones.
 # → OpenAPI docs (only when APP_DEBUG=true): http://127.0.0.1:8000/api/docs
 ```
 
-Key endpoints implemented in M0 (all under `/api`):
+Key endpoints (all under `/api`):
 
 | Endpoint             | Purpose                                            |
 | -------------------- | -------------------------------------------------- |
 | `GET /health`        | structured health payload                          |
 | `GET /meta`          | non-secret runtime/app metadata for the UI         |
-| `GET /data/status`   | live data-directory architecture status            |
+| `GET /data/status`   | M1 live data + pair-registry aggregates            |
 | `GET /data/sensors`  | Phase-A sensor catalog (OHRC, TMC-2, LROC ref)     |
+| `GET /pairs`         | metadata-only list of registered pairs             |
+| `GET /pairs/next-id` | deterministic next Pair ID (`CS-PNNN`)             |
+| `GET /pairs/scan`    | list candidate products under `data/raw`           |
+| `GET /pairs/probe`   | read one product's PDS4 metadata                   |
+| `POST /pairs/register` | register a real pair (hashes raws, never copies) |
+| `GET /pairs/{id}`    | full pair detail + completeness                    |
+| `GET/POST /pairs/{id}/validate` | run & persist pair validation          |
+| `GET /pairs/{id}/preview/{side}` | derived PNG preview (lazy)            |
 | `GET /auth/status`   | authentication foundation status (no fake login)   |
-| `POST /auth/login`   | contract stub → `501 NOT_CONFIGURED` in M0         |
 | `GET /ai/status`     | AI service status (NOT_CONFIGURED without a key)   |
-| `POST /ai/explain`   | contract stub → `501 NOT_CONFIGURED` in M0         |
 
 ## Setup + run (frontend)
 
@@ -158,34 +168,38 @@ cd frontend && node ssr-smoke.mjs
 cd frontend && npm run build
 ```
 
-The M0 suite covers: application imports, configuration loading, missing-config
-failure, FastAPI startup, `/api/health` + envelope correctness, secret
-non-disclosure, data-directory resolution & raw/derived separation, auth
-foundation, AI NOT_CONFIGURED behaviour, security primitives (PBKDF2, JWT),
-frontend render of every page, and frontend→backend connectivity over a real proxy.
+The M1 suite covers everything from M0 plus: pair schema & registry
+determinism, PDS4 label parsing (missing/corrupt/unknown-field cases), CH-2
+filename decoding, SHA-256 integrity, raw immutability, overlap/evidence rules,
+full coverage of `/pairs` endpoints (register/detail/validate/preview/
+scan/probe/next-id), path-traversal rejection, 404 behaviour, M1 aggregates,
+and a full 29-check environment smoke test over a live HTTP stack.
 
 ## Repository structure
 
 ```
-SIH26166/
+CHANDRASUTRA/
 ├── backend/            FastAPI application
 │   └── app/
 │       ├── main.py         app factory + lifespan
-│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML)
+│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1_config
 │       ├── logging_conf.py structured logging setup
 │       ├── errors.py       unified error envelope + handlers
 │       ├── security.py     auth/authorization foundation
 │       ├── state.py        app singletons
 │       ├── data.py         data architecture service
+│       ├── loader.py       M1 PDS4 parser + CH-2 product loader/previews
+│       ├── pairs.py        M1 pair registry + validation domain
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, auth, data, ai routers
+│       └── api/            health, meta, data, pairs, auth, ai routers
 ├── frontend/           React + Vite + Tailwind UI
 │   └── src/components, src/pages
-├── configs/app.yaml    engineering-default placeholders (no scientific thresholds)
+├── configs/app.yaml    engineering defaults + m1 section (no scientific thresholds)
 ├── data/               raw (immutable) / derived (reproducible) — see data/README.md
-├── tests/              pytest suite (backend)
-├── reports/            milestone reports (M0_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test
+│   └── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
+├── tests/              pytest suite (backend incl. test_m1.py + fixturegen.py)
+├── reports/            milestone reports (M0_REPORT.md, M1_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 checks)
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -213,14 +227,15 @@ Phase-A prototype sensors: **OHRC** (~0.25 m/px) and **TMC-2** (~5 m/px).
 Initial dataset: at least one documented OHRC–TMC-2 pair, later a second
 challenging pair. **We do not download the mission archive, and we do not
 substitute random/generated imagery as scientific evidence.** The first pair is
-acquired properly in M1.
+acquired properly as soon as PRADAN account approval is granted (M1 blocker —
+see `reports/M1_REPORT.md`).
 
 ## Development roadmap M0–M12
 
 | #  | Milestone                                                        |
 | -- | ---------------------------------------------------------------- |
 | M0 | **Foundation**: env, backend, premium UI, config, logging, tests — DONE |
-| M1 | Real data intake & metadata validation (OHRC–TMC-2 pair)          |
+| M1 | **Real data intake & metadata validation** — engineering DONE; first real OHRC–TMC-2 pair BLOCKED on PRADAN approval |
 | M2 | Safe preprocessing, overlap/crop, condition estimator, matcher adapters (baselines) |
 | M3 | Adaptive routing & matcher strategy selection                     |
 | M4 | Trust Gate — independent verification                            |
@@ -255,8 +270,11 @@ acquired properly in M1.
 
 ## Limitations
 
-- M0 performs **no scientific processing**; the pipeline is dormant by design.
-- No OHRC–TMC-2 pair is downloaded or registered yet (that is M1's task).
+- M1 performs **no matching/registration**; the corpus is the pair registry plus
+  real metadata intake and validation. Scientific pipelines start at M2.
+- No OHRC–TMC-2 pair is downloaded or registered yet: official downloads require
+  a PRADAN account with administrator approval (see `reports/M1_REPORT.md` for
+  the exact blocker and unblocking steps). The registry is kept honestly empty.
 - Auth endpoints are contract stubs (`501 NOT_CONFIGURED`) until the real
   authentication milestone.
 - AI explanations are only available after real Gemini integration + key.

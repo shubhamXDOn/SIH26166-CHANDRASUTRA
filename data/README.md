@@ -7,6 +7,11 @@
   - Chandrayaan-2 data: https://pradan.issdc.gov.in/ch2/
   - FAQ: https://pradan.issdc.gov.in/ch2/faq.xhtml
 
+> **Access note (M1):** PRADAN downloads require user registration **and**
+> administrator approval. There is no anonymous download path, so a fully
+> automated pipeline cannot fetch products in this environment. Product
+> placement under `data/raw` is a manual, one-time step per approved download.
+
 ## Primary Phase-A sensors (Chandrayaan-2)
 
 | Id     | Sensor                                   | Role in prototype                           |
@@ -35,6 +40,29 @@ Reference/validation layer for later milestones:
   back into `data/raw/`.
 - Any transformation writes to `data/derived/<stage>/` only.
 - The backend's data service refuses to create directories under `raw/`.
+
+## M1 metadata registry (M1)
+
+Every registered pair writes a **canonical metadata record** to
+`data/metadata/` — this is where traceability lives:
+
+| File                          | Purpose                                              |
+| ----------------------------- | ---------------------------------------------------- |
+| `data/metadata/pairs.json`    | full versioned `PairRecord` for each pair (canonical) |
+| `data/metadata/pairs.csv`     | flattened columns of the same records                |
+| `data/metadata/pair_validation.json` | most recent validation result (checks, hashes, status) |
+| `data/derived/visualizations/previews/` | derived 8-bit PNG previews (never the raw product) |
+
+A `PairRecord` captures provenance (sensor, product ID, source, acquisition),
+geometry (dimensions, dtype, nominal GSD), integrity (SHA-256 of each raw
+file), overlap evidence, lifecycle timestamps, and placeholders for future
+scientific results — which stay `null`/`NOT_RUN` until actually measured.
+
+Pair IDs are deterministic (`CS-P001`, `CS-P002`, …). Validation re-verifies
+file existence, PDS4 labels, readability, dimension/dtype correspondence,
+SHA-256 hashes and the recorded overlap evidence, and marks a pair
+**VALID / INVALID** independently of overlap status. `benchmark_ready`
+requires a CONFIRMED overlap **with documented evidence**.
 
 ## Metadata requirements
 

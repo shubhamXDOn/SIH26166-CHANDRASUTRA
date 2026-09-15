@@ -1,7 +1,8 @@
-"""Data / datasets FOUNDATION endpoints (M0).
+"""Data / datasets endpoint (M0 foundation, upgraded by M1).
 
-Exposes the real on-disk data architecture readiness only. No science is
-performed here. Real ingestion, validation and pair management arrive in M1.
+Exposes the real on-disk data architecture readiness *and* the real M1 pair
+metadata aggregates. No science is performed here and no counts are faked:
+with zero registered pairs every counter honestly reads zero.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from fastapi import APIRouter, Depends
 from ..config import Settings
 from ..data import data_directory_status, ensure_derived_directories
 from ..logging_conf import get_logger
+from ..pairs import PairRegistry, metadata_completeness
 from .deps import get_settings
 
 logger = get_logger(__name__)
@@ -30,17 +32,87 @@ def _directory_dicts(settings: Settings) -> list[dict]:
     ]
 
 
+def _raw_product_count(settings: Settings) -> int:
+    root = settings.data_root_path
+    count = 0
+    for d in data_directory_status(settings):
+        if d.is_raw and d.exists:
+            dir_path = root / d.path
+            try:
+                count += sum(1 for f in dir_path.iterdir() if f.is_file() and not f.name.startswith("."))
+            except OSError:
+                continue
+    return count
+
+
 @router.get("/status")
 def data_status(settings: Settings = Depends(get_settings)) -> dict:
-    """Live status of the data architecture (directories only)."""
+    """Live status of data architecture + real M1 pair registry aggregates."""
     ensure_derived_directories(settings)
     directories = _directory_dicts(settings)
     ready = [d for d in directories if d["exists"]]
+
+    registry = PairRegistry(settings)
+    records = registry.list()
+    valid = [r for r in records if r.validation_status == "VALID"]
+    candidate = [r for r in records if r.overlap_status == "OVERLAP_UNCONFIRMED"]
+    confirmed = [r for r in records if r.overlap_status == "CONFIRMED_OVERLAP"]
+    completeness_values = [metadata_completeness(r)["fraction"] for r in records]
+
+    sensors: list[str] = []
+    for r in records:
+        for key in ("sensor_a", "sensor_b"):
+            value = getattr(r, key, "")
+            if value in ("", "UNKNOWN"):
+                continue
+            if value not in sensors:
+                sensors.append(value)
+
+    first_pair = None
+    if records:
+        first_pair = {
+            "pair_id": records[0].pair_id,
+            "validation_status": records[0].validation_status,
+            "overlap_status": records[0].overlap_status,
+        }
+
+    last_ingestion = max((r.registered_at_utc for r in records), default=None)
+    last_validation = max((r.last_validated_utc for r in records), default=None)
+
     return {
         "root": str(settings.data_root_path),
-        "milestone": "M0",
-        "pairs_registered": 0,
-        "pairs_note": "No OHRC-TMC-2 pair registered yet. First documented pair arrives in M1 from ISSDC PRADAN.",
+        "milestone": settings.milestone,
+        "product": settings.product_name,
+        "pairs_registered": len(records),
+        "pairs_valid": len(valid),
+        "pairs_candidate": len(candidate),
+        "pairs_confirmed_overlap": len(confirmed),
+        "raw_products_present": _raw_product_count(settings),
+        "metadata_completeness": {
+            "average_fraction": round(sum(completeness_values) / len(completeness_values), 3) if completeness_values else 0.0,
+            "per_pair": {r.pair_id: metadata_completeness(r)["fraction"] for r in records},
+        },
+        "first_pair_status": first_pair,
+        "available_sensors": sensors,
+        "last_ingestion_utc": last_ingestion,
+        "last_validation_utc": last_validation,
+        "source": {
+            "organization": "ISRO / ISSDC",
+            "archive": "PRADAN",
+            "mission": "Chandrayaan-2",
+            "url": "https://pradan.issdc.gov.in/ch2/",
+            "access": {
+                "anonymous": False,
+                "note": "PRADAN requires user registration and administrator approval before downloads are permitted.",
+            },
+        },
+        "pairs_note": (
+            "No OHRC–TMC-2 pair is registered yet. Real products must be placed "
+            "under data/raw and registered via the Data workspace. Official downloads "
+            "require a PRADAN account with approved access."
+            if not records
+            else f"{len(records)} pair(s) registered — most recent {records[-1].pair_id}."
+        ),
         "raw_policy": "immutable — writing to data/raw is forbidden by design.",
         "directories": directories,
         "summary": {
