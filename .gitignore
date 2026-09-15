@@ -34,9 +34,11 @@ logs/
 
 # --- Raw + derived scientific data (never commit bulk data) ---
 data/raw/**
+!data/raw/**/
 !data/raw/**/.gitkeep
 !data/raw/README.md
 data/derived/**
+!data/derived/**/
 !data/derived/**/.gitkeep
 data/metadata/*.csv
 data/metadata/*.json

@@ -185,6 +185,6 @@ pair metadata through the existing `/api/pairs` namespace.
 
 ## 18. Git commit / hash
 
-Initial foundation commit and the final report commit (hash below):
-
-- `git log --oneline` after this milestone — see repository history.
+- Foundation commit: `5aaa654` — "M0: SIH26166 foundation - backend, premium UI, config, data architecture, tests"
+- Follow-up commit: record of data dir `.gitkeep` files + this hash reference.
+- Run `git log --oneline` for the complete repository history.
