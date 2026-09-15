@@ -1,0 +1,48 @@
+# ============================================================
+# SIH26166 — .gitignore
+# Keep secrets, caches, build artifacts and bulky data out of git.
+# ============================================================
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+npm-debug.log*
+frontend/vite.config.js.timestamp-*
+
+# --- Runtime artifacts ---
+logs/
+*.log
+
+# --- Raw + derived scientific data (never commit bulk data) ---
+data/raw/**
+!data/raw/**/.gitkeep
+!data/raw/README.md
+data/derived/**
+!data/derived/**/.gitkeep
+data/metadata/*.csv
+data/metadata/*.json
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

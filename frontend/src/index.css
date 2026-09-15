@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-space-950 text-slate-200 antialiased;
+    background-image:
+      radial-gradient(1100px 600px at 85% -10%, rgba(31, 41, 89, 0.35), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(88, 58, 24, 0.18), transparent 55%),
+      radial-gradient(1200px 700px at 50% 120%, rgba(12, 24, 48, 0.45), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(230, 177, 87, 0.3);
+    color: #fff;
+  }
+
+  /* Thin, subtle scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1b2a4c transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #1b2a4c;
+    border-radius: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-white/[0.06] bg-space-800/80 shadow-card backdrop-blur;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:border-lunar-500/30 hover:shadow-glow;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition
+      duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-lunar-400/70
+      active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply btn bg-lunar-500 text-space-950 hover:bg-lunar-400;
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/[0.02] text-slate-200 hover:border-lunar-500/40
+      hover:bg-white/[0.05];
+  }
+
+  .btn-danger {
+    @apply btn border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-lunar-400/90;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-white/10 bg-space-900/70 px-3 py-2 text-sm text-slate-100
+      placeholder:text-muted/60 focus:border-lunar-500/50 focus:outline-none focus:ring-2
+      focus:ring-lunar-500/20;
+  }
+
+  .skeleton {
+    @apply animate-shimmer rounded-md bg-[linear-gradient(90deg,#101a2e_0%,#1b2a4c_40%,#101a2e_80%)]
+      bg-[length:200%_100%];
+  }
+
+  .table-base {
+    @apply w-full text-left text-sm;
+  }
+  .table-base th {
+    @apply border-b border-white/10 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider
+      text-muted;
+  }
+  .table-base td {
+    @apply border-b border-white/[0.04] px-4 py-2.5 align-middle;
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 18px rgba(230, 177, 87, 0.35);
+  }
+}

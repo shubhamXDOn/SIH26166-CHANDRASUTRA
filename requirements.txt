@@ -1,0 +1,28 @@
+# SIH26166 — M0 backend dependencies
+# Install: python -m venv .venv && .venv\Scripts\Activate.ps1 && pip install -r requirements.txt
+#
+# Pinned to versions verified on Python 3.14 / Windows (Rule 24: pin only
+# after they install and import correctly in this environment).
+
+# --- Web / API ---
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+
+# --- Configuration ---
+pydantic-settings==2.15.0
+PyYAML==6.0.3
+python-dotenv==1.2.3
+
+# --- Scientific/CV (foundation verification only in M0) ---
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
+pillow==12.3.0
+
+# --- Auth foundation ---
+PyJWT==2.14.0
+
+# --- HTTP client (tests + future AI calls) ---
+httpx==0.28.1
+
+# --- Testing ---
+pytest==9.1.1

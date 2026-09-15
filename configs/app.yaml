@@ -1,0 +1,57 @@
+# ============================================================
+# SIH26166 — Pipeline placeholder configuration
+#
+# M0 engineering defaults ONLY. There are intentionally NO
+# scientifically tuned thresholds in this file.
+#
+# Every future experimental value must be linked to a Pair ID and a
+# Configuration ID and recorded in results/reports. Do not edit this
+# file to "make a result look good."
+#
+# Source of truth for runtime/secrets: environment variables + .env
+# (see backend/app/config.py Settings).
+# ============================================================
+
+pipeline_stages:
+  - id: data
+    label: Data
+  - id: validate
+    label: Validate
+  - id: preprocess
+    label: Preprocess
+  - id: match
+    label: Match
+  - id: trust
+    label: Trust
+  - id: register
+    label: Register
+  - id: report
+    label: Report
+
+# ------------------------------------------------------------
+# Engineering defaults — placeholders to be replaced by real
+# experiment-tuned parameters in later milestones. They carry no
+# scientific meaning yet.
+# ------------------------------------------------------------
+engineering_defaults_placeholder:
+  preprocessing:
+    dtype: ">u2"          # 16-bit unsigned big-endian (spacecraft PDS product)
+    bit_depth: 16
+    normalize: "instance"
+  crops:
+    size_px: [512, 512]   # development tile size — memory-lite by design
+    strategy: "overlap_confirmed_only"
+  matcher:
+    library_subsets: ["sift", "akaze"]   # baselines; adapters arrive later
+    ransac_reproj_threshold_px: 3.0      # engineering default, NOT a scientific claim
+  routing:
+    enabled: false                        # condition-aware routing = later milestone
+  trust_gate:
+    enabled: false                        # adaptive reliability gate = later milestone
+  registration:
+    model: "homography_placeholder"
+  logging:
+    operation_scope: "request + Pair ID + Configuration ID (future)"
+  runtime:
+    lazy_imports: true
+    max_parallel: 2
