@@ -439,8 +439,9 @@ function TileCandidatesView({ payload }) {
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-warn">
           <Icon.Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            Trust Gate: <strong>NOT_RUN (M4)</strong>. These are raw observations from one matcher run per tile —
-            they have not been independently geometrically verified and carry no accuracy/trust verdict.
+            Trust Gate (M4): these are raw observations from one matcher run per tile — they are{" "}
+            <strong>not yet verified</strong>. Run TRUST below to apply deterministic geometric
+            verification and convert qualified tiles into verified spatial evidence.
           </span>
         </p>
       </div>

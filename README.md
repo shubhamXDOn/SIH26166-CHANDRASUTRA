@@ -7,15 +7,14 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M3 — Adaptive Matcher Strategy Selection & Candidate
-> Correspondences.** The MATCH pipeline (matcher adapters, condition-aware
-> strategy routing, explicit recorded candidate filtering, candidate
-> correspondences as observations) and the Matching workspace are **DONE** and
-> fully tested (99 backend tests, 39/39 smoke checks, 872 candidates on the
-> correlated e2e fixture). Acquisition of the first real OHRC–TMC-2 pair is
-> still **BLOCKED** on official PRADAN account approval, so M3 honestly reports
-> a BLOCKED overview on the live app; nothing is fabricated and the independent
-> Trust Gate stays truthfully **NOT_RUN (M4)**.
+> **Current milestone: M4 — Trust Gate (independent geometric verification).**
+> Candidate correspondences from M3 are now independently verified: RANSAC
+> homography/affine models, degeneracy + residual-policy + spatial-reliability
+> checks, symmetric cross-check and a binary Trust Gate are **DONE** and fully
+> tested (131 backend tests, 44/44 smoke checks, gate COMPLETE with 6/6 tiles
+> TRUSTED on the correlated e2e fixture). Acquisition of the first real OHRC–TMC-2
+> pair is still **BLOCKED** on official PRADAN account approval, so the M4 gate
+> honestly reports a BLOCKED overview on the live app; nothing is fabricated.
 
 ---
 
@@ -78,13 +77,14 @@ ABSTAIN when evidence is insufficient).
 | M1        | Real OHRC–TMC-2 data intake & metadata        | **DONE (engineering)** — real download BLOCKED on PRADAN approval, see `reports/M1_REPORT.md` |
 | M2        | Preprocessing, overlap/crops, condition analysis, matcher readiness | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M2_REPORT.md`) |
 | M3        | Matcher adapters & adaptive strategy, candidate correspondences | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M3_REPORT.md`) |
-| M4        | Trust Gate, spatial reliability, registration | pending |
-| M5–M12    | Metrics, benchmarks, AI assistance, hardening | pending |
+| M4        | Trust Gate — independent geometric verification | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M4_REPORT.md`) |
+| M5–M12    | Spatial reliability, metrics, benchmarks, AI assistance, hardening | pending |
 
 Milestone reports: `reports/M0_REPORT.md` (foundation),
 `reports/M1_REPORT.md` (real data & metadata),
-`reports/M2_REPORT.md` (preprocessing & scene conditioning), and
-`reports/M3_REPORT.md` (adaptive matcher & candidate correspondences).
+`reports/M2_REPORT.md` (preprocessing & scene conditioning),
+`reports/M3_REPORT.md` (adaptive matcher & candidate correspondences), and
+`reports/M4_REPORT.md` (Trust Gate & independent geometric verification).
 
 ## Setup (backend)
 
@@ -146,6 +146,15 @@ Key endpoints (all under `/api`):
 | `GET /matching/{id}/decisions` | per-tile routing decisions |
 | `GET /matching/{id}/candidates` | candidate-correspondence index (observations) |
 | `GET /matching/{id}/tiles[...]/candidates` | per-tile candidate points + distance + score |
+| `GET /trust/configurations` | available trust configurations (`TG-M4-001`) |
+| `GET /trust/overview` | M4 aggregate — honestly BLOCKED until a validated real pair exists |
+| `POST /trust/{id}/run` | run Trust Gate (independent geometric verification) |
+| `GET /trust/{id}/status` | Trust Gate run state + gate verdict + block code |
+| `POST /trust/{id}/reset` | wipe `derived/trust/<pair>` (raw + M2 + M3 untouched) |
+| `GET /trust/{id}/manifest` | trust provenance manifest (relative paths + SHA-256) |
+| `GET /trust/{id}/summary` | trust run summary |
+| `GET /trust/{id}/tiles` | per-tile verdict cards (TRUSTED/REJECTED/INSUFFICIENT/FAILED) |
+| `GET /trust/{id}/tiles/{tile}` | single tile verdict (model, spatial, cross-check evidence) |
 | `GET /auth/status`   | authentication foundation status (no fake login)   |
 | `GET /ai/status`     | AI service status (NOT_CONFIGURED without a key)   |
 
@@ -211,8 +220,16 @@ INSUFFICIENT_CANDIDATES / MATCHER_FAILED / NO_FEATURES / TIMEOUT outcomes,
 artifact roundtrip + "not a verdict" licensing, the full MATCH lifecycle to
 COMPLETE with the derived layout, manifest relative-only + SHA-256, BLOCK /
 404 / 422 paths, reset scoping, and bug-hunt regressions (non-finite rejection,
-path-traversal guard, zero-dims border skip). The environment smoke test runs
-**39 checks** over a live HTTP stack
+path-traversal guard, zero-dims border skip). The M4 suite adds: trust
+configuration registration/load/endpoint, RANSAC + affine geometry (translation
+recovery, noise rejection, collinear degeneracy, symmetric transfer,
+determinism), spatial diagnostics (occupancy, cluster fail, zero-inlier safety),
+per-tile engine verdicts (TRUSTED, INSUFFICIENT, collinear/cluster reject,
+cross-check, residual-policy, determinism), the full Trust Gate lifecycle over a
+real M3 run (COMPLETE / FAILED gates), honest BLOCKED, overview aggregates,
+unknown pair/config behaviour (404 + service block), manifest provenance, reset
+scoping, path-traversal safety, runtime TIMEOUT, and re-run determinism. The
+environment smoke test runs **44 checks** over a live HTTP stack
 (backend endpoints, frontend render, vite proxy).
 
 ## Repository structure
@@ -232,18 +249,20 @@ CHANDRASUTRA/
 │       ├── pairs.py        M1 pair registry + validation domain
 │       ├── processing/     M2 PREPARE engine (masks, overlap, crops, conditions, manifest)
 │       ├── matching/       M3 MATCH engine (adapters, routing, candidates, manifest)
+│       ├── trust/          M4 Trust Gate engine (geometry, spatial, degeneracy, service, manifest)
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, meta, data, pairs, processing, matching, auth, ai routers
+│       └── api/            health, meta, data, pairs, processing, matching, trust, auth, ai routers
 ├── frontend/           React + Vite + Tailwind UI
-│   └── src/components, src/pages        (incl. Analysis workspace — M2/M3)
-├── configs/app.yaml    engineering defaults + m1/m2/m3 sections (no scientific thresholds)
+│   └── src/components, src/pages        (incl. Analysis workspace — M2/M3/M4)
+├── configs/app.yaml    engineering defaults + m1/m2/m3/m4 sections (no scientific thresholds)
 ├── data/               raw (immutable) / derived (reproducible) — see data/README.md
 │   ├── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
 │   ├── derived/processing/   per-pair PREPARE outputs (M2: status, manifest, masks, crops, conditions)
-│   └── derived/matches/      per-pair MATCH outputs (M3: status, manifest, decisions, candidates)
-├── tests/              pytest suite (incl. test_m1.py, test_m2.py, test_m3.py + fixturegen.py)
-├── reports/            milestone reports (M0_REPORT.md, M1_REPORT.md, M2_REPORT.md, M3_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + M3 checks, 39 total)
+│   ├── derived/matches/      per-pair MATCH outputs (M3: status, manifest, decisions, candidates)
+│   └── derived/trust/        per-pair TRUST outputs (M4: gate status, manifest, tile verdicts)
+├── tests/              pytest suite (incl. test_m1.py … test_m4.py + fixturegen.py)
+├── reports/            milestone reports (M0_REPORT.md … M4_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + M3 + M4 checks, 44 total)
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -282,9 +301,8 @@ see `reports/M1_REPORT.md`).
 | M1 | **Real data intake & metadata validation** — engineering DONE; first real OHRC–TMC-2 pair BLOCKED on PRADAN approval |
 | M2 | **Preprocessing & scene conditioning** (masks, overlap, crops, conditions, matcher readiness) — engineering DONE; real-data execution BLOCKED, see `reports/M2_REPORT.md` |
 | M3 | **Matcher adapters & adaptive strategy selection, candidate correspondences** — engineering DONE; real-data execution BLOCKED, see `reports/M3_REPORT.md` |
-| M4 | Trust Gate — independent verification                            |
-| M5 | Spatial reliability / spatial selection                          |
-| M6 | Registration (homography/affine) + diagnostics                   |
+| M4 | **Trust Gate — independent geometric verification** (RANSAC geometry, degeneracy + residual + spatial reliability checks, symmetric cross-check, binary gate over candidate correspondences) — engineering DONE; real-data execution BLOCKED, see `reports/M4_REPORT.md` |
+| M5–M6 | Spatial reliability / spatial selection (real-data depth); registration (homography/affine) + diagnostics |
 | M7 | Metrics, visualization, SUCCESS / FAILURE / ABSTAIN reporting    |
 | M8 | Deep matcher adapters + benchmarking vs baselines                |
 | M9 | Real Gemini explanatory layer                                    |
@@ -321,8 +339,13 @@ see `reports/M1_REPORT.md`).
   produced; scientific matching starts at M3.
 - M3 produces **candidate correspondences as observations** — condition-aware
   strategy routing and explicit candidate filters are real, but nothing is a
-  trust verdict: the independent Trust Gate remains **NOT_RUN (M4)** until it
-  actually executes, and no accuracy/confidence metric is produced or shown.
+  trust verdict until the independent Trust Gate actually executes.
+- M4 has executed the **Trust Gate** on engineering fixtures; candidate sets are
+  now independently verified (RANSAC/affine models, degeneracy + residual +
+  spatial-reliability checks, symmetric cross-check) and carry a binary
+  TRUSTED/BLOCKED verdict per tile. No accuracy/confidence metric is ever
+  produced or shown, and real-data gate runs remain BLOCKED until PRADAN access
+  is granted.
 - No OHRC–TMC-2 pair is downloaded or registered yet: official downloads require
   a PRADAN account with administrator approval (see `reports/M1_REPORT.md` for
   the exact blocker and unblocking steps). The registry and the M2 overview are

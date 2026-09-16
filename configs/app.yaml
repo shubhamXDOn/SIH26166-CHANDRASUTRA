@@ -190,6 +190,51 @@ m3:
           requires_availability: true
 
 # ------------------------------------------------------------
+# M4 — trust gate & independent geometric verification.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning yet — they are reproducible defaults registered under the
+# Trust Configuration ID below. Policy parameters are engineering
+# defaults; real-data thresholds require Pair ID + Configuration ID.
+# Reproducibility = Pair ID + Processing Configuration ID +
+# Matcher Configuration ID + Trust Configuration ID.
+# ------------------------------------------------------------
+m4:
+  trust_configuration_id: "TG-M4-001"
+  trust_configuration_version: 1
+  name: "Independent Geometric Verification & Trust Gate"
+  source_reference: "SIH26166 M4 spec — engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/trust"
+  defaults:
+    candidate_integrity:
+      min_usable_candidates: 8
+    geometric_model:
+      type: "homography"
+      ransac:
+        max_iterations: 2000
+        inlier_threshold_px: 3.0
+        confidence: 0.995
+        seed: 42
+    acceptance:
+      min_inliers: 8
+      min_inlier_ratio: 0.3
+      max_residual_mean: 10.0
+      max_residual_median: 6.0
+      max_residual_p95: 15.0
+    spatial:
+      grid_cells: 4
+      min_occupied_cells: 4
+      max_concentration_ratio: 0.6
+    degeneracy:
+      min_unique_points: 4
+      max_condition_number: 1000000
+    cross_check:
+      enabled: true
+      max_symmetric_transfer_px: 8.0
+    execution:
+      max_runtime_seconds: 60
+
+# ------------------------------------------------------------
 # Engineering defaults — placeholders to be replaced by real
 # experiment-tuned parameters in later milestones. They carry no
 # scientific meaning yet.

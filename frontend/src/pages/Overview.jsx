@@ -66,6 +66,21 @@ function useMatchingOverview() {
   return { overview, error };
 }
 
+function useTrustOverview() {
+  const [overview, setOverview] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiGet("/trust/overview")
+      .then((o) => alive && setOverview(o))
+      .catch((e) => alive && setError(e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return { overview, error };
+}
+
 function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
   const valueTone = {
     neutral: "text-slate-100",
@@ -91,6 +106,7 @@ export default function Overview({ backend, onNavigate }) {
   const { status, error: statusError } = useDataStatus();
   const { overview, error: procError } = useProcessingOverview();
   const { overview: mOverview, error: mError } = useMatchingOverview();
+  const { overview: tOverview, error: tError } = useTrustOverview();
   const [modalStage, setModalStage] = useState(null);
   const [lockModal, setLockModal] = useState(false);
 
@@ -99,7 +115,7 @@ export default function Overview({ backend, onNavigate }) {
     return (
       <div className="space-y-6">
         <div className="space-y-4">
-          <Badge tone="gold">CHANDRASUTRA · SIH26166 · Milestone M3</Badge>
+          <Badge tone="gold">CHANDRASUTRA · SIH26166 · Milestone M4</Badge>
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-100">
             Trustworthy Lunar Image Intelligence
           </h2>
@@ -139,6 +155,10 @@ export default function Overview({ backend, onNavigate }) {
   const totalCandidates = mOverview?.total_candidates ?? 0;
   const matchedPairs = mOverview?.pairs ?? [];
 
+  const trustedPairs = tOverview?.trusted_pairs ?? 0;
+  const trustBlockedPairs = tOverview?.blocked_pairs ?? 0;
+  const trustTotal = tOverview?.total_trust_pairs ?? 0;
+
   const pipeline = PIPELINE.map((stage) => ({
     ...stage,
     state:
@@ -160,7 +180,15 @@ export default function Overview({ backend, onNavigate }) {
                 : readyInM2 > 0
                   ? "ready"
                   : "locked"
-              : "locked",
+              : stage.id === "trust"
+                ? trustedPairs > 0
+                  ? "complete"
+                  : trustTotal > 0
+                    ? "warning"
+                    : matchedTiles > 0
+                      ? "ready"
+                      : "locked"
+                : "locked",
   }));
 
   const anchor = backend?.online ? "green" : "gray";
@@ -171,13 +199,15 @@ export default function Overview({ backend, onNavigate }) {
       <section className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="gold">Milestone M3 — Adaptive Matcher Intelligence</Badge>
-            <Badge tone={matchedTiles > 0 ? "ok" : readyInM2 > 0 ? "blue" : "neutral"}>
-              {matchedTiles > 0
-                ? `${totalCandidates} candidates across ${matchedTiles} match tile(s)`
-                : readyInM2 > 0
-                  ? "Matcher-ready — matching can run"
-                  : "Awaiting documented geometry"}
+            <Badge tone="gold">Milestone M4 — Independent Geometric Verification</Badge>
+            <Badge tone={trustedPairs > 0 ? "ok" : matchedTiles > 0 ? "blue" : readyInM2 > 0 ? "blue" : "neutral"}>
+              {trustedPairs > 0
+                ? `Trust Gate complete — ${trustedPairs} pair(s) verified`
+                : matchedTiles > 0
+                  ? `${totalCandidates} candidates — TRUST not yet run`
+                  : readyInM2 > 0
+                    ? "Matcher-ready — matching can run"
+                    : "Awaiting documented geometry"}
             </Badge>
           </div>
           <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-[1.7rem]">
@@ -186,8 +216,8 @@ export default function Overview({ backend, onNavigate }) {
           <p className="text-sm leading-relaxed text-muted">
             Real Chandrayaan-2 OHRC × TMC-2 pairs are hashed and validated in M1; M2 executes an
             honest PREPARE — masks, overlap evidence, crops and per-tile conditions; M3 runs an
-            explainable adaptive matcher that records candidate correspondences as observations,
-            never verified truth. Nothing is simulated.
+            explainable adaptive matcher that records candidate correspondences as observations;
+            M4 independently verifies them geometrically through the Trust Gate. Nothing is simulated.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-3">
@@ -198,7 +228,7 @@ export default function Overview({ backend, onNavigate }) {
             onClick={() => setLockModal(true)}
             className="btn-ghost"
             disabled={!meta}
-            title="Opens Analysis — honest M2 PREPARE runs and the M3 adaptive matcher"
+            title="Opens Analysis — honest M2 PREPARE runs, the M3 adaptive matcher and the M4 Trust Gate"
           >
             <Icon.Activity className="h-4 w-4" /> Open Analysis
           </button>
@@ -212,7 +242,7 @@ export default function Overview({ backend, onNavigate }) {
           value={backend?.online ? "Operational" : "Offline"}
           tone={backend?.online ? "ok" : "danger"}
           pulse={backend?.online}
-          sub={`${settings.app_env ?? "development"} · v${meta.version ?? "—"} · M3`}
+          sub={`${settings.app_env ?? "development"} · v${meta.version ?? "—"} · M4`}
         />
         <StatCard
           label="Data source"
@@ -246,12 +276,13 @@ export default function Overview({ backend, onNavigate }) {
             <p className="text-xs text-muted">
               Data is ready; Validate reflects the real registered-pair state; M2 PREPARE runs trace
               honestly in the Analysis workspace. The Match stage reflects M3 candidate-matching
-              progress — BLOCKED is a first-class, honest outcome.
+              progress and the Trust stage reflects M4 independent verification — BLOCKED is a
+              first-class, honest outcome.
             </p>
           </div>
-          <Badge tone={matchedTiles > 0 ? "ok" : readyInM2 > 0 ? "blue" : backend?.online ? "neutral" : "danger"}>
-            <StatusDot state={matchedTiles > 0 ? "ok" : readyInM2 > 0 ? "info" : backend?.online ? "info" : "danger"} />
-            {matchedTiles > 0 ? "MATCH complete" : readyInM2 > 0 ? "MATCH ready to run" : "PREPARE ready to report BLOCKED"}
+          <Badge tone={trustedPairs > 0 ? "ok" : trustTotal > 0 ? "warn" : matchedTiles > 0 ? "blue" : readyInM2 > 0 ? "blue" : backend?.online ? "neutral" : "danger"}>
+            <StatusDot state={trustedPairs > 0 ? "ok" : trustTotal > 0 ? "warn" : matchedTiles > 0 ? "info" : readyInM2 > 0 ? "info" : backend?.online ? "info" : "danger"} />
+            {trustedPairs > 0 ? "TRUST complete" : trustTotal > 0 ? "TRUST reported" : matchedTiles > 0 ? "TRUST ready to run" : "PREPARE ready to report BLOCKED"}
           </Badge>
         </div>
         <Pipeline stages={pipeline} onStageClick={(st) => setModalStage(st)} />
@@ -351,6 +382,18 @@ export default function Overview({ backend, onNavigate }) {
                 </Badge>
               </li>
               <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Geometric verification (M4)</span>
+                <Badge tone={trustedPairs > 0 ? "ok" : trustTotal > 0 ? "warn" : matchedTiles > 0 ? "blue" : "neutral"}>
+                  {trustedPairs > 0 ? `${trustedPairs} trusted pair(s)` : trustTotal > 0 ? "Reported (blocked/rejected)" : matchedTiles > 0 ? "Ready to verify" : "Awaiting candidates"}
+                </Badge>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="text-muted">Trust Gate decision</span>
+                <Badge tone={trustedPairs > 0 ? "ok" : "neutral"}>
+                  {trustedPairs > 0 ? "Gate open (evidence-based)" : "Gate closed — never fabricated"}
+                </Badge>
+              </li>
+              <li className="flex items-center justify-between gap-3">
                 <span className="text-muted">AI explanatory layer</span>
                 <Badge tone={settings.ai?.configured ? "ok" : "warn"}>
                   {settings.ai?.configured ? "Ready" : "Not configured"}
@@ -380,8 +423,10 @@ export default function Overview({ backend, onNavigate }) {
             ? "This stage executes only on real, validated pairs and is gated by the preceding milestone (M2+). No processing is simulated."
             : modalStage?.state === "complete"
               ? modalStage?.id === "match"
-                ? "M3 candidate correspondences were produced as observations — the independent Trust Gate verification remains NOT_RUN (M4)."
-                : "Validated against the registered pair(s) — raw integrity, metadata checks and M2 PREPARE readiness pass."
+                ? "M3 candidate correspondences were produced as observations — run the M4 Trust Gate in the Analysis workspace to independently verify them."
+                : modalStage?.id === "trust"
+                  ? "M4 Trust Gate produced per-tile geometric verification decisions — TRUSTED tiles are verified spatial evidence for model fitting, not absolute accuracy claims."
+                  : "Validated against the registered pair(s) — raw integrity, metadata checks and M2 PREPARE readiness pass."
               : modalStage?.id === "preprocess"
                 ? "M2 PREPARE ran but stopped transparently — a registered real pair still lacks documented ground geometry for overlap."
                 : modalStage?.id === "match"
@@ -393,7 +438,7 @@ export default function Overview({ backend, onNavigate }) {
       <Modal
         open={lockModal}
         onClose={() => setLockModal(false)}
-        title="Analysis workspace — PREPARE + MATCH"
+        title="Analysis workspace — PREPARE + MATCH + TRUST"
         footer={
           <>
             <button className="btn-ghost" onClick={() => setLockModal(false)}>
@@ -405,10 +450,10 @@ export default function Overview({ backend, onNavigate }) {
           </>
         }
       >
-        <p>M2 PREPARE registers, validates and transforms a pair to the matcher boundary; M3 then runs the adaptive matcher and records candidate correspondences as observations.</p>
+        <p>M2 PREPARE registers, validates and transforms a pair to the matcher boundary; M3 runs the adaptive matcher and records candidate correspondences as observations; M4 then independently verifies them geometrically through the Trust Gate.</p>
         <p className="mt-2">
           {readyInM2 > 0
-            ? "A pair is matcher-ready here, so the full M3 MATCH flow can run now — explainable strategy routing, explicit candidate filters and an honest Trust Gate (M4, closed)."
+            ? "A pair is matcher-ready here, so the full M3 MATCH + M4 TRUST flow can run now — explainable strategy routing, explicit candidate filters and an evidence-based Trust Gate."
             : "Register a validated pair first. M2 PREPARE to the match boundary will then run truthfully — BLOCKED is a first-class outcome."}
         </p>
       </Modal>

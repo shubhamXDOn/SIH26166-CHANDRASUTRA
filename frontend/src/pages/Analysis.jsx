@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Pipeline, { STAGE_STYLE } from "../components/Pipeline.jsx";
 import { Badge, EmptyState, Icon, Modal, PageSkeleton } from "../components/ui.jsx";
 import MatchingPanel from "../components/MatchingPanel.jsx";
+import TrustPanel from "../components/TrustPanel.jsx";
 import { apiGet, apiPost } from "../api.js";
 
 const M2_PIPELINE = [
@@ -39,9 +40,9 @@ const MODULE_PLAN = [
   {
     id: "trust",
     label: "Trust Gate",
-    desc: "Independent verification layer — matcher confidence is never the final truth signal.",
+    desc: "Independent verification layer — matcher confidence is never the final truth signal. Deterministic RANSAC geometry + spatial support + symmetric cross-check.",
     milestone: "M4",
-    implemented: false,
+    implemented: true,
   },
   {
     id: "spatial",
@@ -261,7 +262,8 @@ export default function Analysis({ notify, onNavigate }) {
           overlap evidence, sensor-native crops and per-tile scene conditions. Once preparatory
           readiness is met, M3 runs the <strong className="text-slate-200">adaptive matcher</strong> — an explainable
           per-tile strategy decision, explicit candidate filters and observable correspondences
-          (which remain observations, never verified truth). BLOCKED is a normal
+          (which remain observations, never verified truth). M4 then independently verifies each
+          candidate set geometrically and applies the Trust Gate. BLOCKED is a normal
           result — <strong className="text-slate-200">nothing is simulated and nothing is guessed</strong>.
         </p>
       </section>
@@ -448,6 +450,23 @@ export default function Analysis({ notify, onNavigate }) {
             <Badge tone="gold">MC-M3-001 config</Badge>
           </div>
           <MatchingPanel key={sel} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M4 trust gate workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Trust Gate · M4</h3>
+              <p className="text-xs text-muted">
+                Runs when M3 candidates exist: deterministic geometry verification, spatial support and
+                symmetric cross-check per tile.
+              </p>
+            </div>
+            <Badge tone="gold">TG-M4-001 config</Badge>
+          </div>
+          <TrustPanel key={`${sel}-trust`} pairId={sel} notify={notify} />
         </section>
       )}
 

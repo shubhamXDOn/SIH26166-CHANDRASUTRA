@@ -129,6 +129,32 @@ tile so the reduction from raw matches to the candidate set is fully auditable.
 `POST /api/matching/{pair_id}/reset` deletes the pair's derived matches
 directory; `derived/processing` and the raw data are untouched.
 
+## M4 derived trust outputs (M4)
+
+Running `POST /api/trust/{pair_id}/run` with configuration `TG-M4-001` against
+MATCH outputs writes everything under
+`data/derived/trust/<pair_id>/<processing_config>/<matcher_config>/TG-M4-001/`:
+
+| Artifact | Contents |
+| --- | --- |
+| `trust_status.json` | gate state (NOT_STARTED/BLOCKED/RUNNING/COMPLETE/FAILED), block code, gate verdict, run dir |
+| `trust_manifest.json` | trust configuration + match run inputs + verdict artifacts (relative paths, SHA-256) |
+| `summary.json` | trusted / rejected / failed / processed tile counts + reasons aggregated |
+| `tile_trust.json` | per-tile verdicts: model (type, inlier/outlier counts, residual stats, iterations, seed), spatial diagnostics, symmetric cross-check, reasons |
+| `policies/applied.json` | geometry model-selection + degeneracy + residual + spatial threshold trace |
+
+Trust verdicts are **binary and honest**: a tile is `TRUSTED` only when every
+independent check passes (candidate integrity, geometry model + inliers,
+residual policy, spatial support, zero-degeneracy, symmetric cross-check under
+the threshold). Otherwise it is `REJECTED` / `INSUFFICIENT` / `FAILED` with
+recorded reason codes (`TG_PASS_*` / `TG_BLOCK_*` / `TG_FAIL_*`). The gate is
+`COMPLETE` only if at least one tile is TRUSTED; otherwise `FAILED`. No
+confidence register, accuracy percentage, or probabilistic score is ever
+produced — trust is a verdict, not a float.
+
+`POST /api/trust/{pair_id}/reset` deletes the pair's derived trust directory;
+`derived/matches`, `derived/processing` and the raw data are untouched.
+
 ## Derived-data policy
 
 - `data/derived/` is reproducible: regenerate from raw + config, never edit

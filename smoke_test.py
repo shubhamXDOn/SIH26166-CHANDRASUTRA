@@ -43,7 +43,7 @@ def record(name: str, ok: bool, detail: str) -> None:
 
 
 def main() -> int:
-    print(f"CHANDRASUTRA (SIH26166) M1/M2/M3 smoke test  |  repo root: {REPO_ROOT}")
+    print(f"CHANDRASUTRA (SIH26166) M1/M2/M3/M4 smoke test  |  repo root: {REPO_ROOT}")
     print(f"  Python           : {sys.version.split()[0]}  ({sys.executable})\n")
 
     # ---- 1. Python version ------------------------------------------------
@@ -107,6 +107,9 @@ def main() -> int:
 
     # ---- 5d. M3 endpoints over HTTP ----------------------------------------
     record_m3_backend()
+
+    # ---- 5e. M4 endpoints over HTTP ----------------------------------------
+    record_m4_backend()
 
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
@@ -271,7 +274,7 @@ def record_m1_backend() -> None:
             return
 
         meta = _get_json(f"{base}/meta")
-        record("m1-meta", bool(meta and meta.get("milestone") == "M3"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M4"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
         record(
             "m1-config",
             (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
@@ -454,6 +457,78 @@ def record_m3_backend() -> None:
         record("m3-unknown-run-404", run404 == 404, f"unknown pair matching run -> HTTP {run404}")
     except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
         record("m3-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m4_backend() -> None:
+    """Probe the M4 trust gate endpoints honestly (clean repo -> NOT_STARTED)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M4_PORT": str(port)},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m4-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        meta = _get_json(f"{base}/meta") or {}
+        m4cfg = meta.get("m4_config") or {}
+        record(
+            "m4-meta-config",
+            m4cfg.get("trust_configuration_id") == "TG-M4-001" and "defaults" in m4cfg,
+            f"m4_config={list(m4cfg.keys())}",
+        )
+
+        cfg = _get_json(f"{base}/trust/configurations") or {}
+        cfgs = cfg.get("configurations") or []
+        record(
+            "m4-configurations",
+            bool(cfgs)
+            and cfgs[0].get("trust_configuration_id") == "TG-M4-001"
+            and cfg.get("default_trust_configuration_id") == "TG-M4-001",
+            f"configurations={[c.get('trust_configuration_id') for c in cfgs]}",
+        )
+
+        overview = _get_json(f"{base}/trust/overview") or {}
+        record(
+            "m4-overview-honest-zero",
+            (overview.get("total_trust_pairs") == 0)
+            and (overview.get("trusted_pairs") == 0)
+            and (overview.get("blocked_pairs") == 0),
+            f"overview total={overview.get('total_trust_pairs')} trusted={overview.get('trusted_pairs')}",
+        )
+
+        status404 = _get_status(f"{base}/trust/CS-P999/status")
+        record("m4-unknown-status-404", status404 == 404, f"unknown pair trust status -> HTTP {status404}")
+
+        run404 = _get_status(f"{base}/trust/CS-P999/run", method="POST", payload={"trust_configuration_id": "TG-M4-001"})
+        record("m4-unknown-run-404", run404 == 404, f"unknown pair trust run -> HTTP {run404}")
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m4-backend", False, f"request failed: {exc}")
     finally:
         if proc is not None:
             proc.terminate()

@@ -46,10 +46,10 @@ class Settings(BaseSettings):
     app_name: str = "SIH26166"
     product_name: str = "CHANDRASUTRA"
     tagline: str = "Trustworthy Lunar Image Intelligence"
-    milestone: str = "M3"
+    milestone: str = "M4"
     app_env: str = "development"  # development | production
     app_debug: bool = True
-    app_version: str = "0.2.0"
+    app_version: str = "0.3.0"
 
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
@@ -124,6 +124,7 @@ class PipelineConfig(BaseModel):
     m1: dict[str, Any] = Field(default_factory=dict)
     m2: dict[str, Any] = Field(default_factory=dict)
     m3: dict[str, Any] = Field(default_factory=dict)
+    m4: dict[str, Any] = Field(default_factory=dict)
 
     def model_dump_public(self) -> dict[str, Any]:
         data = self.model_dump()
@@ -156,6 +157,7 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
     raw.setdefault("m1", {})
     raw.setdefault("m2", {})
     raw.setdefault("m3", {})
+    raw.setdefault("m4", {})
     return PipelineConfig(source=str(config_path), **raw)
 
 
@@ -342,6 +344,66 @@ _M3_DEFAULTS: dict[str, Any] = {
         },
     },
 }
+
+
+_M4_DEFAULTS: dict[str, Any] = {
+    "trust_configuration_id": "TG-M4-001",
+    "trust_configuration_version": 1,
+    "name": "Independent Geometric Verification & Trust Gate",
+    "derived_rel": "derived/trust",
+    "defaults": {
+        "candidate_integrity": {"min_usable_candidates": 8},
+        "geometric_model": {
+            "type": "homography",
+            "ransac": {
+                "max_iterations": 2000, "inlier_threshold_px": 3.0,
+                "confidence": 0.995, "seed": 42,
+            },
+        },
+        "acceptance": {
+            "min_inliers": 8, "min_inlier_ratio": 0.3,
+            "max_residual_mean": 10.0, "max_residual_median": 6.0, "max_residual_p95": 15.0,
+        },
+        "spatial": {
+            "grid_cells": 4, "min_occupied_cells": 4, "max_concentration_ratio": 0.6,
+        },
+        "degeneracy": {"min_unique_points": 4, "max_condition_number": 1e6},
+        "cross_check": {"enabled": True, "max_symmetric_transfer_px": 8.0},
+        "execution": {"max_runtime_seconds": 60},
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m4_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M4 settings from configs/app.yaml.
+
+    Mirrors ``m3_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``trust_configuration_id`` is the stable M4 Trust
+    Configuration ID.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m4") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "trust_configuration_id": _M4_DEFAULTS["trust_configuration_id"],
+        "trust_configuration_version": _M4_DEFAULTS["trust_configuration_version"],
+        "name": _M4_DEFAULTS["name"],
+        "derived_rel": _M4_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M4_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
 
 
 def _deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:

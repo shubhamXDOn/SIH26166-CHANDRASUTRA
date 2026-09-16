@@ -9,7 +9,9 @@ export default function Results() {
           Registration outcomes, matched-candidate observations, Trust Gate states and metrics will
           be reported here — only from real experiments, never fabricated or edited by hand. M3
           records <strong className="text-slate-200">candidate correspondences as observations</strong>; how many
-          survive explicit filtering, which strategy was routed and why. None of it is a trust verdict.
+          survive explicit filtering, which strategy was routed and why. M4 then applies the{" "}
+          <strong className="text-slate-200">Trust Gate</strong> — deterministic geometric verification — and
+          either accepts a tile as verified spatial evidence or rejects it with structured reasons.
         </p>
       </section>
 
@@ -28,14 +30,18 @@ export default function Results() {
           </p>
         </div>
         <div className="card p-5">
-          <Badge tone="warn">M4 · Trust Gate (closed)</Badge>
+          <Badge tone="ok">M4 · Trust Gate (open)</Badge>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Independent geometric verification of the candidate sets is <strong className="text-slate-200">NOT_RUN</strong>.
-            Until the Trust Gate executes, no accuracy or confidence metric is produced, displayed or
-            claimed anywhere.
+            Candidate sets are independently verified with deterministic RANSAC geometry, spatial
+            support and a symmetric cross-check. Every tile ends in a first-class state:{" "}
+            <span className="mx-1 font-mono text-[11px] text-ok">TRUSTED</span>
+            <span className="mx-1 font-mono text-[11px] text-danger">REJECTED</span>
+            <span className="mx-1 font-mono text-[11px] text-warn">INSUFFICIENT</span> or{" "}
+            <span className="mx-1 font-mono text-[11px] text-orbit-300">NOT_RUN</span>.
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            A closed Trust Gate is a first-class state — shown as such in the Analysis workspace.
+            TRUSTED means verified spatial evidence for model fitting — it is still not final registration
+            geometry. Registration (M6) remains locked until implemented.
           </p>
         </div>
         <div className="card p-5">
