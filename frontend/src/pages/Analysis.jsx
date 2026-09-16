@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import Pipeline, { STAGE_STYLE } from "../components/Pipeline.jsx";
 import { Badge, EmptyState, Icon, Modal, PageSkeleton } from "../components/ui.jsx";
+import MatchingPanel from "../components/MatchingPanel.jsx";
 import { apiGet, apiPost } from "../api.js";
 
 const M2_PIPELINE = [
@@ -23,17 +24,17 @@ const MODULE_PLAN = [
   },
   {
     id: "matcher",
-    label: "Matcher adapter interface",
-    desc: "Uniform adapters over existing baselines (SIFT, AKAZE, and deep matchers in later milestones).",
-    milestone: "M2",
-    implemented: false,
+    label: "Matcher adapters",
+    desc: "Uniform adapters over classical (SIFT) and robust (ORB) local matchers; deep matchers declared-but-unavailable in this build.",
+    milestone: "M3",
+    implemented: true,
   },
   {
     id: "routing",
     label: "Adaptive routing",
-    desc: "Condition-informed choice of matcher strategy instead of a single blind default.",
+    desc: "Condition-informed, explainable choice of matcher strategy instead of a single blind default. Routing is a what-to-try decision, never a quality verdict.",
     milestone: "M3",
-    implemented: false,
+    implemented: true,
   },
   {
     id: "trust",
@@ -257,7 +258,10 @@ export default function Analysis({ notify, onNavigate }) {
         <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">Analysis workspace</h2>
         <p className="text-sm leading-relaxed text-muted">
           M2 executes a reproducible PREPARE run: raw-integrity re-verification, invalid-data masks,
-          overlap evidence, sensor-native crops and per-tile scene conditions. BLOCKED is a normal
+          overlap evidence, sensor-native crops and per-tile scene conditions. Once preparatory
+          readiness is met, M3 runs the <strong className="text-slate-200">adaptive matcher</strong> — an explainable
+          per-tile strategy decision, explicit candidate filters and observable correspondences
+          (which remain observations, never verified truth). BLOCKED is a normal
           result — <strong className="text-slate-200">nothing is simulated and nothing is guessed</strong>.
         </p>
       </section>
@@ -428,6 +432,22 @@ export default function Analysis({ notify, onNavigate }) {
               ? "This realization used a SOFTWARE-TEST fixture geometry — it validates the engine, not the Moon."
               : "No real ground geometry is available; the run stopped before any overlap claim."}
           </p>
+        </section>
+      )}
+
+      {/* M3 matcher workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Matcher intelligence · M3</h3>
+              <p className="text-xs text-muted">
+                Runs when M2 readiness is met: adaptive strategy routing then candidate localisation.
+              </p>
+            </div>
+            <Badge tone="gold">MC-M3-001 config</Badge>
+          </div>
+          <MatchingPanel key={sel} pairId={sel} notify={notify} />
         </section>
       )}
 

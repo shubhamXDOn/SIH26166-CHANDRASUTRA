@@ -136,3 +136,81 @@ def write_extra_product(root: Path, fixture: dict, *, stem: str | None = None,
     clone["product_id"] = f"urn:fixture:ch2:{stem}"
     img, lab = _write_product(root, clone, seed=3)
     return img, lab
+
+
+CORRELATED_OHRC = {**OHRC_FIXTURE, "lines": 700, "samples": 520}
+CORRELATED_TMC2 = {**TMC2_FIXTURE, "lines": 700, "samples": 540}
+
+
+def _synthetic_scene_rows(size: int = 800, cols: int = 650, seed: int = 5) -> np.ndarray:
+    """A deterministic, structured synthetic lunar-like scene (0..1 float).
+
+    Low-frequency terrain + high-contrast craters; resolution 1 px = 0.5 m.
+    Both sensors sample the *same* scene through different sub-windows, so M3
+    matching can genuinely localise candidate correspondences — for SOFTWARE
+    validation only, never as real imagery.
+    """
+    rng = np.random.default_rng(seed)
+    coarse = rng.uniform(0.15, 0.85, size=(40, 36))
+    rows_i = np.linspace(0, coarse.shape[0] - 1, size)
+    cols_i = np.linspace(0, coarse.shape[1] - 1, cols)
+    base = np.clip(interp2d(coarse, rows_i, cols_i), 0.15, 0.85)
+
+    rng2 = np.random.default_rng(seed + 1)
+    for _ in range(seed % 7 + 5):
+        cx = rng2.integers(0, cols)
+        cy = rng2.integers(0, size)
+        r = rng2.uniform(6, 40)
+        yy, xx = np.mgrid[0:size, 0:cols]
+        dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+        rim = np.logical_and(dist >= r * 0.85, dist <= r * 1.1)
+        floor = dist <= r * 0.85
+        base[rim] = np.minimum(base[rim] + 0.18, 0.99)
+        base[floor] = np.maximum(base[floor] - 0.22, 0.03)
+
+    # gentle radiometric gradient across the sensor (sensor response, not truth)
+    grad = (np.arange(size)[:, None] / size) * 0.05
+    return np.clip(base + grad, 0.03, 0.99)
+
+
+def interp2d(grid: np.ndarray, rows_i: np.ndarray, cols_i: np.ndarray) -> np.ndarray:
+    """Bilinear interpolation of a coarse float grid to a dense (rows, cols) map."""
+    r_idx = np.clip(rows_i[:, None].astype(np.int64), 0, grid.shape[0] - 2)
+    c_idx = np.clip(cols_i[None, :].astype(np.int64), 0, grid.shape[1] - 2)
+    wa = rows_i[:, None] - r_idx
+    wb = cols_i[None, :] - c_idx
+    top = grid[r_idx, c_idx] * (1 - wb) + grid[r_idx, c_idx + 1] * wb
+    bot = grid[r_idx + 1, c_idx] * (1 - wb) + grid[r_idx + 1, c_idx + 1] * wb
+    return top * (1 - wa) + bot * wa
+
+
+def write_correlated_fixtures(root: Path) -> dict:
+    """Overwrite the standard fixture products with a correlated synthetic pair.
+
+    Scene windows:
+        OHRC (700x520) samples scene rows [50:750), cols [50:570)
+        TMC2 (700x540) samples scene rows [25:725), cols [25:565)
+    so the shared ground region carries genuinely corresponding features
+    (pure translation, matching is scale-neutral here), heavily labelled
+    TEST FIXTURE / SYNTHETIC.
+    """
+    scene = _synthetic_scene_rows(size=800, cols=650, seed=5)
+    ohrc_img = (scene[50:50 + CORRELATED_OHRC["lines"], 50:50 + CORRELATED_OHRC["samples"]] * 65535).astype(np.uint16)
+    tmc2_img = (scene[25:25 + CORRELATED_TMC2["lines"], 25:25 + CORRELATED_TMC2["samples"]] * 65535).astype(np.uint16)
+
+    rng_a = np.random.default_rng(11)
+    rng_b = np.random.default_rng(29)
+    ohrc_img = np.clip(ohrc_img.astype(np.int64) + rng_a.normal(0, 350, ohrc_img.shape).astype(np.int64), 0, 65535).astype(np.uint16)
+    tmc2_img = np.clip(tmc2_img.astype(np.int64) + 4000 + rng_b.normal(0, 700, tmc2_img.shape).astype(np.int64), 0, 65535).astype(np.uint16)
+
+    def write(fixture: dict, data: np.ndarray) -> tuple[Path, Path]:
+        img = root / fixture["dir"] / f"{fixture['stem']}.img"
+        lab = root / fixture["dir"] / f"{fixture['stem']}.xml"
+        img.parent.mkdir(parents=True, exist_ok=True)
+        img.write_bytes(data.astype(">u2").tobytes())
+        lab.write_text(_label_xml(fixture), encoding="utf-8")
+        return img, lab
+
+    img_a, lab_a = write(CORRELATED_OHRC, ohrc_img)
+    img_b, lab_b = write(CORRELATED_TMC2, tmc2_img)
+    return {"ohrc_img": img_a, "ohrc_label": lab_a, "tmc2_img": img_b, "tmc2_label": lab_b}

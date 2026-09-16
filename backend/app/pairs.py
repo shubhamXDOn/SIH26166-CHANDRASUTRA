@@ -516,6 +516,7 @@ def write_validation_record(payload: dict, settings: Settings) -> Path:
     import json
 
     target = settings.data_root_path / "metadata" / "pair_validation.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     tmp.replace(target)

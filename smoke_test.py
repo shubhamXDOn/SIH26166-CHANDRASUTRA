@@ -43,7 +43,7 @@ def record(name: str, ok: bool, detail: str) -> None:
 
 
 def main() -> int:
-    print(f"CHANDRASUTRA (SIH26166) M1 smoke test  |  repo root: {REPO_ROOT}")
+    print(f"CHANDRASUTRA (SIH26166) M1/M2/M3 smoke test  |  repo root: {REPO_ROOT}")
     print(f"  Python           : {sys.version.split()[0]}  ({sys.executable})\n")
 
     # ---- 1. Python version ------------------------------------------------
@@ -104,6 +104,9 @@ def main() -> int:
 
     # ---- 5c. M2 endpoints over HTTP ----------------------------------------
     record_m2_backend()
+
+    # ---- 5d. M3 endpoints over HTTP ----------------------------------------
+    record_m3_backend()
 
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
@@ -268,7 +271,7 @@ def record_m1_backend() -> None:
             return
 
         meta = _get_json(f"{base}/meta")
-        record("m1-meta", bool(meta and meta.get("milestone") == "M2"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M3"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
         record(
             "m1-config",
             (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
@@ -377,6 +380,80 @@ def record_m2_backend() -> None:
         record("m2-unknown-prepare-404", prep404 == 404, f"unknown pair prepare -> HTTP {prep404}")
     except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
         record("m2-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m3_backend() -> None:
+    """Probe the M3 matching endpoints honestly (clean repo -> BLOCKED)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M3_PORT": str(port)},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m3-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        meta = _get_json(f"{base}/meta") or {}
+        m3cfg = meta.get("m3_config") or {}
+        record(
+            "m3-meta-config",
+            m3cfg.get("configuration_id") == "MC-M3-001" and "defaults" in m3cfg,
+            f"m3_config={list(m3cfg.keys())}",
+        )
+
+        cfg = _get_json(f"{base}/matching/configurations") or {}
+        cfgs = cfg.get("configurations") or []
+        strategies = (cfgs[0].get("display_only") or {}).get("strategies") or [] if cfgs else []
+        by_id = {s.get("strategy"): s for s in strategies}
+        record(
+            "m3-configurations",
+            bool(cfgs)
+            and cfgs[0].get("configuration_id") == "MC-M3-001"
+            and cfg.get("default_configuration_id") == "MC-M3-001"
+            and by_id.get("sift", {}).get("available") is True
+            and by_id.get("deep_optional", {}).get("available") is False,
+            f"configurations={[c.get('configuration_id') for c in cfgs]} strategies={sorted(by_id)}",
+        )
+
+        overview = _get_json(f"{base}/matching/overview") or {}
+        record(
+            "m3-overview-honest-zero",
+            (overview.get("pairs") == []) and (overview.get("blocked") is True) and "BLOCKED" in (overview.get("reason") or ""),
+            f"overview blocked={overview.get('blocked')} reason={(overview.get('reason') or '')[:80]}",
+        )
+
+        status404 = _get_status(f"{base}/matching/CS-P999/status")
+        record("m3-unknown-status-404", status404 == 404, f"unknown pair matching status -> HTTP {status404}")
+
+        run404 = _get_status(f"{base}/matching/CS-P999/run", method="POST", payload={"configuration_id": "MC-M3-001"})
+        record("m3-unknown-run-404", run404 == 404, f"unknown pair matching run -> HTTP {run404}")
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m3-backend", False, f"request failed: {exc}")
     finally:
         if proc is not None:
             proc.terminate()

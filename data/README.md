@@ -103,6 +103,32 @@ Running `POST /api/processing/{pair_id}/prepare` with configuration
 `POST /api/processing/{pair_id}/reset` deletes the pair's derived processing
 directory; raw data and the registry records are left untouched.
 
+## M3 derived matching outputs (M3)
+
+Running `POST /api/matching/{pair_id}/run` with configuration `MC-M3-001`
+against a PREPARE-ready pair writes everything under
+`data/derived/matches/<pair_id>/<processing_config>/MC-M3-001/`:
+
+| Artifact | Contents |
+| --- | --- |
+| `matching_status.json` | run state, run log + per-stage status, blocked code, progress, per-tile attempts |
+| `matching_manifest.json` | configuration + processing inputs + candidate artifacts (relative paths, SHA-256) |
+| `summary.json` | tiles matched, total candidates, strategy counts, outcome counts |
+| `strategy/decisions.json` | per-tile routing decision: measured conditions, per-strategy scores, selected strategy |
+| `candidates/candidates.json` | candidate index across match tiles (outcome, strategy, counts, diagnostics) |
+| `candidates/<mid>.npz` | candidate points on both windows + matcher score + descriptor distance + feature scale/orientation |
+| `candidates/<mid>.json` | per-tile summary + decision + "not a verdict" note |
+| `events/<mid>.json` | per-attempt runtime events (per m3 event stream) |
+
+Candidate sets are **observations**, never verdicts: independent geometric
+verification and the resulting trust state are **NOT_RUN (M4 Trust Gate)**, and
+no accuracy/confidence value is produced or stored. Filter counts
+(`mask / border / non-finite / duplicate / candidate set`) are recorded per
+tile so the reduction from raw matches to the candidate set is fully auditable.
+
+`POST /api/matching/{pair_id}/reset` deletes the pair's derived matches
+directory; `derived/processing` and the raw data are untouched.
+
 ## Derived-data policy
 
 - `data/derived/` is reproducible: regenerate from raw + config, never edit

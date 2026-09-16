@@ -29,6 +29,7 @@ export default function Data({ notify, onNavigate }) {
   const [detail, setDetail] = useState(null);
   const [validation, setValidation] = useState(null);
   const [processing, setProcessing] = useState(null);
+  const [matching, setMatching] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -84,10 +85,17 @@ export default function Data({ notify, onNavigate }) {
       } catch {
         /* processing not staged */
       }
+      let mat = null;
+      try {
+        mat = await apiGet(`/matching/${pairId}/status`);
+      } catch {
+        /* matching not staged */
+      }
       setSelected(pairId);
       setDetail(det);
       setValidation(val);
       setProcessing(proc);
+      setMatching(mat);
     } catch (e) {
       notify({ title: "Could not open pair", message: e.message, tone: "danger" });
     }
@@ -253,7 +261,7 @@ export default function Data({ notify, onNavigate }) {
       </section>
 
       {/* C+D+E. PAIR DETAIL */}
-      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} onValidate={runValidate} onNavigate={onNavigate} />}
+      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} onValidate={runValidate} onNavigate={onNavigate} />}
 
       {/* Ingestion wizard */}
       {wizard && (
@@ -291,7 +299,7 @@ function OverlapBadge({ value }) {
 /* Pair inspection workspace                                           */
 /* ------------------------------------------------------------------ */
 
-function PairInspection({ detail, validation, processing, onValidate, onNavigate }) {
+function PairInspection({ detail, validation, processing, matching, onValidate, onNavigate }) {
   const r = detail.record;
   const comp = detail.completeness;
   const overlap = validation?.overlap ?? { status: r.overlap_status, evidence: r.overlap_evidence || "No evidence recorded." };
@@ -299,6 +307,8 @@ function PairInspection({ detail, validation, processing, onValidate, onNavigate
   const pState = processing?.state ?? "NOT_STARTED";
   const pLevel = processing?.matcher_readiness?.level ?? null;
   const pBlocked = processing?.blocked ?? null;
+  const mState = matching?.state ?? "NOT_STARTED";
+  const mRun = matching?.summary ?? null;
 
   const checks = validation?.checks ?? [];
   const integrity = {
@@ -346,15 +356,18 @@ function PairInspection({ detail, validation, processing, onValidate, onNavigate
       <div className="card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h4 className="text-sm font-bold text-slate-100">M2 preprocessing readiness</h4>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={pState === "READY_FOR_MATCHING" ? "ok" : pState === "BLOCKED" ? "warn" : "neutral"}>
-              <StatusDot state={pState === "READY_FOR_MATCHING" ? "ok" : pState === "BLOCKED" ? "warn" : "info"} /> {pState}
-            </Badge>
-            {pLevel && <Badge tone={pLevel === "READY" || pLevel === "CONDITIONAL" ? "ok" : "warn"}>Matcher {pLevel}</Badge>}
-            <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onNavigate?.("analysis")}>
-              <Icon.Activity className="h-3.5 w-3.5" /> Open in Analysis
-            </button>
-          </div>
+<div className="flex flex-wrap items-center gap-2">
+          <Badge tone={pState === "READY_FOR_MATCHING" ? "ok" : pState === "BLOCKED" ? "warn" : "neutral"}>
+            <StatusDot state={pState === "READY_FOR_MATCHING" ? "ok" : pState === "BLOCKED" ? "warn" : "info"} /> {pState}
+          </Badge>
+          {pLevel && <Badge tone={pLevel === "READY" || pLevel === "CONDITIONAL" ? "ok" : "warn"}>Matcher {pLevel}</Badge>}
+          <Badge tone={mState === "COMPLETE" ? "ok" : mState === "BLOCKED" ? "warn" : mState === "RUNNING" ? "blue" : "neutral"}>
+            M3 {mState} {mRun ? `· ${mRun.total_candidates ?? 0} candidates` : ""}
+          </Badge>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onNavigate?.("analysis")}>
+            <Icon.Activity className="h-3.5 w-3.5" /> Open in Analysis
+          </button>
+        </div>
         </div>
 
         {pBlocked ? (
@@ -451,13 +464,14 @@ function PairInspection({ detail, validation, processing, onValidate, onNavigate
         </div>
       </div>
 
-      <div className="card p-4">
+<div className="card p-4">
         <p className="flex items-start gap-2 text-xs leading-relaxed text-muted">
-          <Icon.Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orbit-400" />
+          <Icon.Info className="mt-0.5 h-3.5 w-3.5 text-orbit-400" />
           <span>
-            {r.pair_id} is registered and its raw products are hashed. Scientific matching,
-            registration and quantitative results are <strong className="text-slate-200">NOT_RUN</strong> in M1 —
-            the pipeline reports them only once M2+ actually executes.
+            {r.pair_id} is registered and its raw products are hashed. M3 candidate correspondences,
+            when produced, are raw observations — independent geometric verification and the resulting
+            trust state are <strong className="text-slate-200">NOT_RUN (M4 Trust Gate)</strong> and carry no
+            accuracy/trust verdict until that gate actually executes.
           </span>
         </p>
       </div>

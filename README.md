@@ -7,14 +7,15 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M2 — Preprocessing & Scene Conditioning.** The PREPARE
-> pipeline (re-verified raw integrity, invalid-data masks, sensor-native
-> overlap/crops with calculated evidence, per-tile condition analysis, matcher
-> readiness) and the Analysis workspace are **DONE** and fully tested.
-> Acquisition of the first real OHRC–TMC-2 pair is **BLOCKED** on official
-> PRADAN account approval (no anonymous downloads), so M2 honestly reports a
-> BLOCKED overview on the live app; nothing is fabricated. Scientific matching
-> starts at M3.
+> **Current milestone: M3 — Adaptive Matcher Strategy Selection & Candidate
+> Correspondences.** The MATCH pipeline (matcher adapters, condition-aware
+> strategy routing, explicit recorded candidate filtering, candidate
+> correspondences as observations) and the Matching workspace are **DONE** and
+> fully tested (99 backend tests, 39/39 smoke checks, 872 candidates on the
+> correlated e2e fixture). Acquisition of the first real OHRC–TMC-2 pair is
+> still **BLOCKED** on official PRADAN account approval, so M3 honestly reports
+> a BLOCKED overview on the live app; nothing is fabricated and the independent
+> Trust Gate stays truthfully **NOT_RUN (M4)**.
 
 ---
 
@@ -76,13 +77,14 @@ ABSTAIN when evidence is insufficient).
 | M0        | Reproducible env, app shell, foundations      | **DONE** (committed) |
 | M1        | Real OHRC–TMC-2 data intake & metadata        | **DONE (engineering)** — real download BLOCKED on PRADAN approval, see `reports/M1_REPORT.md` |
 | M2        | Preprocessing, overlap/crops, condition analysis, matcher readiness | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M2_REPORT.md`) |
-| M3+       | Matcher adapters, adaptive strategy           | pending |
-| M4+       | Trust Gate, spatial reliability, registration | pending |
+| M3        | Matcher adapters & adaptive strategy, candidate correspondences | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M3_REPORT.md`) |
+| M4        | Trust Gate, spatial reliability, registration | pending |
 | M5–M12    | Metrics, benchmarks, AI assistance, hardening | pending |
 
 Milestone reports: `reports/M0_REPORT.md` (foundation),
-`reports/M1_REPORT.md` (real data & metadata), and
-`reports/M2_REPORT.md` (preprocessing & scene conditioning).
+`reports/M1_REPORT.md` (real data & metadata),
+`reports/M2_REPORT.md` (preprocessing & scene conditioning), and
+`reports/M3_REPORT.md` (adaptive matcher & candidate correspondences).
 
 ## Setup (backend)
 
@@ -135,6 +137,15 @@ Key endpoints (all under `/api`):
 | `GET /processing/{id}/manifest` | provenance hash manifest |
 | `GET /processing/{id}/conditions` | per-tile condition distribution |
 | `GET /processing/{id}/tiles` | tile list + indicators (`/tiles/{tile}/preview` = PNG) |
+| `GET /matching/configurations` | available matcher configurations (`MC-M3-001`) |
+| `GET /matching/overview` | M3 aggregate — honestly BLOCKED until a validated real pair exists |
+| `POST /matching/{id}/run` | run MATCH (routing → matchers → candidate filters) |
+| `GET /matching/{id}/status` | MATCH run state + summary + blocked code |
+| `POST /matching/{id}/reset` | wipe `derived/matches/<pair>` (raw + M2 untouched) |
+| `GET /matching/{id}/manifest` | matching provenance manifest (relative paths + SHA-256) |
+| `GET /matching/{id}/decisions` | per-tile routing decisions |
+| `GET /matching/{id}/candidates` | candidate-correspondence index (observations) |
+| `GET /matching/{id}/tiles[...]/candidates` | per-tile candidate points + distance + score |
 | `GET /auth/status`   | authentication foundation status (no fake login)   |
 | `GET /ai/status`     | AI service status (NOT_CONFIGURED without a key)   |
 
@@ -191,7 +202,17 @@ processing, manifest relative-only paths + SHA-256, tiles/conditions/preview
 endpoints, reset, `NO_GEOMETRY` / `NO_OVERLAP` / `NO_GSD` blocks, mask
 bitflags, display normalization, condition determinism + `UNKNOWN`, overlap
 slicing, overview honest-BLOCKED, route wiring, and M2 endpoint behaviour.
-The environment smoke test runs **34 checks** over a live HTTP stack
+The M3 suite adds: matcher configuration + rejection, configurations endpoint
+(dynamic availability), adapter capability matrix, SIFT/ORB shifted-window
+correspondences, mask steering, adaptive engine selection vs condition + scale
+gap, unavailable/constraint recording, determinism + `final_confidence` absence,
+candidate filter counts/ordering, mask/border/duplicate rejection, honest
+INSUFFICIENT_CANDIDATES / MATCHER_FAILED / NO_FEATURES / TIMEOUT outcomes,
+artifact roundtrip + "not a verdict" licensing, the full MATCH lifecycle to
+COMPLETE with the derived layout, manifest relative-only + SHA-256, BLOCK /
+404 / 422 paths, reset scoping, and bug-hunt regressions (non-finite rejection,
+path-traversal guard, zero-dims border skip). The environment smoke test runs
+**39 checks** over a live HTTP stack
 (backend endpoints, frontend render, vite proxy).
 
 ## Repository structure
@@ -210,17 +231,19 @@ CHANDRASUTRA/
 │       ├── loader.py       M1 PDS4 parser + CH-2 product loader/previews
 │       ├── pairs.py        M1 pair registry + validation domain
 │       ├── processing/     M2 PREPARE engine (masks, overlap, crops, conditions, manifest)
+│       ├── matching/       M3 MATCH engine (adapters, routing, candidates, manifest)
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, meta, data, pairs, processing, auth, ai routers
+│       └── api/            health, meta, data, pairs, processing, matching, auth, ai routers
 ├── frontend/           React + Vite + Tailwind UI
-│   └── src/components, src/pages        (incl. Analysis workspace — M2)
-├── configs/app.yaml    engineering defaults + m1/m2 sections (no scientific thresholds)
+│   └── src/components, src/pages        (incl. Analysis workspace — M2/M3)
+├── configs/app.yaml    engineering defaults + m1/m2/m3 sections (no scientific thresholds)
 ├── data/               raw (immutable) / derived (reproducible) — see data/README.md
 │   ├── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
-│   └── derived/processing/   per-pair PREPARE outputs (M2: status, manifest, masks, crops, conditions)
-├── tests/              pytest suite (incl. test_m1.py, test_m2.py + fixturegen.py)
-├── reports/            milestone reports (M0_REPORT.md, M1_REPORT.md, M2_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test (M1 + M2 checks, 34 total)
+│   ├── derived/processing/   per-pair PREPARE outputs (M2: status, manifest, masks, crops, conditions)
+│   └── derived/matches/      per-pair MATCH outputs (M3: status, manifest, decisions, candidates)
+├── tests/              pytest suite (incl. test_m1.py, test_m2.py, test_m3.py + fixturegen.py)
+├── reports/            milestone reports (M0_REPORT.md, M1_REPORT.md, M2_REPORT.md, M3_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + M3 checks, 39 total)
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -258,8 +281,7 @@ see `reports/M1_REPORT.md`).
 | M0 | **Foundation**: env, backend, premium UI, config, logging, tests — DONE |
 | M1 | **Real data intake & metadata validation** — engineering DONE; first real OHRC–TMC-2 pair BLOCKED on PRADAN approval |
 | M2 | **Preprocessing & scene conditioning** (masks, overlap, crops, conditions, matcher readiness) — engineering DONE; real-data execution BLOCKED, see `reports/M2_REPORT.md` |
-| M3 | Matcher adapters (baselines) & adaptive strategy selection            |
-| M3 | Adaptive routing & matcher strategy selection                     |
+| M3 | **Matcher adapters & adaptive strategy selection, candidate correspondences** — engineering DONE; real-data execution BLOCKED, see `reports/M3_REPORT.md` |
 | M4 | Trust Gate — independent verification                            |
 | M5 | Spatial reliability / spatial selection                          |
 | M6 | Registration (homography/affine) + diagnostics                   |
@@ -297,6 +319,10 @@ see `reports/M1_REPORT.md`).
 - M2 ends at the **matcher-readiness contract**: preprocessing, overlap/crops,
   condition analysis and readiness are real, but no correspondences are
   produced; scientific matching starts at M3.
+- M3 produces **candidate correspondences as observations** — condition-aware
+  strategy routing and explicit candidate filters are real, but nothing is a
+  trust verdict: the independent Trust Gate remains **NOT_RUN (M4)** until it
+  actually executes, and no accuracy/confidence metric is produced or shown.
 - No OHRC–TMC-2 pair is downloaded or registered yet: official downloads require
   a PRADAN account with administrator approval (see `reports/M1_REPORT.md` for
   the exact blocker and unblocking steps). The registry and the M2 overview are

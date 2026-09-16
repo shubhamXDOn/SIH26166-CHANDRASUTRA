@@ -66,7 +66,7 @@ function Shell() {
           <div className="flex items-center gap-3">
             <span className="hidden items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] font-medium text-muted md:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-orbit-400" />
-              M2 · Preprocessing &amp; Scene Conditioning
+              M3 · Adaptive Matcher Intelligence
             </span>
             <button
               onClick={() => {

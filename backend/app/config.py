@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     app_name: str = "SIH26166"
     product_name: str = "CHANDRASUTRA"
     tagline: str = "Trustworthy Lunar Image Intelligence"
-    milestone: str = "M2"
+    milestone: str = "M3"
     app_env: str = "development"  # development | production
     app_debug: bool = True
     app_version: str = "0.2.0"
@@ -123,6 +123,7 @@ class PipelineConfig(BaseModel):
     engineering_defaults_placeholder: dict[str, Any] = Field(default_factory=dict)
     m1: dict[str, Any] = Field(default_factory=dict)
     m2: dict[str, Any] = Field(default_factory=dict)
+    m3: dict[str, Any] = Field(default_factory=dict)
 
     def model_dump_public(self) -> dict[str, Any]:
         data = self.model_dump()
@@ -154,6 +155,7 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
     raw.setdefault("engineering_defaults_placeholder", {})
     raw.setdefault("m1", {})
     raw.setdefault("m2", {})
+    raw.setdefault("m3", {})
     return PipelineConfig(source=str(config_path), **raw)
 
 
@@ -197,8 +199,6 @@ def m1_config(path: Path | None = None) -> dict[str, Any]:
 def m2_config(path: Path | None = None) -> dict[str, Any]:
     """Engineering (non-scientific) M2 settings from configs/app.yaml.
 
-    Mirrors ``m1_config``: cached per process, falls back to documented
-    defaults when the YAML is unavailable, and never raises on parse.
     The embedded ``configuration_id`` is the stable M2 Configuration ID.
     """
     config_path = path or CONFIG_FILE_DEFAULT
@@ -261,6 +261,84 @@ _M2_DEFAULTS: dict[str, Any] = {
                 "raw_integrity_ok", "preprocess_ok", "overlap_valid",
                 "tiles_generated", "tiles_usable", "condition_evaluated",
             ]
+        },
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m3_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M3 settings from configs/app.yaml.
+
+    Mirrors ``m2_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``configuration_id`` is the stable M3 Matcher
+    Configuration ID.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m3") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "configuration_id": _M3_DEFAULTS["configuration_id"],
+        "configuration_version": _M3_DEFAULTS["configuration_version"],
+        "name": _M3_DEFAULTS["name"],
+        "derived_rel": _M3_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M3_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M3_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "MC-M3-001",
+    "configuration_version": 1,
+    "name": "Adaptive Matcher Strategy Selection & Candidate Correspondences",
+    "derived_rel": "derived/matches",
+    "defaults": {
+        "execution": {
+            "max_runtime_seconds": 45, "max_features": 4000,
+            "max_tile_area_px": 400000, "border_margin_px": 4,
+        },
+        "minimum_candidates": 8,
+        "fallback": {"enabled": True, "max_attempts": 2},
+        "sift": {
+            "detector": {"nfeatures": 2000, "contrast_threshold": 0.04, "edge_threshold": 10, "sigma": 1.6},
+            "matching": {"cross_check": True, "ratio_threshold": 0.8, "max_distance": 350},
+        },
+        "orb": {
+            "detector": {"nfeatures": 2000, "scale_factor": 1.2, "nlevels": 8, "edge_threshold": 31, "fast_threshold": 20},
+            "matching": {"cross_check": True, "ratio_threshold": 0.85, "max_distance": 60},
+        },
+        "routing": {
+            "scoring": {
+                "classical_local": {
+                    "base": 0.5, "texture_normal": 0.25, "texture_high": 0.1,
+                    "valid_fraction": 0.2, "scale_gap_small": 0.1,
+                    "scale_gap_medium": 0.0, "scale_gap_large": -0.3,
+                },
+                "robust_local": {
+                    "base": 0.5, "texture_low": 0.2, "texture_high": 0.15,
+                    "contrast_high": 0.15, "valid_fraction": 0.15,
+                    "scale_gap_large": 0.15, "scale_gap_medium": 0.05,
+                },
+                "deep_optional": {
+                    "base": 0.6, "texture_normal": 0.1, "scale_gap_large": 0.1,
+                },
+            },
+            "constraints": {
+                "classical_local": {"min_valid_fraction": 0.3},
+                "robust_local": {"min_valid_fraction": 0.15},
+                "deep_optional": {"requires_availability": True},
+            },
         },
     },
 }
