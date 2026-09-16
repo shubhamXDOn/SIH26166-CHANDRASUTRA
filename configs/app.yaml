@@ -234,6 +234,39 @@ m4:
     execution:
       max_runtime_seconds: 60
 
+m5:
+  spatial_reliability_configuration_id: "SR-M5-001"
+  spatial_reliability_configuration_version: 1
+  name: "Spatial Reliability & Reliability-Aware Selection"
+  source_reference: "SIH26166 M5 spec - engineering/policy defaults; no scientifically calibrated lunar thresholds."
+  derived_rel: "derived/spatial"
+  defaults:
+    coordinate_space: "pair_overlap_normalized"
+    grid:
+      rows: 8
+      cols: 8
+      edge_tolerance_px: 0.5
+    reliability:
+      min_verified_inliers_per_cell: 4
+      min_trusted_tiles_per_cell: 1
+    neighborhood:
+      support_radius_cells: 1
+    fragmentation:
+      enabled: true
+    boundary:
+      edge_policy: "REPORT_ONLY"
+    connected_components:
+      connectivity: 8
+    selection:
+      mode: "SUPPORTED_REGION"
+      min_component_cells: 4
+      min_component_correspondences: 16
+      min_selected_region_cells: 4
+      max_selected_correspondences: 4000
+      deterministic_ordering: "largest_evidence_first"
+    execution:
+      max_runtime_seconds: 60
+
 # ------------------------------------------------------------
 # Engineering defaults — placeholders to be replaced by real
 # experiment-tuned parameters in later milestones. They carry no

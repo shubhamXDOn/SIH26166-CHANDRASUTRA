@@ -28,6 +28,7 @@ DATA_TREE: dict[str, tuple[str, str]] = {
     "derived_crops": ("derived/crops", "Overlap-confirmed crops/tiles used for matching"),
     "derived_matches": ("derived/matches", "Matcher outputs and candidate correspondences"),
     "derived_trust": ("derived/trust", "Trust gate verification results and trusted correspondences (M4)"),
+    "derived_spatial": ("derived/spatial", "Spatial reliability mapping, cell evidence, connected components and registration-ready selection (M5)"),
     "derived_registrations": ("derived/registrations", "Registration models and overlays"),
     "derived_visualizations": ("derived/visualizations", "Report-ready figures and overlays"),
 }

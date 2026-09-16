@@ -6,6 +6,7 @@ export const PIPELINE = [
   { id: "preprocess", label: "Preprocess", desc: "Safe radiometric & geometric" },
   { id: "match", label: "Match", desc: "Correspondence search" },
   { id: "trust", label: "Trust", desc: "Adaptive reliability gate" },
+  { id: "reliability", label: "Reliability", desc: "Spatial selection" },
   { id: "register", label: "Register", desc: "Spatial model" },
   { id: "report", label: "Report", desc: "Metrics & visualization" },
 ];
@@ -58,7 +59,7 @@ export const STAGE_STYLE = {
 export default function Pipeline({ stages, onStageClick }) {
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
         {stages.map((stage, i) => {
           const style = STAGE_STYLE[stage.state] ?? STAGE_STYLE.locked;
           const running = stage.state === "running";

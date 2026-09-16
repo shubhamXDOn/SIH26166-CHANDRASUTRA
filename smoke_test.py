@@ -111,6 +111,9 @@ def main() -> int:
     # ---- 5e. M4 endpoints over HTTP ----------------------------------------
     record_m4_backend()
 
+    # ---- 5f. M5 endpoints over HTTP ----------------------------------------
+    record_m5_backend()
+
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
 
@@ -274,7 +277,7 @@ def record_m1_backend() -> None:
             return
 
         meta = _get_json(f"{base}/meta")
-        record("m1-meta", bool(meta and meta.get("milestone") == "M4"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M5"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
         record(
             "m1-config",
             (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
@@ -529,6 +532,80 @@ def record_m4_backend() -> None:
         record("m4-unknown-run-404", run404 == 404, f"unknown pair trust run -> HTTP {run404}")
     except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
         record("m4-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m5_backend() -> None:
+    """Probe the M5 spatial reliability endpoints honestly (clean repo -> NOT_STARTED)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M5_PORT": str(port)},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m5-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        meta = _get_json(f"{base}/meta") or {}
+        m5cfg = meta.get("m5_config") or {}
+        record(
+            "m5-meta-config",
+            m5cfg.get("spatial_reliability_configuration_id") == "SR-M5-001" and "defaults" in m5cfg,
+            f"m5_config={list(m5cfg.keys())}",
+        )
+
+        cfg = _get_json(f"{base}/spatial/configurations") or {}
+        cfgs = cfg.get("configurations") or []
+        record(
+            "m5-configurations",
+            bool(cfgs)
+            and cfgs[0].get("spatial_reliability_configuration_id") == "SR-M5-001"
+            and cfg.get("default_spatial_reliability_configuration_id") == "SR-M5-001",
+            f"configurations={[c.get('spatial_reliability_configuration_id') for c in cfgs]}",
+        )
+
+        overview = _get_json(f"{base}/spatial/overview") or {}
+        record(
+            "m5-overview-honest-zero",
+            (overview.get("total_spatial_pairs") == 0)
+            and (overview.get("complete_pairs") == 0)
+            and (overview.get("blocked_or_insufficient_pairs") == 0),
+            f"overview total={overview.get('total_spatial_pairs')} complete={overview.get('complete_pairs')}",
+        )
+
+        status404 = _get_status(f"{base}/spatial/CS-P999/status")
+        record("m5-unknown-status-404", status404 == 404, f"unknown pair spatial status -> HTTP {status404}")
+
+        run404 = _get_status(f"{base}/spatial/CS-P999/run", method="POST",
+                             payload={"spatial_reliability_configuration_id": "SR-M5-001"})
+        record("m5-unknown-run-404", run404 == 404, f"unknown pair spatial run -> HTTP {run404}")
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m5-backend", False, f"request failed: {exc}")
     finally:
         if proc is not None:
             proc.terminate()

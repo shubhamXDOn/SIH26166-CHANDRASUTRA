@@ -46,10 +46,10 @@ class Settings(BaseSettings):
     app_name: str = "SIH26166"
     product_name: str = "CHANDRASUTRA"
     tagline: str = "Trustworthy Lunar Image Intelligence"
-    milestone: str = "M4"
+    milestone: str = "M5"
     app_env: str = "development"  # development | production
     app_debug: bool = True
-    app_version: str = "0.3.0"
+    app_version: str = "0.4.0"
 
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
@@ -125,6 +125,7 @@ class PipelineConfig(BaseModel):
     m2: dict[str, Any] = Field(default_factory=dict)
     m3: dict[str, Any] = Field(default_factory=dict)
     m4: dict[str, Any] = Field(default_factory=dict)
+    m5: dict[str, Any] = Field(default_factory=dict)
 
     def model_dump_public(self) -> dict[str, Any]:
         data = self.model_dump()
@@ -158,6 +159,7 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
     raw.setdefault("m2", {})
     raw.setdefault("m3", {})
     raw.setdefault("m4", {})
+    raw.setdefault("m5", {})
     return PipelineConfig(source=str(config_path), **raw)
 
 
@@ -400,6 +402,64 @@ def m4_config(path: Path | None = None) -> dict[str, Any]:
         "name": _M4_DEFAULTS["name"],
         "derived_rel": _M4_DEFAULTS["derived_rel"],
         "defaults": _deep_merge(_M4_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M5_DEFAULTS: dict[str, Any] = {
+    "spatial_reliability_configuration_id": "SR-M5-001",
+    "spatial_reliability_configuration_version": 1,
+    "name": "Spatial Reliability & Reliability-Aware Selection",
+    "derived_rel": "derived/spatial",
+    "defaults": {
+        "coordinate_space": "pair_overlap_normalized",
+        "grid": {"rows": 8, "cols": 8, "edge_tolerance_px": 0.5},
+        "reliability": {"min_verified_inliers_per_cell": 4, "min_trusted_tiles_per_cell": 1},
+        "neighborhood": {"support_radius_cells": 1},
+        "fragmentation": {"enabled": True},
+        "boundary": {"edge_policy": "REPORT_ONLY"},
+        "connected_components": {"connectivity": 8},
+        "selection": {
+            "mode": "SUPPORTED_REGION",
+            "min_component_cells": 4,
+            "min_component_correspondences": 16,
+            "min_selected_region_cells": 4,
+            "max_selected_correspondences": 4000,
+            "deterministic_ordering": "largest_evidence_first",
+        },
+        "execution": {"max_runtime_seconds": 60},
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m5_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M5 settings from configs/app.yaml.
+
+    Mirrors ``m4_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``spatial_reliability_configuration_id`` is the stable M5
+    Spatial Reliability Configuration ID.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m5") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "spatial_reliability_configuration_id": _M5_DEFAULTS["spatial_reliability_configuration_id"],
+        "spatial_reliability_configuration_version": _M5_DEFAULTS["spatial_reliability_configuration_version"],
+        "name": _M5_DEFAULTS["name"],
+        "derived_rel": _M5_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M5_DEFAULTS["defaults"], defaults),
     }
     merged.update({k: v for k, v in section.items() if k != "defaults"})
     merged["source"] = str(config_path)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from ..config import Settings, m1_config, m2_config, m3_config, m4_config, rfc3339_now, to_jsonable
+from ..config import Settings, m1_config, m2_config, m3_config, m4_config, m5_config, rfc3339_now, to_jsonable
 from ..data import data_directory_status
 from .deps import get_settings
 
@@ -44,6 +44,7 @@ def meta(settings: Settings = Depends(get_settings)) -> dict:
         "m2_config": m2_config(),
         "m3_config": m3_config(),
         "m4_config": m4_config(),
+        "m5_config": m5_config(),
         "settings": settings.public_dict(),
         "data_directories": [to_jsonable(d) for d in data_directory_status(settings)],
     }

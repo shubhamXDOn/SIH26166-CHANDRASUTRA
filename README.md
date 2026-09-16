@@ -7,14 +7,15 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M4 — Trust Gate (independent geometric verification).**
-> Candidate correspondences from M3 are now independently verified: RANSAC
-> homography/affine models, degeneracy + residual-policy + spatial-reliability
-> checks, symmetric cross-check and a binary Trust Gate are **DONE** and fully
-> tested (131 backend tests, 44/44 smoke checks, gate COMPLETE with 6/6 tiles
-> TRUSTED on the correlated e2e fixture). Acquisition of the first real OHRC–TMC-2
-> pair is still **BLOCKED** on official PRADAN account approval, so the M4 gate
-> honestly reports a BLOCKED overview on the live app; nothing is fabricated.
+> **Current milestone: M5 — Spatial reliability & reliability-aware selection.**
+> M4's TRUSTED tiles are now re-projected into an overlap-normalised scene grid:
+> per-cell verified evidence, neighbourhood support, connected regions and a
+> `SUPPORTED_REGION` selection written as `selected_correspondences.npz` are
+> **DONE** and fully tested (200 backend tests, 49/49 smoke checks, COMPLETE with
+> 8 reliable cells / 3 components / 19 selected correspondences on the correlated
+> e2e fixture, deterministic). Acquisition of the first real OHRC–TMC-2 pair is
+> still **BLOCKED** on official PRADAN account approval, so the spatial overview
+> honestly reports a BLOCKED/empty state on the live app; nothing is fabricated.
 
 ---
 
@@ -78,13 +79,15 @@ ABSTAIN when evidence is insufficient).
 | M2        | Preprocessing, overlap/crops, condition analysis, matcher readiness | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M2_REPORT.md`) |
 | M3        | Matcher adapters & adaptive strategy, candidate correspondences | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M3_REPORT.md`) |
 | M4        | Trust Gate — independent geometric verification | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M4_REPORT.md`) |
-| M5–M12    | Spatial reliability, metrics, benchmarks, AI assistance, hardening | pending |
+| M5        | Spatial reliability — scene grid, reliable regions, reliability-aware selection | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M5_REPORT.md`) |
+| M6–M12    | Registration, metrics, benchmarks, AI assistance, hardening | pending |
 
 Milestone reports: `reports/M0_REPORT.md` (foundation),
 `reports/M1_REPORT.md` (real data & metadata),
 `reports/M2_REPORT.md` (preprocessing & scene conditioning),
-`reports/M3_REPORT.md` (adaptive matcher & candidate correspondences), and
-`reports/M4_REPORT.md` (Trust Gate & independent geometric verification).
+`reports/M3_REPORT.md` (adaptive matcher & candidate correspondences),
+`reports/M4_REPORT.md` (Trust Gate & independent geometric verification), and
+`reports/M5_REPORT.md` (spatial reliability & reliability-aware selection).
 
 ## Setup (backend)
 
@@ -155,6 +158,19 @@ Key endpoints (all under `/api`):
 | `GET /trust/{id}/summary` | trust run summary |
 | `GET /trust/{id}/tiles` | per-tile verdict cards (TRUSTED/REJECTED/INSUFFICIENT/FAILED) |
 | `GET /trust/{id}/tiles/{tile}` | single tile verdict (model, spatial, cross-check evidence) |
+| `GET /spatial/configurations` | available spatial reliability configurations (`SR-M5-001`) |
+| `GET /spatial/overview` | M5 aggregate — honestly BLOCKED/empty until a validated real pair exists |
+| `POST /spatial/{id}/run` | run SPATIAL (grid → reliability → components → selection) |
+| `GET /spatial/{id}/status` | spatial gate state + block code |
+| `POST /spatial/{id}/reset` | wipe `derived/spatial/<pair>` (M4/M3/M2/raw untouched) |
+| `GET /spatial/{id}/manifest` | spatial provenance manifest (POSIX relative paths + SHA-256) |
+| `GET /spatial/{id}/summary` | spatial run summary (grid, tiles, scene, reliability, selection) |
+| `GET /spatial/{id}/map` | reliability map incl. `visualization.grid` + legend |
+| `GET /spatial/{id}/components` | connected-region explorer |
+| `GET /spatial/{id}/cells` | full per-cell evidence table |
+| `GET /spatial/{id}/selection` | selection policy outcome + reason + selected IDs |
+| `GET /spatial/{id}/mapping` | scene mapping (tile → normalised box) |
+| `GET /spatial/{id}/selected-correspondences` | npz field list + counts |
 | `GET /auth/status`   | authentication foundation status (no fake login)   |
 | `GET /ai/status`     | AI service status (NOT_CONFIGURED without a key)   |
 
@@ -229,7 +245,16 @@ cross-check, residual-policy, determinism), the full Trust Gate lifecycle over a
 real M3 run (COMPLETE / FAILED gates), honest BLOCKED, overview aggregates,
 unknown pair/config behaviour (404 + service block), manifest provenance, reset
 scoping, path-traversal safety, runtime TIMEOUT, and re-run determinism. The
-environment smoke test runs **44 checks** over a live HTTP stack
+M5 suite adds: spatial configuration registration/load/endpoint, scene mapping
+(tile-origin + overlap resolution, boundary/out-of-scene reasons), the overlap-
+normalised grid and per-cell evidence, connected components + fragmentation,
+`SUPPORTED_REGION` selection, the full spatial lifecycle over a real M4 run
+(COMPLETE / BLOCKED), honest overview, unknown pair/config behaviour (404 +
+service block), manifest provenance (POSIX relative-only paths), npz provenance
+fields + determinism + cap enforcement, reset scoping, and a 22-case bug hunt
+(boundary tolerance, homogeneous-w exclusion, confidence absence, path leaks,
+UTF-8, NaN-free scene arrays, re-entrancy, orientation). The environment smoke
+test runs **49 checks** over a live HTTP stack
 (backend endpoints, frontend render, vite proxy).
 
 ## Repository structure
@@ -239,7 +264,7 @@ CHANDRASUTRA/
 ├── backend/            FastAPI application
 │   └── app/
 │       ├── main.py         app factory + lifespan
-│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1_config + m2_config
+│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1/m2/m3/m4/m5_config
 │       ├── logging_conf.py structured logging setup
 │       ├── errors.py       unified error envelope + handlers
 │       ├── security.py     auth/authorization foundation
@@ -250,19 +275,21 @@ CHANDRASUTRA/
 │       ├── processing/     M2 PREPARE engine (masks, overlap, crops, conditions, manifest)
 │       ├── matching/       M3 MATCH engine (adapters, routing, candidates, manifest)
 │       ├── trust/          M4 Trust Gate engine (geometry, spatial, degeneracy, service, manifest)
+│       ├── spatial/        M5 spatial reliability (mapping, grid, reliability, selection, service, manifest)
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, meta, data, pairs, processing, matching, trust, auth, ai routers
+│       └── api/            health, meta, data, pairs, processing, matching, trust, spatial, auth, ai routers
 ├── frontend/           React + Vite + Tailwind UI
-│   └── src/components, src/pages        (incl. Analysis workspace — M2/M3/M4)
-├── configs/app.yaml    engineering defaults + m1/m2/m3/m4 sections (no scientific thresholds)
+│   └── src/components, src/pages        (incl. Analysis workspace — M2/M3/M4/M5)
+├── configs/app.yaml    engineering defaults + m1/m2/m3/m4/m5 sections (no scientific thresholds)
 ├── data/               raw (immutable) / derived (reproducible) — see data/README.md
 │   ├── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
 │   ├── derived/processing/   per-pair PREPARE outputs (M2: status, manifest, masks, crops, conditions)
 │   ├── derived/matches/      per-pair MATCH outputs (M3: status, manifest, decisions, candidates)
-│   └── derived/trust/        per-pair TRUST outputs (M4: gate status, manifest, tile verdicts)
-├── tests/              pytest suite (incl. test_m1.py … test_m4.py + fixturegen.py)
-├── reports/            milestone reports (M0_REPORT.md … M4_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + M3 + M4 checks, 44 total)
+│   ├── derived/trust/        per-pair TRUST outputs (M4: gate status, manifest, tile verdicts)
+│   └── derived/spatial/      per-pair SPATIAL outputs (M5: status, summary, reliability map, components, selection, npz)
+├── tests/              pytest suite (incl. test_m1.py … test_m5.py + fixturegen.py)
+├── reports/            milestone reports (M0_REPORT.md … M5_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + M3 + M4 + M5 checks, 49 total)
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -302,7 +329,8 @@ see `reports/M1_REPORT.md`).
 | M2 | **Preprocessing & scene conditioning** (masks, overlap, crops, conditions, matcher readiness) — engineering DONE; real-data execution BLOCKED, see `reports/M2_REPORT.md` |
 | M3 | **Matcher adapters & adaptive strategy selection, candidate correspondences** — engineering DONE; real-data execution BLOCKED, see `reports/M3_REPORT.md` |
 | M4 | **Trust Gate — independent geometric verification** (RANSAC geometry, degeneracy + residual + spatial reliability checks, symmetric cross-check, binary gate over candidate correspondences) — engineering DONE; real-data execution BLOCKED, see `reports/M4_REPORT.md` |
-| M5–M6 | Spatial reliability / spatial selection (real-data depth); registration (homography/affine) + diagnostics |
+| M5 | **Spatial reliability & reliability-aware selection** (overlap-normalised scene grid, per-cell verified evidence, connected regions, SUPPORTED_REGION selection → selected_correspondences.npz) — engineering DONE; real-data execution BLOCKED, see `reports/M5_REPORT.md` |
+| M6 | Registration (homography/affine) + diagnostics — LOCKED until M5 evidence is runnable on real data |
 | M7 | Metrics, visualization, SUCCESS / FAILURE / ABSTAIN reporting    |
 | M8 | Deep matcher adapters + benchmarking vs baselines                |
 | M9 | Real Gemini explanatory layer                                    |
@@ -346,6 +374,11 @@ see `reports/M1_REPORT.md`).
   TRUSTED/BLOCKED verdict per tile. No accuracy/confidence metric is ever
   produced or shown, and real-data gate runs remain BLOCKED until PRADAN access
   is granted.
+- M5 has executed **Spatial Reliability** on the same engineering fixtures (8×8
+  grid, connected regions, a supported selection written to
+  `selected_correspondences.npz`). The M5 outputs are **measured spatial
+  evidence positions**, not a final registration/alignment model and not an
+  accuracy claim; real-data spatial runs remain BLOCKED for the same reason.
 - No OHRC–TMC-2 pair is downloaded or registered yet: official downloads require
   a PRADAN account with administrator approval (see `reports/M1_REPORT.md` for
   the exact blocker and unblocking steps). The registry and the M2 overview are

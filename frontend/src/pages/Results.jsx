@@ -6,16 +6,20 @@ export default function Results() {
       <section className="max-w-3xl space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">Results</h2>
         <p className="text-sm leading-relaxed text-muted">
-          Registration outcomes, matched-candidate observations, Trust Gate states and metrics will
-          be reported here — only from real experiments, never fabricated or edited by hand. M3
-          records <strong className="text-slate-200">candidate correspondences as observations</strong>; how many
+          Registration outcomes, matched-candidate observations, Trust Gate states, spatial
+          reliability results and metrics will be reported here — only from real experiments, never
+          fabricated or edited by hand. M3 records{" "}
+          <strong className="text-slate-200">candidate correspondences as observations</strong>; how many
           survive explicit filtering, which strategy was routed and why. M4 then applies the{" "}
           <strong className="text-slate-200">Trust Gate</strong> — deterministic geometric verification — and
           either accepts a tile as verified spatial evidence or rejects it with structured reasons.
+          M5 represents the overlap scene as a{" "}
+          <strong className="text-slate-200">spatial reliability grid</strong> and selects a supported
+          reliability region for the future registration.
         </p>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="card p-5">
           <Badge tone="blue">M3 · Matching observations</Badge>
           <p className="mt-3 text-sm leading-relaxed text-muted">
@@ -42,6 +46,20 @@ export default function Results() {
           <p className="mt-2 text-xs leading-relaxed text-muted">
             TRUSTED means verified spatial evidence for model fitting — it is still not final registration
             geometry. Registration (M6) remains locked until implemented.
+          </p>
+        </div>
+        <div className="card p-5">
+          <Badge tone="blue">M5 · Spatial reliability (open)</Badge>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Trusted correspondences are re-projected into an overlap-normalised scene grid. Each cell
+            records verified inliers, usable correspondences, trusted-tile coverage and neighbourhood
+            support; reliable cells join into connected components; a{" "}
+            <span className="font-mono text-[11px] text-lunar-300">supported region</span> is selected and
+            written as <span className="font-mono text-[11px] text-slate-300">selected_correspondences.npz</span>.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            M5 reports measurable spatial evidence — it is not an absolute accuracy or physical-registration
+            claim. Blocked and insufficient outcomes are first-class.
           </p>
         </div>
         <div className="card p-5">

@@ -155,6 +155,36 @@ produced — trust is a verdict, not a float.
 `POST /api/trust/{pair_id}/reset` deletes the pair's derived trust directory;
 `derived/matches`, `derived/processing` and the raw data are untouched.
 
+## M5 derived spatial reliability outputs (M5)
+
+Running `POST /api/spatial/{pair_id}/run` with configuration `SR-M5-001` against
+the M4 trust outputs creates:
+
+`data/derived/spatial/<pair_id>/<processing_config>/<matcher_config>/<trust_config>/SR-M5-001/`:
+
+| File | Content |
+| ---- | ------- |
+| `status.json` | gate state (NOT_STARTED/BLOCKED/RUNNING/COMPLETE/FAILED/INSUFFICIENT), block code, spatial configuration |
+| `summary.json` | grid dimensions, trusted/processed tiles, scene mapping counts, reliability counts, selection outcome |
+| `reliability_map.json` | per-cell evidence (verified inliers, usable correspondences, neighbour support, reliable/supported booleans), fragmentation and boundary, `visualization.grid` (row-major token array + legend) |
+| `components.json` | connected reliable-region components (cell count, correspondence count, bounding box, centroid, edge-touching, selected flag) |
+| `cells.json` | full per-cell evidence table (same fields as reliability_map cells, without visualization) |
+| `selection.json` | selection policy mode, outcome, decision_reason, selected cell/component IDs, reason_counts, capped_at_limit |
+| `mapping.json` | scene mapping (tile origins, normalised box, mapped status) |
+| `policies/applied.json` | all applied spatial policies + source trust/match config IDs |
+| `selected_correspondences.npz` | binary provenance arrays: `x_a, y_a, x_b, y_b, scene_x, scene_y, scene_side, source_tile_id, source_candidate_index, side_a_cell_id, side_b_cell_id, component_id, selection_reason` |
+| `spatial_manifest.json` | spatial configuration + match/trust inputs + artifact paths (POSIX relative-only, SHA-256) |
+
+The spatial run produces **measured spatial evidence positions**, not a
+registration model. A cell is `reliable` or it is not; a component is `selected`
+or it is not; `BLOCKED`, `INSUFFICIENT`, `FAILED` and `NOT_MAPPED` are
+first-class outcomes. No accuracy percentage or confidence score is ever
+produced.
+
+`POST /api/spatial/{pair_id}/reset` deletes the pair's derived spatial directory;
+`derived/trust`, `derived/matches`, `derived/processing` and the raw data are
+untouched.
+
 ## Derived-data policy
 
 - `data/derived/` is reproducible: regenerate from raw + config, never edit

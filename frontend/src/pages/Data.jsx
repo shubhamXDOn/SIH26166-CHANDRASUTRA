@@ -31,6 +31,7 @@ export default function Data({ notify, onNavigate }) {
   const [processing, setProcessing] = useState(null);
   const [matching, setMatching] = useState(null);
   const [trust, setTrust] = useState(null);
+  const [spatial, setSpatial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -98,12 +99,19 @@ export default function Data({ notify, onNavigate }) {
       } catch {
         /* trust not staged */
       }
+      let sp = null;
+      try {
+        sp = await apiGet(`/spatial/${pairId}/status`);
+      } catch {
+        /* spatial not staged */
+      }
       setSelected(pairId);
       setDetail(det);
       setValidation(val);
       setProcessing(proc);
       setMatching(mat);
       setTrust(tr);
+      setSpatial(sp);
     } catch (e) {
       notify({ title: "Could not open pair", message: e.message, tone: "danger" });
     }
@@ -269,7 +277,7 @@ export default function Data({ notify, onNavigate }) {
       </section>
 
       {/* C+D+E. PAIR DETAIL */}
-      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} trust={trust} onValidate={runValidate} onNavigate={onNavigate} />}
+      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} trust={trust} spatial={spatial} onValidate={runValidate} onNavigate={onNavigate} />}
 
       {/* Ingestion wizard */}
       {wizard && (
@@ -307,7 +315,7 @@ function OverlapBadge({ value }) {
 /* Pair inspection workspace                                           */
 /* ------------------------------------------------------------------ */
 
-function PairInspection({ detail, validation, processing, matching, trust, onValidate, onNavigate }) {
+function PairInspection({ detail, validation, processing, matching, trust, spatial, onValidate, onNavigate }) {
   const r = detail.record;
   const comp = detail.completeness;
   const overlap = validation?.overlap ?? { status: r.overlap_status, evidence: r.overlap_evidence || "No evidence recorded." };
@@ -318,6 +326,7 @@ function PairInspection({ detail, validation, processing, matching, trust, onVal
   const mState = matching?.state ?? "NOT_STARTED";
   const mRun = matching?.summary ?? null;
   const tState = trust?.gate_state ?? "NOT_STARTED";
+  const sState = spatial?.gate_state ?? "NOT_STARTED";
 
   const checks = validation?.checks ?? [];
   const integrity = {
@@ -376,6 +385,10 @@ function PairInspection({ detail, validation, processing, matching, trust, onVal
           <Badge tone={tState === "COMPLETE" ? "ok" : tState === "BLOCKED" ? "warn" : tState === "FAILED" ? "warn" : tState === "RUNNING" ? "blue" : "neutral"}>
             Trust {tState}
           </Badge>
+          <Badge tone={sState === "COMPLETE" ? "ok" : sState === "BLOCKED" ? "warn" : sState === "FAILED" || sState === "INSUFFICIENT" ? "warn" : sState === "RUNNING" ? "blue" : "neutral"}>
+            Spatial {sState}
+          </Badge>
+          <Badge tone="neutral">M6 Registration LOCKED</Badge>
           <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onNavigate?.("analysis")}>
             <Icon.Activity className="h-3.5 w-3.5" /> Open in Analysis
           </button>
@@ -482,9 +495,11 @@ function PairInspection({ detail, validation, processing, matching, trust, onVal
           <span>
             {r.pair_id} is registered and its raw products are hashed. M3 candidate correspondences
             are raw observations. The M4 Trust Gate state for this pair is{" "}
-            <strong className="text-slate-200">{tState}</strong> — independent geometric verification,
-            when run in the Analysis workspace, converts qualified tiles into verified spatial evidence;
-            nothing here ever carries a fabricated accuracy or trust verdict.
+            <strong className="text-slate-200">{tState}</strong> and the M5 spatial reliability state is{" "}
+            <strong className="text-slate-200">{sState}</strong> — independent geometric verification, when run in
+            the Analysis workspace, converts qualified tiles into verified spatial evidence and then
+            selects a supported reliability region; nothing here ever carries a fabricated accuracy or
+            trust verdict. Registration (M6) is locked until implemented.
           </span>
         </p>
       </div>

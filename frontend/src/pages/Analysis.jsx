@@ -4,6 +4,7 @@ import Pipeline, { STAGE_STYLE } from "../components/Pipeline.jsx";
 import { Badge, EmptyState, Icon, Modal, PageSkeleton } from "../components/ui.jsx";
 import MatchingPanel from "../components/MatchingPanel.jsx";
 import TrustPanel from "../components/TrustPanel.jsx";
+import SpatialReliabilityPanel from "../components/SpatialReliabilityPanel.jsx";
 import { apiGet, apiPost } from "../api.js";
 
 const M2_PIPELINE = [
@@ -49,7 +50,7 @@ const MODULE_PLAN = [
     label: "Spatial selection",
     desc: "Temporal & spatial reliability of accepted correspondences before model fitting.",
     milestone: "M5",
-    implemented: false,
+    implemented: true,
   },
   {
     id: "registration",
@@ -467,6 +468,23 @@ export default function Analysis({ notify, onNavigate }) {
             <Badge tone="gold">TG-M4-001 config</Badge>
           </div>
           <TrustPanel key={`${sel}-trust`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M5 spatial reliability workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Spatial Reliability · M5</h3>
+              <p className="text-xs text-muted">
+                Runs when M4 trusted tiles exist: overlap-normalised scene grid, per-cell verified evidence,
+                neighbourhood support and reliability-aware selection.
+              </p>
+            </div>
+            <Badge tone="gold">SR-M5-001 config</Badge>
+          </div>
+          <SpatialReliabilityPanel key={`${sel}-spatial`} pairId={sel} notify={notify} />
         </section>
       )}
 
