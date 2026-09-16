@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     app_name: str = "SIH26166"
     product_name: str = "CHANDRASUTRA"
     tagline: str = "Trustworthy Lunar Image Intelligence"
-    milestone: str = "M1"
+    milestone: str = "M2"
     app_env: str = "development"  # development | production
     app_debug: bool = True
     app_version: str = "0.2.0"
@@ -122,6 +122,7 @@ class PipelineConfig(BaseModel):
     pipeline_stages: list[dict[str, str]] = Field(default_factory=list)
     engineering_defaults_placeholder: dict[str, Any] = Field(default_factory=dict)
     m1: dict[str, Any] = Field(default_factory=dict)
+    m2: dict[str, Any] = Field(default_factory=dict)
 
     def model_dump_public(self) -> dict[str, Any]:
         data = self.model_dump()
@@ -152,6 +153,7 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
     raw.setdefault("pipeline_stages", [])
     raw.setdefault("engineering_defaults_placeholder", {})
     raw.setdefault("m1", {})
+    raw.setdefault("m2", {})
     return PipelineConfig(source=str(config_path), **raw)
 
 
@@ -189,6 +191,90 @@ def m1_config(path: Path | None = None) -> dict[str, Any]:
     merged.update(section or {})
     merged["source"] = str(config_path)
     return merged
+
+
+@lru_cache(maxsize=1)
+def m2_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M2 settings from configs/app.yaml.
+
+    Mirrors ``m1_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``configuration_id`` is the stable M2 Configuration ID.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m2") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "configuration_id": _M2_DEFAULTS["configuration_id"],
+        "configuration_version": _M2_DEFAULTS["configuration_version"],
+        "name": _M2_DEFAULTS["name"],
+        "derived_rel": _M2_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M2_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M2_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "PC-M2-001",
+    "configuration_version": 1,
+    "name": "Trustworthy Preprocessing and Lunar Scene Conditioning",
+    "derived_rel": "derived/processing",
+    "defaults": {
+        "overlap": {"min_overlap_px": 64, "strategy": "footprint_intersection", "require_geometry": True},
+        "crops": {
+            "size_px": 512, "stride_px": 256,
+            "min_tile_width_px": 16, "min_tile_height_px": 16,
+            "min_valid_fraction": 0.5,
+        },
+        "normalization": {
+            "display": "percentile_1_99",
+            "display_low_percentile": 1.0,
+            "display_high_percentile": 99.0,
+            "radiometric": "not_applicable",
+            "radiometric_reason": "Label carries no radiometric calibration metadata for this product.",
+        },
+        "masking": {
+            "nan_inf": True, "saturated": True, "saturation_dn": 65535,
+            "negative": True, "zero_valid": True,
+        },
+        "orientation": {"source": "record_footprint_or_request", "fallback": "block"},
+        "resampling": {
+            "applied": False,
+            "rationale": (
+                "Sensors differ in native GSD. No documented camera model exists in M2 labels, "
+                "so no geometric resampling is applied; tiles are sensor-native."
+            ),
+        },
+        "condition": {"texture_low_dn": 8.0, "texture_high_dn": 60.0, "empty_valid_fraction": 0.02},
+        "matcher_readiness": {
+            "required": [
+                "raw_integrity_ok", "preprocess_ok", "overlap_valid",
+                "tiles_generated", "tiles_usable", "condition_evaluated",
+            ]
+        },
+    },
+}
+
+
+def _deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge nested dicts (overlay wins; no type coercion)."""
+    out = dict(base)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = _deep_merge(out[key], value)
+        else:
+            out[key] = value
+    return out
 
 
 def rfc3339_now() -> str:

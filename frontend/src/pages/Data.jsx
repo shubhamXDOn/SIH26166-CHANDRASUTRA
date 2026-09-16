@@ -21,13 +21,14 @@ const WIZ = {
   FAILED: "failed",
 };
 
-export default function Data({ notify }) {
+export default function Data({ notify, onNavigate }) {
   const [status, setStatus] = useState(null);
   const [sensors, setSensors] = useState(null);
   const [pairs, setPairs] = useState([]);
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
   const [validation, setValidation] = useState(null);
+  const [processing, setProcessing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -77,9 +78,16 @@ export default function Data({ notify }) {
     try {
       const det = await apiGet(`/pairs/${pairId}`);
       const val = await apiGet(`/pairs/${pairId}/validate`);
+      let proc = null;
+      try {
+        proc = await apiGet(`/processing/${pairId}/status`);
+      } catch {
+        /* processing not staged */
+      }
       setSelected(pairId);
       setDetail(det);
       setValidation(val);
+      setProcessing(proc);
     } catch (e) {
       notify({ title: "Could not open pair", message: e.message, tone: "danger" });
     }
@@ -245,7 +253,7 @@ export default function Data({ notify }) {
       </section>
 
       {/* C+D+E. PAIR DETAIL */}
-      {selected && detail && <PairInspection detail={detail} validation={validation} onValidate={runValidate} />}
+      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} onValidate={runValidate} onNavigate={onNavigate} />}
 
       {/* Ingestion wizard */}
       {wizard && (
@@ -283,11 +291,14 @@ function OverlapBadge({ value }) {
 /* Pair inspection workspace                                           */
 /* ------------------------------------------------------------------ */
 
-function PairInspection({ detail, validation, onValidate }) {
+function PairInspection({ detail, validation, processing, onValidate, onNavigate }) {
   const r = detail.record;
   const comp = detail.completeness;
   const overlap = validation?.overlap ?? { status: r.overlap_status, evidence: r.overlap_evidence || "No evidence recorded." };
-  const readyM2 = (detail.record.validation_status === "VALID" || detail.validation_status === "VALID") && overlap.status === "CONFIRMED_OVERLAP";
+  const readyM2 = (detail.record.validation_status === "VALID") && overlap.status === "CONFIRMED_OVERLAP";
+  const pState = processing?.state ?? "NOT_STARTED";
+  const pLevel = processing?.matcher_readiness?.level ?? null;
+  const pBlocked = processing?.blocked ?? null;
 
   const checks = validation?.checks ?? [];
   const integrity = {
@@ -329,6 +340,44 @@ function PairInspection({ detail, validation, onValidate }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <ProductCard side="a" record={r} />
         <ProductCard side="b" record={r} />
+      </div>
+
+      {/* F. M2 PROCESSING READINESS */}
+      <div className="card p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h4 className="text-sm font-bold text-slate-100">M2 preprocessing readiness</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={pState === "READY_FOR_MATCHING" ? "ok" : pState === "BLOCKED" ? "warn" : "neutral"}>
+              <StatusDot state={pState === "READY_FOR_MATCHING" ? "ok" : pState === "BLOCKED" ? "warn" : "info"} /> {pState}
+            </Badge>
+            {pLevel && <Badge tone={pLevel === "READY" || pLevel === "CONDITIONAL" ? "ok" : "warn"}>Matcher {pLevel}</Badge>}
+            <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onNavigate?.("analysis")}>
+              <Icon.Activity className="h-3.5 w-3.5" /> Open in Analysis
+            </button>
+          </div>
+        </div>
+
+        {pBlocked ? (
+          <div className="flex items-start gap-2 rounded-lg border border-warn/30 bg-warn/[0.06] p-3 text-[11px] leading-relaxed text-warn">
+            <Icon.Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              PREPARE stopped truthfully at <strong className="text-warn">{pBlocked.stage}</strong> ({pBlocked.code}):{" "}
+              {pBlocked.reason}
+            </span>
+          </div>
+        ) : pState === "READY_FOR_MATCHING" ? (
+          <p className="text-xs leading-relaxed text-slate-300">
+            All matcher-readiness requirements met. Preprocessed products, invalid-data masks,
+            sensor-native crops and per-tile scene conditions are available under{" "}
+            <code className="font-mono text-slate-300">data/derived/processing/{r.pair_id}/</code>.
+          </p>
+        ) : (
+          <p className="text-xs leading-relaxed text-muted">
+            {processing
+              ? `${r.pair_id} has a PREPARE run in state ${pState}. Real pairs have no documented ground geometry in M2 yet, so PREPARE stops transparently at the overlap gate.`
+              : "No PREPARE run yet for this pair. Open it in Analysis to run the honest M2 preparation pipeline."}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

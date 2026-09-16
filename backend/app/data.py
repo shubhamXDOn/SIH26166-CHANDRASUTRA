@@ -23,6 +23,7 @@ DATA_TREE: dict[str, tuple[str, str]] = {
     "raw_iirs": ("raw/iirs", "Chandrayaan-2 IIRS data (raw, immutable)"),
     "raw_lroc": ("raw/lroc", "LROC reference layer for validation (raw)"),
     "metadata": ("metadata", "Acquisition metadata and PDS4 labels (structured)"),
+    "derived_processing": ("derived/processing", "Per-pair preprocessing runs, crops/tiles, condition diagnostics and provenance manifests (M2)"),
     "derived_preprocessed": ("derived/preprocessed", "Validated, safely preprocessed products"),
     "derived_crops": ("derived/crops", "Overlap-confirmed crops/tiles used for matching"),
     "derived_matches": ("derived/matches", "Matcher outputs and candidate correspondences"),

@@ -102,6 +102,9 @@ def main() -> int:
     # ---- 5b. M1 endpoints over HTTP ----------------------------------------
     record_m1_backend()
 
+    # ---- 5c. M2 endpoints over HTTP ----------------------------------------
+    record_m2_backend()
+
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
 
@@ -265,7 +268,7 @@ def record_m1_backend() -> None:
             return
 
         meta = _get_json(f"{base}/meta")
-        record("m1-meta", bool(meta and meta.get("milestone") == "M1"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M2"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
         record(
             "m1-config",
             (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
@@ -315,6 +318,74 @@ def record_m1_backend() -> None:
                 proc.kill()
 
 
+def record_m2_backend() -> None:
+    """Probe the M2 processing endpoints honestly (clean repo -> BLOCKED)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M2_PORT": str(port)},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m2-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        meta = _get_json(f"{base}/meta") or {}
+        m2cfg = meta.get("m2_config") or {}
+        record(
+            "m2-meta-config",
+            m2cfg.get("configuration_id") == "PC-M2-001" and "defaults" in m2cfg,
+            f"m2_config={list(m2cfg.keys())}",
+        )
+
+        cfg = _get_json(f"{base}/processing/configurations") or {}
+        cfgs = cfg.get("configurations") or []
+        record(
+            "m2-configurations",
+            bool(cfgs) and cfgs[0].get("configuration_id") == "PC-M2-001" and cfg.get("default_configuration_id") == "PC-M2-001",
+            f"configurations={[c.get('configuration_id') for c in cfgs]}",
+        )
+
+        overview = _get_json(f"{base}/processing/overview") or {}
+        record(
+            "m2-overview-honest-zero",
+            (overview.get("pairs") == []) and (overview.get("blocked") is True) and "BLOCKED" in (overview.get("reason") or ""),
+            f"overview blocked={overview.get('blocked')} reason={(overview.get('reason') or '')[:80]}",
+        )
+
+        status404 = _get_status(f"{base}/processing/CS-P999/status")
+        record("m2-unknown-status-404", status404 == 404, f"unknown pair processing status -> HTTP {status404}")
+
+        prep404 = _get_status(f"{base}/processing/CS-P999/prepare", method="POST", payload={"configuration_id": None})
+        record("m2-unknown-prepare-404", prep404 == 404, f"unknown pair prepare -> HTTP {prep404}")
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m2-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
 def _get_json(url: str) -> dict | None:
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
@@ -324,9 +395,12 @@ def _get_json(url: str) -> dict | None:
         return None
 
 
-def _get_status(url: str) -> int:
+def _get_status(url: str, method: str = "GET", payload: dict | None = None) -> int:
     try:
-        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        headers = {"Content-Type": "application/json"} if data is not None else {}
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
             return resp.status
     except urllib.error.HTTPError as exc:
         return exc.code

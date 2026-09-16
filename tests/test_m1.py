@@ -353,7 +353,7 @@ def test_api_register_then_list_detail_validate_and_status(settings_factory):
         assert vrec["scientific_matching"] == "NOT_RUN"
 
         stat = client.get("/api/data/status").json()
-        assert stat["milestone"] == "M1"
+        assert stat["milestone"] == "M2"
         assert stat["pairs_registered"] == 1
         assert stat["pairs_valid"] == 1
         assert stat["available_sensors"] == ["ohrc", "tmc2"]

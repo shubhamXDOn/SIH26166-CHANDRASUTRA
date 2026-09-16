@@ -36,6 +36,21 @@ function useDataStatus() {
   return { status, error };
 }
 
+function useProcessingOverview() {
+  const [overview, setOverview] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiGet("/processing/overview")
+      .then((o) => alive && setOverview(o))
+      .catch((e) => alive && setError(e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return { overview, error };
+}
+
 function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
   const valueTone = {
     neutral: "text-slate-100",
@@ -59,6 +74,7 @@ function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
 export default function Overview({ backend, onNavigate }) {
   const { meta, error: metaError } = useMeta(backend?.online === true);
   const { status, error: statusError } = useDataStatus();
+  const { overview, error: procError } = useProcessingOverview();
   const [modalStage, setModalStage] = useState(null);
   const [lockModal, setLockModal] = useState(false);
 
@@ -99,6 +115,9 @@ export default function Overview({ backend, onNavigate }) {
   const rawPresent = s.raw_products_present ?? 0;
   const avgCompleteness = Math.round((s.metadata_completeness?.average_fraction ?? 0) * 100);
   const firstPair = s.first_pair_status ?? null;
+  const procPairs = (overview?.pairs ?? []).filter((p) => p.ready);
+  const readyInM2 = procPairs.length;
+  const procRows = overview?.pairs ?? null;
 
   const pipeline = PIPELINE.map((stage) => ({
     ...stage,
@@ -109,7 +128,13 @@ export default function Overview({ backend, onNavigate }) {
           ? pairsRegistered > 0
             ? pairsValid > 0 ? "complete" : "warning"
             : "ready"
-          : "locked",
+          : stage.id === "preprocess"
+            ? readyInM2 > 0
+              ? "complete"
+              : procRows && procRows.length > 0
+                ? "warning"
+                : "locked"
+            : "locked",
   }));
 
   const anchor = backend?.online ? "green" : "gray";
@@ -120,18 +145,18 @@ export default function Overview({ backend, onNavigate }) {
       <section className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="gold">Milestone M1 — Real Data &amp; Metadata</Badge>
-            <Badge tone={pairsValid > 0 ? "ok" : "blue"}>
-              {pairsValid > 0 ? `${pairsValid} validated pair${pairsValid > 1 ? "s" : ""}` : "Awaiting validated pair"}
+            <Badge tone="gold">Milestone M2 — Preprocessing &amp; Scene Conditioning</Badge>
+            <Badge tone={readyInM2 > 0 ? "ok" : "blue"}>
+              {readyInM2 > 0 ? `${readyInM2} pair${readyInM2 > 1 ? "s" : ""} matcher-ready` : "Awaiting documented geometry"}
             </Badge>
           </div>
           <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-[1.7rem]">
             Trustworthy <span className="text-lunar-400 text-glow">lunar image</span> intelligence
           </h2>
           <p className="text-sm leading-relaxed text-muted">
-            Real Chandrayaan-2 OHRC × TMC-2 image pairs are registered with hashed, immutable raw
-            files, PDS4 metadata and documented overlap evidence. Matching runs only on pairs that
-            pass validation — M2 uses them, nothing is simulated in M1.
+            Real Chandrayaan-2 OHRC × TMC-2 pairs are hashed and validated in M1; M2 executes an
+            honest PREPARE — invalid-data masks, overlap evidence, sensor-native crops and per-tile
+            scene conditions — and reports matcher readiness. Nothing is simulated.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-3">
@@ -142,9 +167,9 @@ export default function Overview({ backend, onNavigate }) {
             onClick={() => setLockModal(true)}
             className="btn-ghost"
             disabled={!meta}
-            title="Requires a registered, overlap-confirmed pair"
+            title="Opens M2 PREPARE runs — BLOCKED is a first-class outcome"
           >
-            <Icon.Activity className="h-4 w-4" /> Begin analysis
+            <Icon.Activity className="h-4 w-4" /> Open Analysis
           </button>
         </div>
       </section>
@@ -178,7 +203,7 @@ export default function Overview({ backend, onNavigate }) {
           label="Benchmark-ready"
           value={confirmed > 0 ? `${confirmed} pair${confirmed > 1 ? "s" : ""}` : "0"}
           tone={confirmed > 0 ? "ok" : "neutral"}
-          sub={`${avgCompleteness}% avg metadata completeness · matching is NOT_RUN in M1`}
+          sub={`${avgCompleteness}% avg metadata completeness · ${readyInM2} pair${readyInM2 === 1 ? "" : "s"} matcher-ready in M2`}
         />
       </section>
 
@@ -188,13 +213,13 @@ export default function Overview({ backend, onNavigate }) {
           <div>
             <h3 className="text-sm font-bold text-slate-100">Scientific pipeline</h3>
             <p className="text-xs text-muted">
-              Data is ready; Validate reflects the real registered-pair state; processing stages stay
-              locked until M2+ executes on real data.
+              Data is ready; Validate reflects the real registered-pair state; M2 PREPARE runs are
+              traced by the Analysis workspace and block honestly where evidence is missing.
             </p>
           </div>
-          <Badge tone={backend?.online ? "ok" : "danger"}>
-            <StatusDot state={backend?.online ? "ok" : "danger"} pulse={backend?.online} />
-            {pairsValid > 0 ? "M1 data validated" : "Awaiting validated pair"}
+          <Badge tone={readyInM2 > 0 ? "ok" : backend?.online ? "neutral" : "danger"}>
+            <StatusDot state={readyInM2 > 0 ? "ok" : backend?.online ? "info" : "danger"} />
+            {readyInM2 > 0 ? "PREPARE complete" : "PREPARE ready to report BLOCKED"}
           </Badge>
         </div>
         <Pipeline stages={pipeline} onStageClick={(st) => setModalStage(st)} />
@@ -282,8 +307,10 @@ export default function Overview({ backend, onNavigate }) {
                 <Badge tone={confirmed > 0 ? "ok" : "neutral"}>{confirmed > 0 ? "Confirmed" : "Unconfirmed"}</Badge>
               </li>
               <li className="flex items-center justify-between gap-3">
-                <span className="text-muted">Preprocessing / matching</span>
-                <Badge tone="neutral">M2+</Badge>
+                <span className="text-muted">Preprocessing / conditioning</span>
+                <Badge tone={readyInM2 > 0 ? "ok" : procRows && procRows.length > 0 ? "warn" : "neutral"}>
+                  {readyInM2 > 0 ? "M2 ready" : procRows && procRows.length > 0 ? "M2 runs reported (blocked)" : "Awaiting validated pair"}
+                </Badge>
               </li>
               <li className="flex items-center justify-between gap-3">
                 <span className="text-muted">AI explanatory layer</span>
@@ -312,33 +339,35 @@ export default function Overview({ backend, onNavigate }) {
         </p>
         <p className="mt-2">
           {modalStage?.state === "locked"
-            ? "This stage executes only on real, validated pairs and is enabled by a later milestone (M2+). No processing is simulated in M1."
+            ? "This stage executes only on real, validated pairs with documented geometry and is enabled by a later milestone (M2+). No processing is simulated."
             : modalStage?.state === "complete"
-              ? "Validated against the registered pair(s) — raw integrity and metadata checks pass."
-              : "The data architecture exists and official source (ISSDC PRADAN) is documented. Ingestion needs approved real products on disk."}
+              ? "Validated against the registered pair(s) — raw integrity, metadata checks and M2 PREPARE readiness pass."
+              : modalStage?.id === "preprocess"
+                ? "M2 PREPARE ran but stopped transparently — a registered real pair still lacks documented ground geometry for overlap."
+                : "The data architecture exists and official source (ISSDC PRADAN) is documented. Ingestion needs approved real products on disk."}
         </p>
       </Modal>
 
       <Modal
         open={lockModal}
         onClose={() => setLockModal(false)}
-        title="Begin analysis — unavailable"
+        title="Analysis workspace — M2 PREPARE"
         footer={
           <>
             <button className="btn-ghost" onClick={() => setLockModal(false)}>
               Cancel
             </button>
-            <button className="btn-primary" onClick={() => { setLockModal(false); onNavigate("data"); }}>
-              Go to data workspace
+            <button className="btn-primary" onClick={() => { setLockModal(false); onNavigate("analysis"); }}>
+              Open Analysis
             </button>
           </>
         }
       >
-        <p>An analysis requires at least one registered, overlap-confirmed OHRC–TMC-2 pair.</p>
+        <p>M2 PREPARE registers, validates and transforms a pair to the matcher boundary — truthfully reporting each gate.</p>
         <p className="mt-2">
-          {confirmed > 0
-            ? "A benchmark-ready pair exists, but scientific matching is deliberately NOT_RUN in M1."
-            : `${pairsRegistered} pair(s) are registered but overlap is not yet confirmed with documented evidence. Nothing is faked.`}
+          {confirmed > 0 || pairsRegistered > 0
+            ? "M2 PREPARE can run now: it will report each gate honestly (validation, overlap, tiles, conditions, matcher readiness). Scientific matching itself stays dormant until M3+."
+            : "Register a validated pair first. M2 PREPARE to the match boundary will then run truthfully — BLOCKED is a first-class outcome."}
         </p>
       </Modal>
     </div>

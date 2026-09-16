@@ -55,6 +55,63 @@ m1:
     pair_scope: pair_id
 
 # ------------------------------------------------------------
+# M2 — trustworthy preprocessing & lunar scene conditioning.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning yet — they are reproducible defaults registered under the
+# Configuration ID below. Every experimental value in later
+# milestones must be tied to a Pair ID + Configuration ID in
+# results/reports before it can influence a scientific claim.
+# ------------------------------------------------------------
+m2:
+  configuration_id: "PC-M2-001"
+  configuration_version: 1
+  name: "Trustworthy Preprocessing and Lunar Scene Conditioning"
+  source_reference: "SIH26166 M2 spec — engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/processing"
+  defaults:
+    overlap:
+      min_overlap_px: 64
+      strategy: "footprint_intersection"
+      require_geometry: true
+    crops:
+      size_px: 512
+      stride_px: 256
+      min_tile_width_px: 16
+      min_tile_height_px: 16
+      min_valid_fraction: 0.5
+    normalization:
+      display: "percentile_1_99"
+      display_low_percentile: 1.0
+      display_high_percentile: 99.0
+      radiometric: "not_applicable"
+      radiometric_reason: "Label carries no radiometric calibration metadata for this product."
+    masking:
+      nan_inf: true
+      saturated: true
+      saturation_dn: 65535
+      negative: true
+      zero_valid: true
+    orientation:
+      source: "record_footprint_or_request"
+      fallback: "block"
+    resampling:
+      applied: false
+      rationale: "Sensors differ in native GSD (OHRC ~0.25 m/px vs TMC-2 ~5 m/px). M2 labels carry no documented camera model, so no geometric resampling is applied. Tiles are sensor-native and recorded as such."
+    condition:
+      texture_low_dn: 8.0
+      texture_high_dn: 60.0
+      empty_valid_fraction: 0.02
+    matcher_readiness:
+      required:
+        - raw_integrity_ok
+        - preprocess_ok
+        - overlap_valid
+        - tiles_generated
+        - tiles_usable
+        - condition_evaluated
+
+# ------------------------------------------------------------
 # Engineering defaults — placeholders to be replaced by real
 # experiment-tuned parameters in later milestones. They carry no
 # scientific meaning yet.

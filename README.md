@@ -7,12 +7,14 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M1 — Real Data & Metadata.** The pair registry, PDS4
-> metadata intake, validation and the functional Data workspace are **DONE**.
+> **Current milestone: M2 — Preprocessing & Scene Conditioning.** The PREPARE
+> pipeline (re-verified raw integrity, invalid-data masks, sensor-native
+> overlap/crops with calculated evidence, per-tile condition analysis, matcher
+> readiness) and the Analysis workspace are **DONE** and fully tested.
 > Acquisition of the first real OHRC–TMC-2 pair is **BLOCKED** on official
-> PRADAN account approval (no anonymous downloads); nothing is fabricated —
-> with zero real files on disk the registry honestly reports zero pairs.
-> Scientific matching starts at M2.
+> PRADAN account approval (no anonymous downloads), so M2 honestly reports a
+> BLOCKED overview on the live app; nothing is fabricated. Scientific matching
+> starts at M3.
 
 ---
 
@@ -73,12 +75,14 @@ ABSTAIN when evidence is insufficient).
 | --------- | --------------------------------------------- | ------ |
 | M0        | Reproducible env, app shell, foundations      | **DONE** (committed) |
 | M1        | Real OHRC–TMC-2 data intake & metadata        | **DONE (engineering)** — real download BLOCKED on PRADAN approval, see `reports/M1_REPORT.md` |
-| M2+       | Preprocessing, condition analysis, matchers   | pending |
-| M3+       | Trust Gate, spatial reliability, registration | pending |
-| M4–M12    | Metrics, benchmarks, AI assistance, hardening | pending |
+| M2        | Preprocessing, overlap/crops, condition analysis, matcher readiness | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M2_REPORT.md`) |
+| M3+       | Matcher adapters, adaptive strategy           | pending |
+| M4+       | Trust Gate, spatial reliability, registration | pending |
+| M5–M12    | Metrics, benchmarks, AI assistance, hardening | pending |
 
-Milestone reports: `reports/M0_REPORT.md` (foundation) and
-`reports/M1_REPORT.md` (real data & metadata).
+Milestone reports: `reports/M0_REPORT.md` (foundation),
+`reports/M1_REPORT.md` (real data & metadata), and
+`reports/M2_REPORT.md` (preprocessing & scene conditioning).
 
 ## Setup (backend)
 
@@ -123,6 +127,14 @@ Key endpoints (all under `/api`):
 | `GET /pairs/{id}`    | full pair detail + completeness                    |
 | `GET/POST /pairs/{id}/validate` | run & persist pair validation          |
 | `GET /pairs/{id}/preview/{side}` | derived PNG preview (lazy)            |
+| `GET /processing/configurations` | available processing configs (`PC-M2-001`) |
+| `GET /processing/overview` | M2 aggregate — honestly BLOCKED until a validated real pair exists |
+| `POST /processing/{id}/prepare` | run PREPARE (validate → masks → overlap → crops → conditions → readiness) |
+| `GET /processing/{id}/status` | PREPARE run state + matcher readiness |
+| `POST /processing/{id}/reset` | wipe `derived/processing/<pair>` (raw untouched) |
+| `GET /processing/{id}/manifest` | provenance hash manifest |
+| `GET /processing/{id}/conditions` | per-tile condition distribution |
+| `GET /processing/{id}/tiles` | tile list + indicators (`/tiles/{tile}/preview` = PNG) |
 | `GET /auth/status`   | authentication foundation status (no fake login)   |
 | `GET /ai/status`     | AI service status (NOT_CONFIGURED without a key)   |
 
@@ -172,8 +184,15 @@ The M1 suite covers everything from M0 plus: pair schema & registry
 determinism, PDS4 label parsing (missing/corrupt/unknown-field cases), CH-2
 filename decoding, SHA-256 integrity, raw immutability, overlap/evidence rules,
 full coverage of `/pairs` endpoints (register/detail/validate/preview/
-scan/probe/next-id), path-traversal rejection, 404 behaviour, M1 aggregates,
-and a full 29-check environment smoke test over a live HTTP stack.
+scan/probe/next-id), path-traversal rejection, 404 behaviour, M1 aggregates.
+The M2 suite adds: processing configuration defaults, the PREPARE happy path to
+`READY_FOR_MATCHING` with the full derived layout, raw immutability during
+processing, manifest relative-only paths + SHA-256, tiles/conditions/preview
+endpoints, reset, `NO_GEOMETRY` / `NO_OVERLAP` / `NO_GSD` blocks, mask
+bitflags, display normalization, condition determinism + `UNKNOWN`, overlap
+slicing, overview honest-BLOCKED, route wiring, and M2 endpoint behaviour.
+The environment smoke test runs **34 checks** over a live HTTP stack
+(backend endpoints, frontend render, vite proxy).
 
 ## Repository structure
 
@@ -182,7 +201,7 @@ CHANDRASUTRA/
 ├── backend/            FastAPI application
 │   └── app/
 │       ├── main.py         app factory + lifespan
-│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1_config
+│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1_config + m2_config
 │       ├── logging_conf.py structured logging setup
 │       ├── errors.py       unified error envelope + handlers
 │       ├── security.py     auth/authorization foundation
@@ -190,16 +209,18 @@ CHANDRASUTRA/
 │       ├── data.py         data architecture service
 │       ├── loader.py       M1 PDS4 parser + CH-2 product loader/previews
 │       ├── pairs.py        M1 pair registry + validation domain
+│       ├── processing/     M2 PREPARE engine (masks, overlap, crops, conditions, manifest)
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, meta, data, pairs, auth, ai routers
+│       └── api/            health, meta, data, pairs, processing, auth, ai routers
 ├── frontend/           React + Vite + Tailwind UI
-│   └── src/components, src/pages
-├── configs/app.yaml    engineering defaults + m1 section (no scientific thresholds)
+│   └── src/components, src/pages        (incl. Analysis workspace — M2)
+├── configs/app.yaml    engineering defaults + m1/m2 sections (no scientific thresholds)
 ├── data/               raw (immutable) / derived (reproducible) — see data/README.md
-│   └── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
-├── tests/              pytest suite (backend incl. test_m1.py + fixturegen.py)
-├── reports/            milestone reports (M0_REPORT.md, M1_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test (M1 checks)
+│   ├── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
+│   └── derived/processing/   per-pair PREPARE outputs (M2: status, manifest, masks, crops, conditions)
+├── tests/              pytest suite (incl. test_m1.py, test_m2.py + fixturegen.py)
+├── reports/            milestone reports (M0_REPORT.md, M1_REPORT.md, M2_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 + M2 checks, 34 total)
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -236,7 +257,8 @@ see `reports/M1_REPORT.md`).
 | -- | ---------------------------------------------------------------- |
 | M0 | **Foundation**: env, backend, premium UI, config, logging, tests — DONE |
 | M1 | **Real data intake & metadata validation** — engineering DONE; first real OHRC–TMC-2 pair BLOCKED on PRADAN approval |
-| M2 | Safe preprocessing, overlap/crop, condition estimator, matcher adapters (baselines) |
+| M2 | **Preprocessing & scene conditioning** (masks, overlap, crops, conditions, matcher readiness) — engineering DONE; real-data execution BLOCKED, see `reports/M2_REPORT.md` |
+| M3 | Matcher adapters (baselines) & adaptive strategy selection            |
 | M3 | Adaptive routing & matcher strategy selection                     |
 | M4 | Trust Gate — independent verification                            |
 | M5 | Spatial reliability / spatial selection                          |
@@ -271,10 +293,14 @@ see `reports/M1_REPORT.md`).
 ## Limitations
 
 - M1 performs **no matching/registration**; the corpus is the pair registry plus
-  real metadata intake and validation. Scientific pipelines start at M2.
+  real metadata intake and validation.
+- M2 ends at the **matcher-readiness contract**: preprocessing, overlap/crops,
+  condition analysis and readiness are real, but no correspondences are
+  produced; scientific matching starts at M3.
 - No OHRC–TMC-2 pair is downloaded or registered yet: official downloads require
   a PRADAN account with administrator approval (see `reports/M1_REPORT.md` for
-  the exact blocker and unblocking steps). The registry is kept honestly empty.
+  the exact blocker and unblocking steps). The registry and the M2 overview are
+  kept honestly empty/BLOCKED.
 - Auth endpoints are contract stubs (`501 NOT_CONFIGURED`) until the real
   authentication milestone.
 - AI explanations are only available after real Gemini integration + key.

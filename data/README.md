@@ -75,7 +75,33 @@ requires a CONFIRMED overlap **with documented evidence**.
 
 - A pair is only used for matching after its spatial overlap has been
   **confirmed** via metadata (and, in later milestones, verified geometrically).
+- In M2 the overlap is recomputed from the documented per-sensor ground
+  footprint at PREPARE time (`footprint_intersection`) and the evidence
+  (`diagnostics/overlap.json`) is written for inspection; absence of geometry
+  blocks the run (`NO_GEOMETRY`).
 - No confirmed overlap -> no matching is attempted.
+
+## M2 derived processing outputs (M2)
+
+Running `POST /api/processing/{pair_id}/prepare` with configuration
+`PC-M2-001` writes everything under
+`data/derived/processing/<pair_id>/PC-M2-001/`:
+
+| Artifact | Contents |
+| --- | --- |
+| `processing_status.json` | run state, stage log + per-stage status, blocked reason, matcher readiness, tile counts |
+| `processing_manifest.json` | step → relative path + SHA-256 provenance (no absolute paths) |
+| `<sensor>/preprocessed_display_u16.npy` | display-normalized 16-bit array (raw never touched) |
+| `<sensor>/invalid_mask_u8.npy` | validity mask (bitflags 1 NaN/Inf, 2 saturated, 4 negative, 8 unknown) |
+| `<sensor>/stats.json` | per-sensor statistics + normalization parameters |
+| `crops/tiles.json` | tile registry (`CS-PNNN-T###`, origin, size, clipped/too_small, valid fraction indicators) |
+| `crops/*.npy` | sensor-native tile arrays |
+| `diagnostics/overlap.json` | computed footprint intersection evidence |
+| `diagnostics/conditions.json` | per-tile per-sensor condition classification + thresholds applied |
+| `<tile_id>_preview.png` | derived (lazy) tile preview PNG |
+
+`POST /api/processing/{pair_id}/reset` deletes the pair's derived processing
+directory; raw data and the registry records are left untouched.
 
 ## Derived-data policy
 
