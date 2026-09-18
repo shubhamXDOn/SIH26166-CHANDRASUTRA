@@ -17,6 +17,8 @@ from fastapi.testclient import TestClient
 
 import fixturegen  # noqa: F401
 
+from auth_helpers import authed_client_for_app, configure_auth
+
 
 def _harness(settings_factory):
     from backend.app.config import Settings
@@ -27,8 +29,9 @@ def _harness(settings_factory):
     fixturegen.write_standard_fixtures(tmp)
     settings = Settings(data_root=str(tmp), _env_file=None)
     ensure_derived_directories(settings)
+    configure_auth(settings)
     app = create_app(settings=settings)
-    return TestClient(app), settings, tmp
+    return authed_client_for_app(app), settings, tmp
 
 
 def _register(client) -> str:

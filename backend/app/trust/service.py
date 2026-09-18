@@ -45,8 +45,13 @@ class TrustService:
             if not proc_dir.is_dir():
                 continue
             for matcher_dir in sorted(proc_dir.iterdir()):
-                if matcher_dir.is_dir():
-                    deepest = matcher_dir
+                if not matcher_dir.is_dir():
+                    continue
+                if matcher_dir.name == "m8":
+                    # M8 deep-matcher expansion runs must NOT be interpreted as
+                    # an M3 matcher run by the M4 trust gate.
+                    continue
+                deepest = matcher_dir
         if deepest is not None and (deepest / "summary.json").is_file():
             return deepest
         return None

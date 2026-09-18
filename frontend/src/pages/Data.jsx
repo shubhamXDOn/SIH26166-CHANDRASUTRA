@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge, EmptyState, Icon, Modal, PageSkeleton, StatusDot } from "../components/ui.jsx";
 import { apiGet, apiPost } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 const OVERLAP_OPTIONS = [
   { value: "OVERLAP_UNCONFIRMED", label: "Overlap unconfirmed", note: "Candidate — not benchmark-ready until footprint evidence exists." },
@@ -22,6 +23,7 @@ const WIZ = {
 };
 
 export default function Data({ notify, onNavigate }) {
+  const { canMutate, user } = useAuth();
   const [status, setStatus] = useState(null);
   const [sensors, setSensors] = useState(null);
   const [pairs, setPairs] = useState([]);
@@ -32,6 +34,7 @@ export default function Data({ notify, onNavigate }) {
   const [matching, setMatching] = useState(null);
   const [trust, setTrust] = useState(null);
   const [spatial, setSpatial] = useState(null);
+  const [registration, setRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -105,6 +108,12 @@ export default function Data({ notify, onNavigate }) {
       } catch {
         /* spatial not staged */
       }
+      let rg = null;
+      try {
+        rg = await apiGet(`/registration/${pairId}/status`);
+      } catch {
+        /* registration not staged */
+      }
       setSelected(pairId);
       setDetail(det);
       setValidation(val);
@@ -112,6 +121,7 @@ export default function Data({ notify, onNavigate }) {
       setMatching(mat);
       setTrust(tr);
       setSpatial(sp);
+      setRegistration(rg);
     } catch (e) {
       notify({ title: "Could not open pair", message: e.message, tone: "danger" });
     }
@@ -164,7 +174,7 @@ export default function Data({ notify, onNavigate }) {
           <button className="btn-ghost !px-3 !py-2 text-xs" onClick={() => { load().catch(() => {}); notify({ title: "Workspace refreshed", tone: "ok" }); }}>
             <Icon.Refresh className="h-3.5 w-3.5" /> Refresh
           </button>
-          <button className="btn-primary" onClick={() => setWizard({ step: WIZ.IDLE })}>
+          <button className="btn-primary" onClick={() => canMutate && setWizard({ step: WIZ.IDLE })} disabled={!canMutate} title={canMutate ? "Register a real pair" : `Viewer access — ${user?.username ?? "you"} can inspect but only an analyst or admin can register pairs.`}>
             <Icon.Database className="h-4 w-4" /> Load / Register Pair
           </button>
         </div>
@@ -232,7 +242,7 @@ export default function Data({ notify, onNavigate }) {
               title="No registered pairs yet"
               message="Real OHRC/TMC-2 products are not present on disk. Once PRADAN-approval files are placed under data/raw, use 'Load / Register Pair' to build the first traceable pair (CS-P001)."
               action={
-                <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setWizard({ step: WIZ.IDLE })}>
+                <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setWizard({ step: WIZ.IDLE })} disabled={!canMutate}>
                   Start ingestion
                 </button>
               }
@@ -277,7 +287,7 @@ export default function Data({ notify, onNavigate }) {
       </section>
 
       {/* C+D+E. PAIR DETAIL */}
-      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} trust={trust} spatial={spatial} onValidate={runValidate} onNavigate={onNavigate} />}
+      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} trust={trust} spatial={spatial} registration={registration} onValidate={runValidate} onNavigate={onNavigate} />}
 
       {/* Ingestion wizard */}
       {wizard && (
@@ -315,7 +325,7 @@ function OverlapBadge({ value }) {
 /* Pair inspection workspace                                           */
 /* ------------------------------------------------------------------ */
 
-function PairInspection({ detail, validation, processing, matching, trust, spatial, onValidate, onNavigate }) {
+function PairInspection({ detail, validation, processing, matching, trust, spatial, registration, onValidate, onNavigate }) {
   const r = detail.record;
   const comp = detail.completeness;
   const overlap = validation?.overlap ?? { status: r.overlap_status, evidence: r.overlap_evidence || "No evidence recorded." };
@@ -327,6 +337,8 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
   const mRun = matching?.summary ?? null;
   const tState = trust?.gate_state ?? "NOT_STARTED";
   const sState = spatial?.gate_state ?? "NOT_STARTED";
+  const rgState = registration?.state ?? "NOT_STARTED";
+  const rgBlock = registration?.block_code ?? null;
 
   const checks = validation?.checks ?? [];
   const integrity = {
@@ -359,7 +371,7 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
           <Badge tone={readyM2 ? "ok" : "neutral"}>
             {readyM2 ? "Ready for preprocessing (M2)" : "Awaiting M1 validation"}
           </Badge>
-          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={onValidate}>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={onValidate} disabled={!canMutate} title={canMutate ? "Re-validate raw integrity" : "Analyst or admin required"}>
             <Icon.Activity className="h-3.5 w-3.5" /> Validate now
           </button>
         </div>
@@ -388,7 +400,9 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
           <Badge tone={sState === "COMPLETE" ? "ok" : sState === "BLOCKED" ? "warn" : sState === "FAILED" || sState === "INSUFFICIENT" ? "warn" : sState === "RUNNING" ? "blue" : "neutral"}>
             Spatial {sState}
           </Badge>
-          <Badge tone="neutral">M6 Registration LOCKED</Badge>
+          <Badge tone={rgState === "COMPLETE" ? "ok" : rgState === "BLOCKED" || rgState === "FAILED" || rgState === "INSUFFICIENT" ? "warn" : rgState === "RUNNING" ? "blue" : "neutral"}>
+            Registration {rgState}
+          </Badge>
           <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onNavigate?.("analysis")}>
             <Icon.Activity className="h-3.5 w-3.5" /> Open in Analysis
           </button>
@@ -417,6 +431,22 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
           </p>
         )}
       </div>
+
+      {rgState === "COMPLETE" && (
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="flex items-start gap-2 text-xs leading-relaxed text-muted">
+            <Icon.Info className="mt-0.5 h-3.5 w-3.5 text-orbit-400" />
+            <span>
+              Registration for <strong className="text-slate-200">{r.pair_id}</strong> completed a verified
+              transform fit on M5-selected correspondences and warped the source crop into the target
+              sensor frame. Diagnostics are measurements — never a claim of scientific alignment.
+            </span>
+          </p>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => onNavigate?.("analysis")}>
+            <Icon.Activity className="h-3.5 w-3.5" /> Open Registration
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* D. DATA INTEGRITY */}
@@ -495,11 +525,13 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
           <span>
             {r.pair_id} is registered and its raw products are hashed. M3 candidate correspondences
             are raw observations. The M4 Trust Gate state for this pair is{" "}
-            <strong className="text-slate-200">{tState}</strong> and the M5 spatial reliability state is{" "}
-            <strong className="text-slate-200">{sState}</strong> — independent geometric verification, when run in
-            the Analysis workspace, converts qualified tiles into verified spatial evidence and then
-            selects a supported reliability region; nothing here ever carries a fabricated accuracy or
-            trust verdict. Registration (M6) is locked until implemented.
+            <strong className="text-slate-200">{tState}</strong>, the M5 spatial reliability state is{" "}
+            <strong className="text-slate-200">{sState}</strong> and the M6 registration state is{" "}
+            <strong className="text-slate-200">{rgState}{rgBlock ? ` (${rgBlock})` : ""}</strong> — independent
+            geometric verification, when run in the Analysis workspace, converts qualified tiles into
+            verified spatial evidence, selects a supported reliability region, and then fits and
+            validates a transform for registration; nothing here ever carries a fabricated accuracy
+            or trust verdict.
           </span>
         </p>
       </div>

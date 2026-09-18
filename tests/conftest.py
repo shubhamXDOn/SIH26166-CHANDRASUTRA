@@ -43,3 +43,30 @@ def client_factory(tmp_path):
         return TestClient(app)
 
     return make
+
+
+@pytest.fixture()
+def authed_client_factory(tmp_path):
+    """Return a factory building an app+client where auth is configured and
+    the client is already logged in as the bootstrap administrator.
+
+    Used by the M1–M9 suites (whose endpoints require authentication since
+    M10) and by M10 happy-path tests.
+    """
+    from auth_helpers import (
+        ADMIN_PASSWORD,
+        ADMIN_USERNAME,
+        AUTH_TEST_SECRET,
+        authed_client_for_app,
+    )
+
+    def make(**overrides):
+        overrides.setdefault("data_root", str(tmp_path / "data"))
+        overrides.setdefault("auth_secret_key", AUTH_TEST_SECRET)
+        overrides.setdefault("auth_bootstrap_admin_username", ADMIN_USERNAME)
+        overrides.setdefault("auth_bootstrap_admin_password", ADMIN_PASSWORD)
+        settings = Settings(**overrides, _env_file=None)
+        app = create_app(settings=settings)
+        return authed_client_for_app(app)
+
+    return make

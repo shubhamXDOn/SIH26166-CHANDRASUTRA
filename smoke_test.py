@@ -1,4 +1,4 @@
-"""SIH26166 — Milestone M1 environment smoke test.
+"""SIH26166 — Milestone M10 environment smoke test.
 
 Validates, end to end:
     * Python environment
@@ -10,7 +10,15 @@ Validates, end to end:
     * M1 endpoints: /api/data/status, /api/data/sensors,
       /api/pairs, /api/pairs/next-id, /api/pairs/scan,
       /api/pairs/probe (traversal rejection), 404 behaviour
+    * M2..M9 pipeline endpoint honesty (clean repo -> BLOCKED/NOT_STARTED)
+    * M10 authentication: auth status, login with HttpOnly cookie, /me,
+      fail-closed anonymous 401/501 behaviour
     * frontend render + frontend->backend connectivity
+
+Every milestone boots the real app with authentication ENABLED (a random
+AUTH_SECRET_KEY is generated unless one is already configured) and an
+isolated temporary auth database, then logs in as an administrator and
+carries the bearer token on all probes.
 
 Usage:
     .venv\\Scripts\\python.exe smoke_test.py
@@ -22,9 +30,11 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -35,6 +45,56 @@ BACKEND_PORT = int(os.environ.get("SMOKE_PORT", "8137"))
 
 CHECKS: list[tuple[str, bool, str]] = []
 
+# Freshly-obtained access token for the currently-probed backend instance.
+SMOKE_TOKEN: str | None = None
+
+SMOKE_ADMIN_USER = "smoke-admin"
+SMOKE_ADMIN_PASSWORD = "Smoke-Admin-2026-m10!"
+
+
+def _auth_env() -> dict[str, str]:
+    """Env overrides that keep the smoke isolated and authentication ENABLED.
+
+    Uses the live AUTH_SECRET_KEY when one is configured, otherwise generates
+    an ephemeral key and a dedicated bootstrap administrator. The auth DB is
+    placed in the OS temp dir so the smoke never writes into the repo's data
+    tree.
+    """
+    key = os.environ.get("AUTH_SECRET_KEY", "").strip() or secrets.token_urlsafe(48)
+    db = (
+        os.environ.get("AUTH_DB_PATH", "").strip()
+        or str(Path(tempfile.gettempdir()) / f"chandrasutra_smoke_{os.getpid()}.db")
+    )
+    user, pw = _admin_creds()
+    return {
+        "AUTH_SECRET_KEY": key,
+        "AUTH_DB_PATH": db,
+        "AUTH_REGISTER_ENABLED": "true",
+        "AUTH_BOOTSTRAP_ADMIN_USERNAME": user,
+        "AUTH_BOOTSTRAP_ADMIN_PASSWORD": pw,
+    }
+
+
+def _admin_creds() -> tuple[str, str]:
+    user = os.environ.get("AUTH_BOOTSTRAP_ADMIN_USERNAME", "").strip() or SMOKE_ADMIN_USER
+    pw = os.environ.get("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "").strip() or SMOKE_ADMIN_PASSWORD
+    return user, pw
+
+
+def _require_token(base: str, tag: str) -> bool:
+    """Log in as the (auto-)bootstrap administrator and stash the bearer token."""
+    global SMOKE_TOKEN  # noqa: PLW0603
+    user, pw = _admin_creds()
+    body = _post_json(f"{base}/auth/login", {"username": user, "password": pw})
+    SMOKE_TOKEN = (body or {}).get("access_token")
+    ok = bool(SMOKE_TOKEN)
+    record(f"{tag}-auth-login", ok, f"login as {user} -> token={bool(SMOKE_TOKEN)} role={(body or {}).get('user', {}).get('role')}")
+    return ok
+
+
+def _headers() -> dict[str, str]:
+    return {"Authorization": f"Bearer {SMOKE_TOKEN}"} if SMOKE_TOKEN else {}
+
 
 def record(name: str, ok: bool, detail: str) -> None:
     CHECKS.append((name, ok, detail))
@@ -43,7 +103,7 @@ def record(name: str, ok: bool, detail: str) -> None:
 
 
 def main() -> int:
-    print(f"CHANDRASUTRA (SIH26166) M1/M2/M3/M4 smoke test  |  repo root: {REPO_ROOT}")
+    print(f"CHANDRASUTRA (SIH26166) M1..M10 smoke test  |  repo root: {REPO_ROOT}")
     print(f"  Python           : {sys.version.split()[0]}  ({sys.executable})\n")
 
     # ---- 1. Python version ------------------------------------------------
@@ -114,6 +174,21 @@ def main() -> int:
     # ---- 5f. M5 endpoints over HTTP ----------------------------------------
     record_m5_backend()
 
+    # ---- 5g. M6 endpoints over HTTP ----------------------------------------
+    record_m6_backend()
+
+    # ---- 5h. M7 endpoints over HTTP ----------------------------------------
+    record_m7_backend()
+
+    # ---- 5i. M8 endpoints over HTTP ----------------------------------------
+    record_m8_backend()
+
+    # ---- 5j. M9 AI endpoints over HTTP -------------------------------------
+    record_m9_backend()
+
+    # ---- 5k. M10 auth endpoints over HTTP ----------------------------------
+    record_m10_backend()
+
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
 
@@ -146,7 +221,7 @@ def record_frontend() -> None:
     # Spawn backend + vite on free ports and request /api/health THROUGH vite.
     backend_port = free_port()
     vite_port = free_port()
-    env = {**os.environ, "VITE_PROXY_TARGET": f"http://127.0.0.1:{backend_port}", "VITE_PORT": str(vite_port)}
+    env = {**os.environ, "VITE_PROXY_TARGET": f"http://127.0.0.1:{backend_port}", "VITE_PORT": str(vite_port), **_auth_env()}
     procs: list[subprocess.Popen] = []
     try:
         procs.append(
@@ -224,7 +299,7 @@ def record_backend_http() -> None:
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env={**os.environ, "SMOKE_PORT": str(port)},
+            env={**os.environ, "SMOKE_PORT": str(port), **_auth_env()},
         )
         url = f"http://127.0.0.1:{port}/api/health"
         healthy = _wait_for_health(url, timeout=40)
@@ -269,15 +344,17 @@ def record_m1_backend() -> None:
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env={**os.environ, "SMOKE_M1_PORT": str(port)},
+            env={**os.environ, "SMOKE_M1_PORT": str(port), **_auth_env()},
         )
         base = f"http://127.0.0.1:{port}/api"
         if not _wait_for_health(f"{base}/health", timeout=40):
             record("m1-backend", False, "uvicorn did not become healthy within 40s")
             return
 
+        if not _require_token(base, "m1"):
+            return
         meta = _get_json(f"{base}/meta")
-        record("m1-meta", bool(meta and meta.get("milestone") == "M5"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M10"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
         record(
             "m1-config",
             (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
@@ -349,13 +426,15 @@ def record_m2_backend() -> None:
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env={**os.environ, "SMOKE_M2_PORT": str(port)},
+            env={**os.environ, "SMOKE_M2_PORT": str(port), **_auth_env()},
         )
         base = f"http://127.0.0.1:{port}/api"
         if not _wait_for_health(f"{base}/health", timeout=40):
             record("m2-backend", False, "uvicorn did not become healthy within 40s")
             return
 
+        if not _require_token(base, "m2"):
+            return
         meta = _get_json(f"{base}/meta") or {}
         m2cfg = meta.get("m2_config") or {}
         record(
@@ -417,13 +496,15 @@ def record_m3_backend() -> None:
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env={**os.environ, "SMOKE_M3_PORT": str(port)},
+            env={**os.environ, "SMOKE_M3_PORT": str(port), **_auth_env()},
         )
         base = f"http://127.0.0.1:{port}/api"
         if not _wait_for_health(f"{base}/health", timeout=40):
             record("m3-backend", False, "uvicorn did not become healthy within 40s")
             return
 
+        if not _require_token(base, "m3"):
+            return
         meta = _get_json(f"{base}/meta") or {}
         m3cfg = meta.get("m3_config") or {}
         record(
@@ -491,13 +572,15 @@ def record_m4_backend() -> None:
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env={**os.environ, "SMOKE_M4_PORT": str(port)},
+            env={**os.environ, "SMOKE_M4_PORT": str(port), **_auth_env()},
         )
         base = f"http://127.0.0.1:{port}/api"
         if not _wait_for_health(f"{base}/health", timeout=40):
             record("m4-backend", False, "uvicorn did not become healthy within 40s")
             return
 
+        if not _require_token(base, "m4"):
+            return
         meta = _get_json(f"{base}/meta") or {}
         m4cfg = meta.get("m4_config") or {}
         record(
@@ -563,13 +646,15 @@ def record_m5_backend() -> None:
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env={**os.environ, "SMOKE_M5_PORT": str(port)},
+            env={**os.environ, "SMOKE_M5_PORT": str(port), **_auth_env()},
         )
         base = f"http://127.0.0.1:{port}/api"
         if not _wait_for_health(f"{base}/health", timeout=40):
             record("m5-backend", False, "uvicorn did not become healthy within 40s")
             return
 
+        if not _require_token(base, "m5"):
+            return
         meta = _get_json(f"{base}/meta") or {}
         m5cfg = meta.get("m5_config") or {}
         record(
@@ -615,19 +700,488 @@ def record_m5_backend() -> None:
                 proc.kill()
 
 
+def record_m6_backend() -> None:
+    """Probe the M6 registration endpoints honestly (clean repo -> NOT_STARTED)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M6_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m6-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        if not _require_token(base, "m6"):
+            return
+        meta = _get_json(f"{base}/meta") or {}
+        m6cfg = meta.get("m6_config") or {}
+        record(
+            "m6-meta-config",
+            m6cfg.get("registration_configuration_id") == "RG-M6-001" and "defaults" in m6cfg,
+            f"m6_config={list(m6cfg.keys())}",
+        )
+
+        cfg = _get_json(f"{base}/registration/configurations") or {}
+        cfgs = cfg.get("configurations") or []
+        record(
+            "m6-configurations",
+            bool(cfgs)
+            and cfgs[0].get("registration_configuration_id") == "RG-M6-001"
+            and cfg.get("default_registration_configuration_id") == "RG-M6-001",
+            f"configurations={[c.get('registration_configuration_id') for c in cfgs]}",
+        )
+
+        overview = _get_json(f"{base}/registration/overview") or {}
+        record(
+            "m6-overview-honest-zero",
+            (overview.get("total_registration_pairs") == 0)
+            and (overview.get("complete_pairs") == 0)
+            and (overview.get("blocked_or_insufficient_pairs") == 0),
+            f"overview total={overview.get('total_registration_pairs')} complete={overview.get('complete_pairs')}",
+        )
+
+        status404 = _get_status(f"{base}/registration/CS-P999/status")
+        record("m6-unknown-status-404", status404 == 404,
+               f"unknown pair registration status -> HTTP {status404}")
+
+        run404 = _get_status(f"{base}/registration/CS-P999/run", method="POST",
+                             payload={"registration_configuration_id": "RG-M6-001"})
+        record("m6-unknown-run-404", run404 == 404,
+               f"unknown pair registration run -> HTTP {run404}")
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m6-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m7_backend() -> None:
+    """Probe the M7 metrics endpoints honestly (clean repo -> NOT_STARTED)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M7_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m7-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        if not _require_token(base, "m7"):
+            return
+        meta = _get_json(f"{base}/meta") or {}
+        m7cfg = meta.get("m7_config") or {}
+        record(
+            "m7-meta-config",
+            m7cfg.get("metrics_configuration_id") == "MT-M7-001" and "defaults" in m7cfg,
+            f"m7_config={list(m7cfg.keys())}",
+        )
+
+        cfg = _get_json(f"{base}/metrics/configurations") or {}
+        cfgs = cfg.get("configurations") or []
+        record(
+            "m7-configurations",
+            bool(cfgs)
+            and cfgs[0].get("metrics_configuration_id") == "MT-M7-001"
+            and cfg.get("default_metrics_configuration_id") == "MT-M7-001",
+            f"configurations={[c.get('metrics_configuration_id') for c in cfgs]}",
+        )
+
+        overview = _get_json(f"{base}/metrics/overview") or {}
+        record(
+            "m7-overview-honest-zero",
+            (overview.get("total_metrics_pairs") == 0)
+            and (overview.get("complete_pairs") == 0)
+            and (overview.get("not_complete_pairs") == 0),
+            f"overview total={overview.get('total_metrics_pairs')} complete={overview.get('complete_pairs')}",
+        )
+
+        status404 = _get_status(f"{base}/metrics/CS-P999/status")
+        record("m7-unknown-status-404", status404 == 404,
+               f"unknown pair metrics status -> HTTP {status404}")
+
+        run404 = _get_status(f"{base}/metrics/CS-P999/run", method="POST",
+                             payload={"metrics_configuration_id": "MT-M7-001"})
+        record("m7-unknown-run-404", run404 == 404,
+               f"unknown pair metrics run -> HTTP {run404}")
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m7-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m8_backend() -> None:
+    """Probe the M8 mental-deep expansion + benchmark endpoints (clean repo)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M8_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m8-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        if not _require_token(base, "m8"):
+            return
+        meta = _get_json(f"{base}/meta") or {}
+        m8cfg = meta.get("m8_config") or {}
+        record(
+            "m8-meta-config",
+            m8cfg.get("configuration_id") == "DM-M8-001" and "defaults" in m8cfg,
+            f"m8_config={list(m8cfg.keys())}",
+        )
+
+        caps = _get_json(f"{base}/matching/capabilities") or {}
+        matchers = caps.get("matchers") or []
+        by_id = {m.get("matcher_id"): m for m in matchers}
+        honest_deep = (by_id.get("superpoint_superglue") or {}).get("available") is False
+        classical_ok = (by_id.get("sift") or {}).get("available") is True
+        weights = (by_id.get("superpoint_superglue") or {}).get("weights_available") is False
+        record(
+            "m8-capabilities-honest",
+            honest_deep and classical_ok and weights,
+            f"matchers={sorted(by_id)} deep_available={honest_deep} weights_available={weights}",
+        )
+        device = caps.get("device") or {}
+        record(
+            "m8-device-surface",
+            "deep_runtime" in device and bool(device.get("effective_device")),
+            f"effective_device={device.get('effective_device')} runtime={sorted((device.get('deep_runtime') or {}).keys())}",
+        )
+
+        status404 = _get_status(f"{base}/matching/CS-P999/m8/status")
+        record("m8-unknown-status-404", status404 == 404,
+               f"unknown pair m8 status -> HTTP {status404}")
+
+        run404 = _get_status(f"{base}/matching/CS-P999/m8/run", method="POST",
+                             payload={"mode": "AUTO", "benchmark": False})
+        record("m8-unknown-run-404", run404 == 404,
+               f"unknown pair m8 run -> HTTP {run404}")
+
+        route404 = _get_status(f"{base}/matching/CS-P999/m8/routing")
+        record("m8-unknown-routing-404", route404 == 404,
+               f"unknown pair m8 routing -> HTTP {route404}")
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m8-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m9_backend() -> None:
+    """Probe the M9 AI assistant endpoints (clean repo, no Gemini key)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M9_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m9-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        if not _require_token(base, "m9"):
+            return
+        meta = _get_json(f"{base}/meta") or {}
+        m9cfg = meta.get("m9_config") or {}
+        record(
+            "m9-meta-config",
+            m9cfg.get("ai_configuration_id") == "AI-M9-001"
+            and "grounding_rules" in m9cfg
+            and "constraints" in m9cfg,
+            f"m9_config keys={list(m9cfg.keys())}",
+        )
+        record("m9-milestone", meta.get("milestone") == "M10", f"milestone={meta.get('milestone')}")
+
+        ai_status = _get_json(f"{base}/ai/status") or {}
+        record(
+            "m9-ai-status",
+            ai_status.get("status") == "NOT_CONFIGURED"
+            and ai_status.get("configured") is False
+            and ai_status.get("policy", {}).get("explanatory_only") is True,
+            f"ai status={ai_status.get('status')} configured={ai_status.get('configured')}",
+        )
+
+        explain = _post_json(f"{base}/ai/explain")
+        err = (explain or {}).get("error") or {}
+        ok_explain = err.get("code") == "NOT_CONFIGURED"
+        record(
+            "m9-ai-explain-unconfigured",
+            ok_explain,
+            f"POST /ai/explain error.code={err.get('code')}",
+        )
+
+        resp_blob = json.dumps(explain or {})
+        record("m9-ai-no-secret", "AIza" not in resp_blob, "no Google API key leaked in any AI response")
+
+        tasks = ("explain-failure", "explain-routing", "summarize-experiment", "chat")
+        for name in tasks:
+            body = _post_json(f"{base}/ai/{name}")
+            errc = ((body or {}).get("error") or {}).get("code")
+            record(f"m9-{name}-unconfigured", errc == "NOT_CONFIGURED", f"POST /ai/{name} error.code={errc}")
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m9-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def record_m10_backend() -> None:
+    """Probe the M10 auth endpoints honestly (real HTTP, real tokens)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M10_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m10-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        status = _get_json(f"{base}/auth/status") or {}
+        record(
+            "m10-auth-status",
+            status.get("authentication_enabled") is True
+            and status.get("configured") is True
+            and status.get("registration_enabled") is True
+            and bool(status.get("roles"))
+            and is_int_ttl(status.get("access_token_ttl_seconds")),
+            f"enabled={status.get('authentication_enabled')} configured={status.get('configured')} "
+            f"session={status.get('session_state')} ttl={status.get('access_token_ttl_seconds')}s",
+        )
+
+        cookies = _login_cookies(base)
+        joined = "; ".join(cookies)
+        record(
+            "m10-refresh-cookie",
+            bool(joined)
+            and "httponly" in joined.lower()
+            and "path=/api/auth/" in joined.lower()
+            and "chandrasutra_refresh" in joined,
+            f"Set-Cookie={joined[:90]}",
+        )
+
+        if not _require_token(base, "m10"):
+            return
+
+        me = _get_json(f"{base}/auth/me") or {}
+        rec_user = me.get("user") or {}
+        admin_user, _admin_pw = _admin_creds()
+        record(
+            "m10-me",
+            bool(rec_user.get("id")) and rec_user.get("username") == admin_user and rec_user.get("role") == "admin",
+            f"fields={list(rec_user.keys())} role={rec_user.get('role')}",
+        )
+
+        anon = _anon_status(f"{base}/data/status")
+        record("m10-fail-closed", anon in (401, 403, 501), f"anonymous GET /data/status -> HTTP {anon}")
+
+        anon_post = _anon_status(f"{base}/processing/CS-P999/prepare", method="POST", payload={"configuration_id": None})
+        record("m10-anon-mutation-blocked", anon_post in (401, 403, 501), f"anonymous POST /prepare -> HTTP {anon_post}")
+
+        users = _get_json(f"{base}/auth/users") or {}
+        record(
+            "m10-users-listed",
+            isinstance(users.get("users"), list) and len(users.get("users")) >= 1,
+            f"users={len(users.get('users') or [])}",
+        )
+
+        summary = _get_json(f"{base}/auth/security-summary") or {}
+        record(
+            "m10-security-summary",
+            summary.get("total_users", 0) >= 1
+            and isinstance(summary.get("recent_security_events"), list)
+            and bool(summary.get("configuration_id")),
+            f"total_users={summary.get('total_users')} events={len(summary.get('recent_security_events') or [])}",
+        )
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m10-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+def is_int_ttl(value: object) -> bool:
+    return isinstance(value, int) and value > 0
+
+
+def _login_cookies(base: str) -> list[str]:
+    user, pw = _admin_creds()
+    data = json.dumps({"username": user, "password": pw}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{base}/auth/login",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            return resp.headers.get_all("Set-Cookie") or []
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _anon_status(url: str, method: str = "GET", payload: dict | None = None) -> int:
+    """Status of a request made WITHOUT any Authorization header."""
+    try:
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        headers = {"Content-Type": "application/json"} if data is not None else {}
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            return resp.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except (urllib.error.URLError, OSError):
+        return -1
+
+
 def _get_json(url: str) -> dict | None:
     try:
-        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
+        req = urllib.request.Request(url, headers=_headers())
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
             payload = resp.read().decode("utf-8")
         return json.loads(payload)
     except Exception:  # noqa: BLE001
         return None
 
 
+def _post_json(url: str, payload: dict | None = None) -> dict | None:
+    try:
+        data = json.dumps(payload).encode("utf-8") if payload is not None else b""
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json", **_headers()},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:  # noqa: PERF203
+        try:
+            return json.loads(exc.read().decode("utf-8"))
+        except Exception:  # noqa: BLE001
+            return None
+    except (urllib.error.URLError, OSError):
+        return None
+
+
 def _get_status(url: str, method: str = "GET", payload: dict | None = None) -> int:
     try:
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
-        headers = {"Content-Type": "application/json"} if data is not None else {}
+        headers = {"Content-Type": "application/json", **_headers()} if data is not None else _headers()
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
             return resp.status

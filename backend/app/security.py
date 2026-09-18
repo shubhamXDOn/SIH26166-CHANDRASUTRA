@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import secrets
 from enum import Enum
 from typing import Any
@@ -35,15 +36,31 @@ from .errors import UnauthorizedError
 class Role(str, Enum):
     ADMIN = "admin"
     ANALYST = "analyst"
-    REVIEWER = "reviewer"
+    VIEWER = "viewer"
 
     @classmethod
     def description(cls) -> str:
         return (
-            "admin: full management; "
-            "analyst: run analyses and view data; "
-            "reviewer: inspect results and reports."
+            "admin: manage users, roles, security audit and config; "
+            "analyst: execute processing/analysis workflows and view data; "
+            "viewer: inspect results and use explanatory AI."
         )
+
+    @property
+    def rank(self) -> int:
+        return _ROLE_RANK[self.value]
+
+
+_ROLE_RANK = {
+    Role.VIEWER.value: 0,
+    Role.ANALYST.value: 1,
+    Role.ADMIN.value: 2,
+}
+
+
+def roles_at_least(role: Role) -> set[Role]:
+    """All roles with rank >= ``role`` (used for authorization)."""
+    return {r for r in Role if r.rank >= role.rank}
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +73,7 @@ class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=64, pattern=r"^[\w.\-]+$")
     password: str = Field(min_length=12, max_length=256)
     display_name: str = Field(default="", max_length=128)
-    role: Role = Role.ANALYST
+    role: Role = Role.VIEWER
 
 
 class UserInDB(BaseModel):
@@ -208,6 +225,25 @@ def require_db_session() -> None:
     raise UnauthorizedError("Persistent user storage is not configured (future milestone).")
 
 
+# ---------------------------------------------------------------------------
+# Redaction inside security.py for lazy import safety.
+# ---------------------------------------------------------------------------
+
+_REDACT_TOKEN_RE = re.compile(r"(?i)(\bBearer\s+)[A-Za-z0-9\-_\.=]+")
+_REDACT_HEADER_RE = re.compile(r"(?i)((?:authorization|x-goog-api-key|api[-_]key|refresh[-_]token|jwt[-_]secret|password[-_]hash)\s*[:=]\s*)([^\s,;]+)")
+_REDACT_JWT_RE = re.compile(r"(?i)\beyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.([A-Za-z0-9\-_]+)")
+
+
+def redact_text(text: str) -> str:
+    """Scrub common secret patterns from a piece of text (logs, messages)."""
+    if not text:
+        return text
+    text = _REDACT_HEADER_RE.sub(lambda m: f"{m.group(1)}***", text)
+    text = _REDACT_TOKEN_RE.sub(r"\1***", text)
+    text = _REDACT_JWT_RE.sub(r"eyJ***.***.***", text)
+    return text
+
+
 __all__ = [
     "Role",
     "UserCreate",
@@ -220,4 +256,5 @@ __all__ = [
     "configure_auth_guard",
     "get_auth_guard",
     "require_db_session",
+    "redact_text",
 ]

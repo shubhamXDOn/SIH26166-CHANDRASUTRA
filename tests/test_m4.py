@@ -25,6 +25,8 @@ from fastapi.testclient import TestClient
 
 import fixturegen  # noqa: F401
 
+from auth_helpers import authed_client_for_app, configure_auth
+
 
 def _m4_harness(settings_factory):
     from backend.app.config import Settings
@@ -35,8 +37,9 @@ def _m4_harness(settings_factory):
     fixturegen.write_correlated_fixtures(tmp)
     settings = Settings(data_root=str(tmp), _env_file=None)
     ensure_derived_directories(settings)
+    configure_auth(settings)
     app = create_app(settings=settings)
-    return TestClient(app), settings, tmp
+    return authed_client_for_app(app), settings, tmp
 
 
 def _register(client) -> str:
@@ -489,7 +492,7 @@ def test_trust_overview_honest_zero_and_meta(settings_factory):
     client, _s, _t = _m4_harness(settings_factory)
     with client:
         meta = client.get("/api/meta").json()
-        assert meta["milestone"] == "M5"
+        assert meta["milestone"] == "M10"
         assert meta["m4_config"]["trust_configuration_id"] == "TG-M4-001"
         body = client.get("/api/trust/overview").json()
         assert body["total_trust_pairs"] == 0

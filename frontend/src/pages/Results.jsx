@@ -15,7 +15,8 @@ export default function Results() {
           either accepts a tile as verified spatial evidence or rejects it with structured reasons.
           M5 represents the overlap scene as a{" "}
           <strong className="text-slate-200">spatial reliability grid</strong> and selects a supported
-          reliability region for the future registration.
+          reliability region; M6 fits and validates a transform on that evidence and produces the{" "}
+          <strong className="text-slate-200">registered product</strong>.
         </p>
       </section>
 
@@ -44,8 +45,8 @@ export default function Results() {
             <span className="mx-1 font-mono text-[11px] text-orbit-300">NOT_RUN</span>.
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            TRUSTED means verified spatial evidence for model fitting — it is still not final registration
-            geometry. Registration (M6) remains locked until implemented.
+            TRUSTED means verified spatial evidence for model fitting — registration still belongs to
+            M6, which feeds on the M5-selected evidence, never on the raw candidates.
           </p>
         </div>
         <div className="card p-5">
@@ -60,6 +61,20 @@ export default function Results() {
           <p className="mt-2 text-xs leading-relaxed text-muted">
             M5 reports measurable spatial evidence — it is not an absolute accuracy or physical-registration
             claim. Blocked and insufficient outcomes are first-class.
+          </p>
+        </div>
+        <div className="card p-5">
+          <Badge tone="ok">M6 · Registration (open)</Badge>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            M6 consumes only the{" "}
+            <span className="font-mono text-[11px] text-slate-300">selected_correspondences.npz</span>{" "}
+            from M5, fits a homography (affine fallback) on sensor-pixel points, validates it through
+            residual + symmetric-transfer checks and warps the source crop into the target sensor
+            frame. Registered products, transform, diagnostics and validation are all recorded.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Diagnostics are measurements, never a claim of scientific alignment. Pass/fail/insufficient
+            verdicts are first-class and reported honestly.
           </p>
         </div>
         <div className="card p-5">

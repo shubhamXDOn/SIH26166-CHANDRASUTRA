@@ -30,7 +30,7 @@ def test_health_endpoint(client_factory):
         assert body["status"] == "ok"
         assert body["application"] == "CHANDRASUTRA"
         assert body["project"] == "SIH26166"
-        assert body["milestone"] == "M5"
+        assert body["milestone"] == "M10"
         assert "version" in body
         assert "environment" in body
         assert "timestamp" in body
@@ -56,37 +56,48 @@ def test_meta_does_not_leak_secrets(client_factory):
         assert "gemini_api_key" not in resp.json()["settings"]
 
 
-def test_data_status_reports_no_pairs(client_factory):
+def test_data_status_requires_auth_then_reports_no_pairs(client_factory, authed_client_factory):
+    # Since M10 every pipeline read requires an authenticated session first:
+    # with no AUTH_SECRET_KEY the honest answer is AUTH_NOT_CONFIGURED.
     with client_factory() as client:
+        resp = client.get("/api/data/status")
+        assert resp.status_code == 501
+        assert resp.json()["error"]["code"] == "AUTH_NOT_CONFIGURED"
+    # Authenticated, a fresh deployment truthfully reports zero pairs.
+    with authed_client_factory() as client:
         resp = client.get("/api/data/status")
         assert resp.status_code == 200
         body = resp.json()
         assert body["pairs_registered"] == 0
-        assert body["milestone"] == "M5"
+        assert body["milestone"] == "M10"
         assert body["summary"]["total"] >= 4
         assert "directories" in body
         assert body["source"]["archive"] == "PRADAN"
 
 
-def test_ai_status_not_configured_without_key(client_factory):
+def test_ai_status_requires_auth_and_reports_not_configured(client_factory, authed_client_factory):
     with client_factory(gemini_api_key="") as client:
+        resp = client.get("/api/ai/status")
+        assert resp.status_code == 501
+        assert resp.json()["error"]["code"] == "AUTH_NOT_CONFIGURED"
+    with authed_client_factory(gemini_api_key="") as client:
         resp = client.get("/api/ai/status")
         assert resp.status_code == 200
         assert resp.json()["status"] == "NOT_CONFIGURED"
 
 
-def test_ai_explain_reports_not_configured(client_factory):
+def test_ai_explain_requires_configured_auth(client_factory):
     with client_factory(gemini_api_key="") as client:
         resp = client.post("/api/ai/explain")
         assert resp.status_code == 501
-        assert resp.json()["error"]["code"] == "NOT_CONFIGURED"
+        assert resp.json()["error"]["code"] == "AUTH_NOT_CONFIGURED"
 
 
 def test_auth_login_returns_not_configured(client_factory):
     with client_factory(auth_secret_key="") as client:
         resp = client.post("/api/auth/login", json={"username": "a", "password": "b"})
         assert resp.status_code == 501
-        assert resp.json()["error"]["code"] == "NOT_CONFIGURED"
+        assert resp.json()["error"]["code"] == "AUTH_NOT_CONFIGURED"
 
 
 def test_auth_status_reports_configuration(client_factory):

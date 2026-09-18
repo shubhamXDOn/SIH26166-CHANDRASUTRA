@@ -46,10 +46,16 @@ class Settings(BaseSettings):
     app_name: str = "SIH26166"
     product_name: str = "CHANDRASUTRA"
     tagline: str = "Trustworthy Lunar Image Intelligence"
-    milestone: str = "M5"
+    milestone: str = "M10"
     app_env: str = "development"  # development | production
     app_debug: bool = True
-    app_version: str = "0.4.0"
+    app_version: str = "0.10.0"
+
+    # M8 deep matcher model/location configuration. Weights are NEVER
+    # downloaded by the application. When this directory (or the default
+    # data_root/models/m8) does not contain the required weight files, the
+    # deep matchers truthfully report MODEL_WEIGHTS_NOT_CONFIGURED.
+    m8_model_dir: str = ""
 
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
@@ -59,18 +65,44 @@ class Settings(BaseSettings):
 
     data_root: str = ""
 
-    # --- Security (empty until real authentication milestone) ---
+    # --- Security (M10 real authentication; secret is env-only) ---
     auth_secret_key: str = ""
     auth_token_expire_minutes: int = 60
     auth_algorithm: str = "HS256"
+
+    # M10 authentication runtime configuration. The signing secret is the only
+    # secret here; everything else is non-sensitive engineering policy that is
+    # also mirrored in configs/app.yaml (AU-M10-001).
+    auth_db_path: str = ""  # default: <data_root>/auth/auth.db
+    auth_issuer: str = ""  # default: app_name
+    auth_audience: str = "chandrasutra-api"
+    auth_access_ttl_seconds: int = 0  # 0 -> m10 config default (900)
+    auth_refresh_ttl_seconds: int = 0  # 0 -> m10 config default (604800)
+    auth_register_enabled: bool = True
+    auth_refresh_cookie_name: str = "chandrasutra_refresh"
+    auth_cookie_secure: bool = False  # forced on in production by cookie helper
+    auth_cookie_samesite: str = "strict"
+    auth_bootstrap_admin_username: str = ""
+    auth_bootstrap_admin_password: str = ""
 
     # --- AI / Gemini (optional in M0) ---
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 
+    # M9 AI runtime tuning (non-secret). Bounds are enforced client-side so
+    # a request can never grow unbounded or hang the provider indefinitely.
+    gemini_timeout_seconds: float = 45.0
+    gemini_max_output_tokens: int = 2048
+    gemini_max_input_chars: int = 50000
+    gemini_max_retries: int = 1
+
     @property
     def data_root_path(self) -> Path:
         return Path(self.data_root).expanduser() if self.data_root else DATA_ROOT_DEFAULT
+
+    @property
+    def m8_model_path(self) -> Path:
+        return Path(self.m8_model_dir).expanduser() if self.m8_model_dir else (self.data_root_path / "models" / "m8")
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -79,6 +111,24 @@ class Settings(BaseSettings):
     @property
     def auth_configured(self) -> bool:
         return bool(self.auth_secret_key.strip())
+
+    @property
+    def auth_db_file(self) -> Path:
+        if self.auth_db_path.strip():
+            return Path(self.auth_db_path).expanduser()
+        return self.data_root_path / "auth" / "auth.db"
+
+    @property
+    def auth_issuer_value(self) -> str:
+        return self.auth_issuer.strip() or self.app_name
+
+    @property
+    def auth_audience_value(self) -> str:
+        return self.auth_audience.strip() or "chandrasutra-api"
+
+    @property
+    def auth_cookie_secure_effective(self) -> bool:
+        return bool(self.auth_cookie_secure) or self.app_env == "production"
 
     @property
     def gemini_configured(self) -> bool:
@@ -100,11 +150,20 @@ class Settings(BaseSettings):
             "auth": {
                 "configured": self.auth_configured,
                 "algorithm": self.auth_algorithm,
+                "configuration_id": "AU-M10-001",
+                "registration_enabled": self.auth_register_enabled,
+                "issuer": self.auth_issuer_value,
+                "audience": self.auth_audience_value,
+                "access_token_ttl_seconds": self.auth_access_ttl_seconds or 900,
+                "refresh_cookie_secure": self.auth_cookie_secure_effective,
             },
             "ai": {
                 "service": "Gemini",
                 "configured": self.gemini_configured,
                 "model": self.gemini_model,
+                "timeout_seconds": self.gemini_timeout_seconds,
+                "max_output_tokens": self.gemini_max_output_tokens,
+                "max_input_chars": self.gemini_max_input_chars,
             },
         }
 
@@ -126,6 +185,11 @@ class PipelineConfig(BaseModel):
     m3: dict[str, Any] = Field(default_factory=dict)
     m4: dict[str, Any] = Field(default_factory=dict)
     m5: dict[str, Any] = Field(default_factory=dict)
+    m6: dict[str, Any] = Field(default_factory=dict)
+    m7: dict[str, Any] = Field(default_factory=dict)
+    m8: dict[str, Any] = Field(default_factory=dict)
+    m9: dict[str, Any] = Field(default_factory=dict)
+    m10: dict[str, Any] = Field(default_factory=dict)
 
     def model_dump_public(self) -> dict[str, Any]:
         data = self.model_dump()
@@ -160,6 +224,11 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
     raw.setdefault("m3", {})
     raw.setdefault("m4", {})
     raw.setdefault("m5", {})
+    raw.setdefault("m6", {})
+    raw.setdefault("m7", {})
+    raw.setdefault("m8", {})
+    raw.setdefault("m9", {})
+    raw.setdefault("m10", {})
     return PipelineConfig(source=str(config_path), **raw)
 
 
@@ -462,6 +531,341 @@ def m5_config(path: Path | None = None) -> dict[str, Any]:
         "defaults": _deep_merge(_M5_DEFAULTS["defaults"], defaults),
     }
     merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M6_DEFAULTS: dict[str, Any] = {
+    "registration_configuration_id": "RG-M6-001",
+    "registration_configuration_version": 1,
+    "name": "Registration Engine, Verified Alignment & Jury-Ready Registration Workspace",
+    "derived_rel": "derived/registration",
+    "defaults": {
+        "transform": {
+            "preferred_type": "homography",
+            "affine_fallback": True,
+            "min_inliers_for_homography": 4,
+            "min_inlier_ratio_for_homography": 0.5,
+            "ransac_max_iterations": 2000,
+            "ransac_inlier_threshold_px": 3.0,
+            "ransac_seed": 42,
+            "refine": False,
+        },
+        "validation": {
+            "max_symmetric_transfer_px": 12.0,
+            "max_residual_mean_px": 10.0,
+            "max_residual_median_px": 6.0,
+            "max_residual_p95_px": 15.0,
+            "min_inlier_ratio": 0.3,
+            "min_inliers": 6,
+            "max_condition_number": 1e6,
+            "check_determinant": True,
+            "min_abs_determinant": 1e-6,
+        },
+        "warp": {
+            "method": "forward_mapping",
+            "output_bounds": "target_bounds",
+            "fill_value": 0,
+            "dtype": "uint16",
+            "output_interpolation": "linear",
+            "output_image_format": "png",
+            "visualization_normalization": "minmax",
+            "max_output_rows": 20000,
+            "max_output_cols": 20000,
+        },
+        "execution": {"max_runtime_seconds": 120},
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m6_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M6 settings from configs/app.yaml.
+
+    Mirrors ``m5_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``registration_configuration_id`` is the stable M6
+    Registration Configuration ID.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m6") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "registration_configuration_id": _M6_DEFAULTS["registration_configuration_id"],
+        "registration_configuration_version": _M6_DEFAULTS["registration_configuration_version"],
+        "name": _M6_DEFAULTS["name"],
+        "derived_rel": _M6_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M6_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M7_DEFAULTS: dict[str, Any] = {
+    "metrics_configuration_id": "MT-M7-001",
+    "metrics_configuration_version": 1,
+    "name": "Quantitative Metrics, Reproducible Experiment Reports & Scientific Diagnostics",
+    "derived_rel": "derived/metrics",
+    "defaults": {
+        "rejected": {
+            "inlier_ratio_minimum": 0.3,
+            "residual_mean_max_px": 10.0,
+            "selected_fraction_minimum": 0.1,
+            "scientifically_tuned": False,
+        },
+        "recompute": {
+            "enabled": True,
+            "inlier_threshold_px": 3.0,
+            "consistency_tolerance": 1e-3,
+            "scientifically_tuned": False,
+        },
+        "report": {
+            "deterministic_report": True,
+        },
+        "execution": {"max_runtime_seconds": 60},
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m7_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M7 settings from configs/app.yaml.
+
+    Mirrors ``m6_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``metrics_configuration_id`` is the stable M7 Metrics
+    Configuration ID. All thresholds carry ``scientifically_tuned: false``.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m7") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "metrics_configuration_id": _M7_DEFAULTS["metrics_configuration_id"],
+        "metrics_configuration_version": _M7_DEFAULTS["metrics_configuration_version"],
+        "name": _M7_DEFAULTS["name"],
+        "derived_rel": _M7_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M7_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
+    return merged
+
+
+_M8_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "DM-M8-001",
+    "configuration_version": 1,
+    "name": "Deep Matcher Benchmarking, Adaptive Expansion & Trustworthy Matcher Selection",
+    "source_reference": "SIH26166 M8 spec - engineering defaults; no scientifically tuned thresholds.",
+    "derived_rel": "derived/matches",
+    "scientifically_tuned": False,
+    "defaults": {
+        "enabled": True,
+        "preferred_matcher": "auto",
+        "classical": {
+            "enabled": True,
+            "strategies": ["sift", "orb"],
+        },
+        "deep": {
+            "enabled": True,
+            "strategies": ["superpoint_superglue", "loftr"],
+        },
+        "runtime": {
+            "device": "auto",
+            "max_runtime_seconds": 120,
+            "max_image_dimension": 2048,
+            "max_tile_area": 400000,
+            "batch_size": 1,
+        },
+        "candidates": {
+            "max_correspondences": 4000,
+            "require_finite": True,
+            "require_mask_valid": True,
+        },
+        "routing": {
+            "allow_classical": True,
+            "allow_deep": True,
+            "fallback_to_classical": True,
+        },
+        "benchmark": {
+            "enabled": True,
+            "reference_dataset": "NOT_AVAILABLE",
+        },
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m8_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M8 settings from configs/app.yaml.
+
+    Mirrors ``m7_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``configuration_id`` is the stable M8 Deep Matcher
+    Configuration ID.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m8") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "configuration_id": _M8_DEFAULTS["configuration_id"],
+        "configuration_version": _M8_DEFAULTS["configuration_version"],
+        "name": _M8_DEFAULTS["name"],
+        "derived_rel": _M8_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M8_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
+    return merged
+
+
+_M9_DEFAULTS: dict[str, Any] = {
+    "ai_configuration_id": "AI-M9-001",
+    "ai_configuration_version": 1,
+    "name": "Real Gemini AI Assistant — Evidence-Grounded Scientific Copilot & Explainable Analysis",
+    "source_reference": "SIH26166 M9 spec - engineering defaults; no scientifically tuned thresholds.",
+    "provider": "gemini",
+    "prompt_version": "M9-SYSTEM-001",
+    "evidence_schema_version": "M9-EVIDENCE-001",
+    "delimiters": {"begin": "BEGIN CHANDRASUTRA EVIDENCE", "end": "END CHANDRASUTRA EVIDENCE"},
+    "forbidden_result_terms": [
+        "overall_accuracy", "scientific_confidence", "registration_confidence",
+        "alignment_score", "lunar_accuracy", "geolocation_accuracy", "CE90", "LE90",
+    ],
+    "grounding_rules": {
+        "R1": "Claims must come only from the supplied evidence packet.",
+        "R2": "When reference (physical-truth) data is NOT_AVAILABLE, reference accuracy is never reported and never guessed.",
+        "R3": "A BLOCKED stage is described as blocked; it is never described as completed or estimated.",
+        "R4": "A metric absent from the evidence packet is 'not available'; it is never invented or estimated.",
+        "R5": "Matcher confidence or matcher scores are observations, never scientific confidence.",
+        "R6": "Residuals are quantitative diagnostics, not physical lunar accuracy.",
+        "R7": "The M4 Trust Gate verdict is never overridden or reclassified.",
+        "R8": "An unexplained cause must be reported as 'Cause is not established by the recorded evidence.'",
+    },
+    "constraints": {
+        "max_input_chars": 50000,
+        "max_output_tokens": 2048,
+        "timeout_seconds": 45.0,
+        "rate_limit_per_minute": 30,
+        "max_sessions": 200,
+        "session_ttl_seconds": 3600,
+        "evidence_digest_algorithm": "sha256",
+        "store_prompts": False,
+        "store_responses": False,
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m9_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M9 settings from configs/app.yaml.
+
+    Mirrors ``m8_config``: cached per process, falls back to documented
+    defaults, and never raises on parse. ``prompt_version`` and
+    ``evidence_schema_version`` are the stable identities used in audit
+    records and M9 provenance.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m9") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged = dict(_M9_DEFAULTS)
+    merged.update(section or {})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M10_DEFAULTS: dict[str, Any] = {
+    "authentication_configuration_id": "AU-M10-001",
+    "authentication_configuration_version": 1,
+    "name": "Full Authentication, Authorization & User Security",
+    "source_reference": "SIH26166 M10 spec — engineering defaults; no enterprise IAM claims.",
+    "access_token_ttl_seconds": 900,
+    "refresh_token_ttl_seconds": 604800,
+    "session_idle_ttl_seconds": 86400,
+    "password_policy": {
+        "min_length": 12,
+        "require_letter": True,
+        "require_digit": True,
+        "disallow_username": True,
+    },
+    "login_rate_limit": {
+        "max_attempts": 5,
+        "window_seconds": 300,
+        "lockout_seconds": 900,
+    },
+    "refresh_rotation": True,
+    "registration_enabled": True,
+    "policy": {
+        "no_plaintext_passwords": True,
+        "passwords_never_in_logs": True,
+        "passwords_never_in_responses": True,
+        "passwords_never_in_audit": True,
+        "secret_from_environment_only": True,
+        "authorization_server_side_only": True,
+        "no_fake_login": True,
+        "protected_routes_enforced": True,
+    },
+    "roles": {
+        "viewer": "read results, datasets, and use explanatory AI",
+        "analyst": "execute permitted processing and analysis workflows",
+        "admin": "manage users, roles, security audit and administrative config",
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m10_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M10 settings from configs/app.yaml.
+
+    Mirrors ``m9_config``: cached per process, falls back to documented
+    defaults, and never raises on parse. Exposed via ``GET /api/auth/status``
+    and ``GET /api/meta`` as ``m10_config``.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m10") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged = dict(_M10_DEFAULTS)
+    merged.update(section or {})
     merged["source"] = str(config_path)
     return merged
 

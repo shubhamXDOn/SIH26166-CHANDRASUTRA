@@ -29,9 +29,10 @@ from ..pairs import (
     _rel_or_filename,
 )
 from .deps import get_settings
+from ..auth.dependencies import AnalystUser, current_user_dep
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/pairs", tags=["pairs"])
+router = APIRouter(prefix="/pairs", tags=["pairs"], dependencies=[Depends(current_user_dep)])
 
 
 def _allowed_raw_locations() -> list[str]:
@@ -190,7 +191,8 @@ def _public_product_dict(info, settings: Settings) -> dict:
 # --------------------------------------------------------------------------
 
 @router.post("/register")
-def register_pair(req: RegisterPairRequest, settings: Settings = Depends(get_settings)) -> dict:
+def register_pair(current: AnalystUser, req: RegisterPairRequest, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     reg = _registry(settings)
     sensor_a = req.sensor_a or infer_sensor_id_from_path(settings, req.image_a)
     sensor_b = req.sensor_b or infer_sensor_id_from_path(settings, req.image_b)
@@ -292,7 +294,8 @@ def get_validation(pair_id: str, settings: Settings = Depends(get_settings)) -> 
 
 
 @router.post("/{pair_id}/validate")
-def run_validation(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+def run_validation(pair_id: str, current: AnalystUser, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     reg = _registry(settings)
     record = reg.get(pair_id)
     if record is None:

@@ -1,9 +1,12 @@
 """SIH26166 FastAPI application factory.
 
-Startup contract (M0):
+Startup contract:
     * application starts even when AUTH_SECRET_KEY / GEMINI_API_KEY are unset
     * configuration failures are reported loudly and precisely
     * no raw scientific data is loaded at startup; nothing blocks startup
+    * M10 — when AUTH_SECRET_KEY is set, persistent users, sessions and
+      role-based authorization are live; protected endpoints then require a
+      valid bearer access token and enforce the viewer/analyst/admin matrix.
 """
 
 from __future__ import annotations
@@ -60,7 +63,15 @@ def create_app(settings: Settings | None = None, *, config_file: Path | None = N
             "CHANDRASUTRA (SIH26166) — adaptive-reliability platform for "
             "heterogeneous lunar imagery. M1: real data & metadata — the first "
             "documented OHRC–TMC-2 pair loads, validates and is fully traceable. "
-            "Matching and registration are NOT yet implemented."
+             "M3 matching, M4 Trust Gate, M5 spatial selection, M6 verified "
+             "registration, M7 quantitative metrics/reproducible experiment "
+             "reports and M8 deep-matcher expansion are implemented. M9 adds a "
+             "real, evidence-grounded Gemini copilot that explains recorded "
+             "pipeline evidence and never originates scientific truth. M10 adds "
+             "full authentication and authorization: persistent users, secure "
+             "registration/login, short-lived access tokens with rotating refresh "
+             "sessions, and server-side viewer/analyst/admin role enforcement with "
+             "a security audit trail."
         ),
         docs_url="/api/docs" if settings.app_debug else None,
         redoc_url=None,

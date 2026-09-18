@@ -24,6 +24,8 @@ from fastapi.testclient import TestClient
 
 import fixturegen  # noqa: F401
 
+from auth_helpers import authed_client_for_app, configure_auth
+
 PA = "CS-P001"
 SA, SB = "ohrc", "tmc2"
 PC, MK, TG = "PC-M2-001", "MC-M3-001", "TG-M4-001"
@@ -48,8 +50,9 @@ def _m5_harness(settings_factory):
     fixturegen.write_correlated_fixtures(tmp)
     settings = Settings(data_root=str(tmp), _env_file=None)
     ensure_derived_directories(settings)
+    configure_auth(settings)
     app = create_app(settings=settings)
-    return TestClient(app), settings, tmp
+    return authed_client_for_app(app), settings, tmp
 
 
 def _register(client) -> str:
@@ -251,7 +254,7 @@ def test_m5_health_meta_includes_m5_config():
     c = TC(app)
     with c:
         meta = c.get("/api/meta").json()
-        assert meta["milestone"] == "M5"
+        assert meta["milestone"] == "M10"
         assert meta["m5_config"]["spatial_reliability_configuration_id"] == "SR-M5-001"
 
 

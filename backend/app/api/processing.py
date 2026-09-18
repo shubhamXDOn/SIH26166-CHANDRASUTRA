@@ -19,11 +19,12 @@ from ..errors import NotFoundError
 from ..logging_conf import get_logger
 from ..pairs import PairRegistry
 from .deps import get_settings
+from ..auth.dependencies import AnalystUser, current_user_dep
 from ..processing.config import configurations_public
 from ..processing.service import ProcessingService, default_configuration_id, processing_overview
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/processing", tags=["processing"])
+router = APIRouter(prefix="/processing", tags=["processing"], dependencies=[Depends(current_user_dep)])
 
 
 class PrepareRequest(BaseModel):
@@ -78,7 +79,8 @@ def status_configuration(service: ProcessingService, pair_id: str) -> str:
 
 
 @router.post("/{pair_id}/prepare")
-def run_prepare(pair_id: str, req: PrepareRequest, settings: Settings = Depends(get_settings)) -> dict:
+def run_prepare(pair_id: str, current: AnalystUser, req: PrepareRequest, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     service = _service(settings)
     status = service.prepare(
         pair_id,
@@ -90,7 +92,8 @@ def run_prepare(pair_id: str, req: PrepareRequest, settings: Settings = Depends(
 
 
 @router.post("/{pair_id}/reset")
-def reset_pair(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+def reset_pair(pair_id: str, current: AnalystUser, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     service = _service(settings)
     registry = PairRegistry(settings)
     if registry.get(pair_id) is None:

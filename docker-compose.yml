@@ -1,0 +1,38 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: chandrasutra-backend
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8000
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:-}            # from .env — never committed
+      AUTH_ACCESS_TTL_SECONDS: ${AUTH_ACCESS_TTL_SECONDS:-900}
+      AUTH_REFRESH_TTL_SECONDS: ${AUTH_REFRESH_TTL_SECONDS:-604800}
+      AUTH_REGISTER_ENABLED: ${AUTH_REGISTER_ENABLED:-true}
+      AUTH_BOOTSTRAP_ADMIN_USERNAME: ${AUTH_BOOTSTRAP_ADMIN_USERNAME:-}
+      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DATA_ROOT: /data
+    volumes:
+      - chandrasutra_data:/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: chandrasutra-frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  chandrasutra_data:

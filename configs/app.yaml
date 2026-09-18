@@ -267,6 +267,221 @@ m5:
     execution:
       max_runtime_seconds: 60
 
+m6:
+  registration_configuration_id: "RG-M6-001"
+  registration_configuration_version: 1
+  name: "Registration Engine, Verified Alignment & Jury-Ready Registration Workspace"
+  source_reference: "SIH26166 M6 spec - engineering/policy defaults; no scientifically calibrated lunar thresholds."
+  derived_rel: "derived/registration"
+  defaults:
+    transform:
+      preferred_type: "homography"
+      affine_fallback: true
+      min_inliers_for_homography: 4
+      min_inlier_ratio_for_homography: 0.5
+      ransac_max_iterations: 2000
+      ransac_inlier_threshold_px: 3.0
+      ransac_seed: 42
+      refine: false
+    validation:
+      max_symmetric_transfer_px: 12.0
+      max_residual_mean_px: 10.0
+      max_residual_median_px: 6.0
+      max_residual_p95_px: 15.0
+      min_inlier_ratio: 0.3
+      min_inliers: 6
+      max_condition_number: 1000000.0
+      check_determinant: true
+      min_abs_determinant: 0.000001
+    warp:
+      method: "forward_mapping"
+      output_bounds: "target_bounds"
+      fill_value: 0
+      dtype: "uint16"
+      output_interpolation: "linear"
+      output_image_format: "png"
+      visualization_normalization: "minmax"
+      max_output_rows: 20000
+      max_output_cols: 20000
+    execution:
+      max_runtime_seconds: 120
+
+m7:
+  metrics_configuration_id: "MT-M7-001"
+  metrics_configuration_version: 1
+  name: "Quantitative Metrics, Reproducible Experiment Reports & Scientific Diagnostics"
+  source_reference: "SIH26166 M7 spec - engineering/policy defaults; no scientifically calibrated lunar thresholds."
+  derived_rel: "derived/metrics"
+  scientifically_tuned: false
+  defaults:
+    rejected:
+      inlier_ratio_minimum: 0.3
+      residual_mean_max_px: 10.0
+      selected_fraction_minimum: 0.1
+      scientifically_tuned: false
+    recompute:
+      enabled: true
+      inlier_threshold_px: 3.0
+      consistency_tolerance: 0.001
+      scientifically_tuned: false
+    report:
+      deterministic_report: true
+    execution:
+      max_runtime_seconds: 60
+
+# ------------------------------------------------------------
+# M8 — deep matcher benchmarking & adaptive expansion.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning — they are reproducible defaults registered under the
+# Deep Matcher Configuration ID below. Deep matcher confidence is
+# an observation, never a truth verdict (M4 Trust Gate remains
+# authoritative). No model weights are downloaded automatically;
+# deep matchers truthfully report MODEL_WEIGHTS_NOT_CONFIGURED
+# unless the configured weights exist.
+# ------------------------------------------------------------
+m8:
+  configuration_id: "DM-M8-001"
+  configuration_version: 1
+  name: "Deep Matcher Benchmarking, Adaptive Expansion & Trustworthy Matcher Selection"
+  source_reference: "SIH26166 M8 spec - engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/matches"
+  scientifically_tuned: false
+  defaults:
+    enabled: true
+    preferred_matcher: "auto"
+    classical:
+      enabled: true
+      strategies:
+        - sift
+        - orb
+    deep:
+      enabled: true
+      strategies:
+        - superpoint_superglue
+        - loftr
+    runtime:
+      device: "auto"
+      max_runtime_seconds: 120
+      max_image_dimension: 2048
+      max_tile_area: 400000
+      batch_size: 1
+    candidates:
+      max_correspondences: 4000
+      require_finite: true
+      require_mask_valid: true
+    routing:
+      allow_classical: true
+      allow_deep: true
+      fallback_to_classical: true
+    benchmark:
+      enabled: true
+      reference_dataset: "NOT_AVAILABLE"
+
+# ------------------------------------------------------------
+# M9 — Real Gemini AI Assistant: evidence-grounded scientific
+# copilot & explainable analysis.
+#
+# The AI layer is explanatory/assistive ONLY. Science truth comes
+# from the deterministic M2..M8 pipeline; Gemini never authorizes a
+# registration and never produces scientific numbers. All evidence
+# sent to the model is sanitized pipeline data (never instructions).
+# The GEMINI_API_KEY lives only in the backend environment/.env.
+# ------------------------------------------------------------
+m9:
+  ai_configuration_id: "AI-M9-001"
+  ai_configuration_version: 1
+  name: "Real Gemini AI Assistant — Evidence-Grounded Scientific Copilot & Explainable Analysis"
+  source_reference: "SIH26166 M9 spec — engineering defaults; no scientifically tuned thresholds."
+  provider: "gemini"
+  prompt_version: "M9-SYSTEM-001"
+  evidence_schema_version: "M9-EVIDENCE-001"
+  tasks:
+    - id: explain
+      label: "Explain pair analysis"
+    - id: explain-failure
+      label: "Explain failure or blocker"
+    - id: explain-routing
+      label: "Explain adaptive matcher routing"
+    - id: summarize-experiment
+      label: "Summarize experiment report"
+    - id: chat
+      label: "Ask about a pair"
+  delimiters:
+    begin: "BEGIN CHANDRASUTRA EVIDENCE"
+    end: "END CHANDRASUTRA EVIDENCE"
+  forbidden_result_terms:
+    - overall_accuracy
+    - scientific_confidence
+    - registration_confidence
+    - alignment_score
+    - lunar_accuracy
+    - geolocation_accuracy
+    - CE90
+    - LE90
+  grounding_rules:
+    - "R1: Claims must come only from the supplied evidence packet."
+    - "R2: When reference (physical-truth) data is NOT_AVAILABLE, reference accuracy is never reported and never guessed."
+    - "R3: A BLOCKED stage is described as blocked; it is never described as completed or estimated."
+    - "R4: A metric absent from the evidence packet is 'not available'; it is never invented or estimated."
+    - "R5: Matcher confidence or matcher scores are observations, never scientific confidence."
+    - "R6: Residuals are quantitative diagnostics of the fitted transform, not physical lunar accuracy."
+    - "R7: The M4 Trust Gate verdict is never overridden or reclassified by the AI layer."
+    - "R8: A cause that the evidence cannot establish must be reported as 'Cause is not established by the recorded evidence.'"
+  constraints:
+    max_input_chars: 50000
+    max_output_tokens: 2048
+    timeout_seconds: 45
+    rate_limit_per_minute: 30
+    max_sessions: 200
+    session_ttl_seconds: 3600
+    evidence_digest_algorithm: "sha256"
+    store_prompts: false
+    store_responses: false
+
+# ------------------------------------------------------------
+# M10 — Full Authentication, Authorization & User Security.
+#
+# Production-grade authentication with real persistent users,
+# secure password hashing, short-lived access tokens, rotating
+# refresh sessions, role-based authorization, and security audit.
+#
+# Secrets (JWT signing key) come from environment variables only.
+# This block contains non-sensitive engineering policy defaults.
+# ------------------------------------------------------------
+m10:
+  authentication_configuration_id: "AU-M10-001"
+  authentication_configuration_version: 1
+  name: "Full Authentication, Authorization & User Security"
+  source_reference: "SIH26166 M10 spec — engineering defaults; no enterprise IAM claims."
+  access_token_ttl_seconds: 900
+  refresh_token_ttl_seconds: 604800
+  session_idle_ttl_seconds: 86400
+  password_policy:
+    min_length: 12
+    require_letter: true
+    require_digit: true
+    disallow_username: true
+  login_rate_limit:
+    max_attempts: 5
+    window_seconds: 300
+    lockout_seconds: 900
+  refresh_rotation: true
+  registration_enabled: true
+  policy:
+    no_plaintext_passwords: true
+    passwords_never_in_logs: true
+    passwords_never_in_responses: true
+    passwords_never_in_audit: true
+    secret_from_environment_only: true
+    authorization_server_side_only: true
+    no_fake_login: true
+    protected_routes_enforced: true
+  roles:
+    viewer: "read results, datasets, and use explanatory AI"
+    analyst: "execute permitted processing and analysis workflows"
+    admin: "manage users, roles, security audit and administrative config"
+
 # ------------------------------------------------------------
 # Engineering defaults — placeholders to be replaced by real
 # experiment-tuned parameters in later milestones. They carry no

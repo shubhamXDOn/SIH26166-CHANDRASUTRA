@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge, Icon, Modal } from "./ui.jsx";
 import { apiGet, apiPost } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 const TILE_TONES = {
   TRUSTED: "ok",
@@ -21,6 +22,7 @@ function gateTone(state) {
 }
 
 export default function TrustPanel({ pairId, notify }) {
+  const { canMutate } = useAuth();
   const [status, setStatus] = useState(null);
   const [summary, setSummary] = useState(null);
   const [tiles, setTiles] = useState(null);
@@ -155,10 +157,10 @@ export default function TrustPanel({ pairId, notify }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={runTrust}>
+            <button className="btn-primary" disabled={busy || !canMutate} title={canMutate ? "Run the Trust Gate" : "Analyst or admin required"} onClick={runTrust}>
               <Icon.Activity className="h-4 w-4" /> {busy ? "Running…" : "Run TRUST"}
             </button>
-            <button className="btn-ghost" disabled={busy} onClick={resetTrust}>
+            <button className="btn-ghost" disabled={busy || !canMutate} title={canMutate ? "Reset pair state" : "Analyst or admin required"} onClick={resetTrust}>
               <Icon.Refresh className="h-4 w-4" /> Reset
             </button>
             <button
@@ -212,7 +214,8 @@ export default function TrustPanel({ pairId, notify }) {
           <span>
             A TRUSTED tile passes the M4 geometric gate (inlier geometry, spatial support, cross-check) under
             the registered configuration — it is <strong>verified spatial evidence for model fitting</strong>, not
-            an absolute accuracy claim. Registration (M6) is locked until it is implemented.
+            an absolute accuracy claim. M6 registration feeds on the M5-selected evidence produced from
+            these trusted correspondences; diagnostics are measurements, never scientific truth.
           </span>
         </p>
       </div>

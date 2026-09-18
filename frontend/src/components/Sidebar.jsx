@@ -1,12 +1,14 @@
 import { Icon, StatusDot } from "./ui.jsx";
+import { useAuth } from "../auth.jsx";
 
 const NAV = [
   { id: "overview", label: "Overview", icon: Icon.Grid },
   { id: "data", label: "Data", icon: Icon.Database },
   { id: "analysis", label: "Analysis", icon: Icon.Activity },
   { id: "results", label: "Results", icon: Icon.Chart },
-  { id: "ai", label: "AI Insights", icon: Icon.Spark },
-  { id: "settings", label: "Settings", icon: Icon.Gear },
+  { id: "ai", label: "AI Copilot", icon: Icon.Spark },
+  { id: "account", label: "Account", icon: Icon.Info },
+  { id: "security", label: "Security", icon: Icon.Lock, admin: true },
 ];
 
 export function Logo({ compact = false }) {
@@ -37,6 +39,8 @@ export function Logo({ compact = false }) {
 
 export function Sidebar({ page, onNavigate, backend }) {
   const online = backend?.online === true;
+  const { user, isAdmin, signOut } = useAuth();
+  const items = NAV.filter((item) => !item.admin || isAdmin);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-16 flex-col border-r border-white/[0.06] bg-space-900/70 backdrop-blur-xl lg:w-64">
@@ -53,7 +57,7 @@ export function Sidebar({ page, onNavigate, backend }) {
         <p className="hidden px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/70 lg:block">
           Workspace
         </p>
-        {NAV.map((item) => {
+        {items.map((item) => {
           const active = page === item.id;
           const IconCmp = item.icon;
           return (
@@ -84,17 +88,30 @@ export function Sidebar({ page, onNavigate, backend }) {
         })}
       </nav>
 
-      <div className="border-t border-white/[0.06] p-2 lg:p-4">
-        <div className="card flex items-center justify-center gap-3 !rounded-lg p-2 lg:justify-start lg:p-3">
-          <StatusDot state={online ? "ok" : "danger"} pulse={online} />
-          <div className="hidden min-w-0 flex-1 leading-tight lg:block">
-            <p className="text-xs font-semibold text-slate-100">
-              {online ? "Backend online" : "Backend offline"}
-            </p>
-            <p className="truncate text-[10px] text-muted">
-              {online ? `${backend?.environment} · v${backend?.version}` : "Retrying…"}
-            </p>
+      <div className="space-y-2 border-t border-white/[0.06] p-2 lg:p-3">
+        {user && (
+          <div className="card flex items-center gap-2.5 !rounded-lg p-2 lg:p-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-lunar-500/15">
+              <Icon.Info className="h-4 w-4 text-lunar-300" />
+            </div>
+            <div className="hidden min-w-0 flex-1 leading-tight lg:block">
+              <p className="truncate text-xs font-semibold text-slate-100">{user.username}</p>
+              <p className="capitalize text-[10px] text-lunar-300">{user.role}</p>
+            </div>
           </div>
+        )}
+        <div className="flex items-center gap-2 px-1 lg:px-0.5">
+          <StatusDot state={online ? "ok" : "danger"} pulse={online} />
+          <span className="hidden flex-1 min-w-0 text-xs font-semibold text-slate-100 lg:block">
+            {online ? `${backend?.environment} · v${backend?.version}` : "Backend offline"}
+          </span>
+          <button
+            onClick={() => signOut()}
+            title="Sign out"
+            className="btn-ghost hidden !px-2 !py-1 text-[10px] lg:inline-flex"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </aside>

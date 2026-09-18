@@ -7,15 +7,16 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M5 — Spatial reliability & reliability-aware selection.**
-> M4's TRUSTED tiles are now re-projected into an overlap-normalised scene grid:
-> per-cell verified evidence, neighbourhood support, connected regions and a
-> `SUPPORTED_REGION` selection written as `selected_correspondences.npz` are
-> **DONE** and fully tested (200 backend tests, 49/49 smoke checks, COMPLETE with
-> 8 reliable cells / 3 components / 19 selected correspondences on the correlated
-> e2e fixture, deterministic). Acquisition of the first real OHRC–TMC-2 pair is
-> still **BLOCKED** on official PRADAN account approval, so the spatial overview
-> honestly reports a BLOCKED/empty state on the live app; nothing is fabricated.
+> **Current milestone: M10 — Authentication/authorization.**
+> M7 (metrics), M8 (deep-matcher expansion + benchmarks) and M9 (real Gemini
+> explanatory layer) are complete. M10 now hardens the entire product with real
+> server-side authentication: SQLite-backed users, JWT access tokens +
+> rotating refresh sessions (HttpOnly cookie), viewer/analyst/admin roles
+> enforced server-side, and a full security/audit surface — **DONE (engineering)**
+> and fully tested (M10 suite plus the M0–M9 suites; smoke passes end to end).
+> Acquisition of the first real OHRC–TMC-2 pair is still **BLOCKED** on official
+> PRADAN account approval, so every real-data pipeline stage honestly reports a
+> BLOCKED/empty state on the live app; nothing is fabricated.
 
 ---
 
@@ -80,14 +81,24 @@ ABSTAIN when evidence is insufficient).
 | M3        | Matcher adapters & adaptive strategy, candidate correspondences | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M3_REPORT.md`) |
 | M4        | Trust Gate — independent geometric verification | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M4_REPORT.md`) |
 | M5        | Spatial reliability — scene grid, reliable regions, reliability-aware selection | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M5_REPORT.md`) |
-| M6–M12    | Registration, metrics, benchmarks, AI assistance, hardening | pending |
+| M6        | Registration engine — verified alignment, transform fit + fallback, warp output, validation verdicts, diagnostics, manifest + provenance, jury-ready workspace | **DONE (engineering)** — real-data execution BLOCKED (see `reports/M6_REPORT.md`) |
+| M7        | Metrics — quality/similarity diagnostics, completeness, honest reporting | **DONE (engineering)** — see `reports/M7_REPORT.md` |
+| M8        | Mental-deep expansion — deep-matcher adapters + benchmark harness | **DONE (engineering)** — see `reports/M8_REPORT.md` |
+| M9        | AI assistant — real Gemini explanatory layer | **DONE (engineering)** — see `reports/M9_REPORT.md` |
+| M10       | Authentication/authorization — users, sessions, roles, audit | **DONE (engineering)** — see `reports/M10_REPORT.md` |
+| M11–M12   | Hardening, full reproducibility suite, final validation & presentation | pending |
 
 Milestone reports: `reports/M0_REPORT.md` (foundation),
 `reports/M1_REPORT.md` (real data & metadata),
 `reports/M2_REPORT.md` (preprocessing & scene conditioning),
 `reports/M3_REPORT.md` (adaptive matcher & candidate correspondences),
-`reports/M4_REPORT.md` (Trust Gate & independent geometric verification), and
-`reports/M5_REPORT.md` (spatial reliability & reliability-aware selection).
+`reports/M4_REPORT.md` (Trust Gate & independent geometric verification),
+`reports/M5_REPORT.md` (spatial reliability & reliability-aware selection),
+`reports/M6_REPORT.md` (registration engine & verified alignment),
+`reports/M7_REPORT.md` (metrics & diagnostics),
+`reports/M8_REPORT.md` (deep-matcher expansion & benchmarks),
+`reports/M9_REPORT.md` (AI assistant & Gemini boundary),
+and `reports/M10_REPORT.md` (authentication/authorization).
 
 ## Setup (backend)
 
@@ -105,8 +116,10 @@ pip install -r requirements.txt
 Copy-Item .env.example .env      # then edit as needed
 ```
 
-The app runs fine with an empty `.env` — `AUTH_SECRET_KEY` and `GEMINI_API_KEY`
-are optional until their future milestones.
+The app always starts, even with an empty `.env`. Without `AUTH_SECRET_KEY` every
+protected endpoint **fails closed** with `501 AUTH_NOT_CONFIGURED` (health,
+meta and `/auth/status` stay public). Set the key and a bootstrap admin to turn
+authentication on — see `.env.example`.
 
 ## Run (backend)
 
@@ -171,7 +184,35 @@ Key endpoints (all under `/api`):
 | `GET /spatial/{id}/selection` | selection policy outcome + reason + selected IDs |
 | `GET /spatial/{id}/mapping` | scene mapping (tile → normalised box) |
 | `GET /spatial/{id}/selected-correspondences` | npz field list + counts |
-| `GET /auth/status`   | authentication foundation status (no fake login)   |
+| `GET /registration/configurations` | available registration configurations (`RG-M6-001`) |
+| `GET /registration/overview` | M6 aggregate — honestly BLOCKED/empty until a validated real pair exists |
+| `POST /registration/{id}/run` | run REGISTRATION (select M5 evidence → fit → validate → warp) |
+| `GET /registration/{id}/status` | registration run state + block code |
+| `POST /registration/{id}/reset` | wipe `derived/registration/<pair>` (M5/M4/M3/M2/raw untouched) |
+| `GET /registration/{id}/manifest` | registration provenance manifest (relative paths + SHA-256) |
+| `GET /registration/{id}/summary` | registration run summary (transform, mapping, correspondences, warp) |
+| `GET /registration/{id}/transform` | fitted transform matrix + source/target space declarations |
+| `GET /registration/{id}/diagnostics` | residual / symmetric-transfer / numerical diagnostics |
+| `GET /registration/{id}/validation` | verdict, checks, issues + independent recompute block |
+| `GET /registration/{id}/provenance` | M2→M6 provenance chain |
+| `GET /registration/{id}/selected-evidence` | M5-selected evidence summary consumed by the run |
+| `GET /registration/{id}/visualizations` | comparison montages list (before/after, difference, correspondences, footprint) |
+| `GET /registration/{id}/visualizations/{name}` | one visualization PNG |
+| `GET /registration/{id}/registered-product` | registered array / valid mask / preview + meta envelope |
+| `GET /registration/{id}/registered-product/array` | registered image `.npy` (uint16 per config) |
+| `GET /registration/{id}/registered-product/valid-mask` | valid-pixel mask `.npy` |
+| `GET /registration/{id}/registered-product/preview` | registered image PNG preview |
+| `GET /auth/status`   | public auth status (configured, registration, TTLs, session state) |
+| `POST /auth/login`   | sign in → JWT access token + HttpOnly refresh cookie |
+| `POST /auth/refresh` | rotate refresh session (token in cookie only) |
+| `POST /auth/logout`  | revoke all the user's refresh sessions |
+| `POST /auth/register`| self-registration (account created disabled, admin activates) |
+| `GET /auth/me`       | current user identity (SafeUser) |
+| `POST /auth/me/password` | change own password (invalidates other sessions) |
+| `GET /auth/users`    | admin — list users                          |
+| `PATCH /auth/users/{id}` | admin — update role / active state      |
+| `DELETE /auth/sessions/{id}` | admin — revoke one refresh session  |
+| `GET /auth/security-summary` | admin — user/session/audit aggregates |
 | `GET /ai/status`     | AI service status (NOT_CONFIGURED without a key)   |
 
 ## Setup + run (frontend)
@@ -184,6 +225,36 @@ npm run dev            # → http://localhost:5173  (proxies /api → 127.0.0.1:
 
 Production build: `npm run build` (outputs to `frontend/dist`).
 
+## Setup + run (Docker)
+
+A reproducible deployment ships with the repository. Docker Compose builds two
+containers — a FastAPI backend (`/api`) and an nginx frontend that statically
+serves the built SPA and proxies `/api` to the backend.
+
+```powershell
+# 1. environment (secrets stay out of git)
+Copy-Item .env.example .env      # then edit as needed (AUTH_SECRET_KEY etc.)
+
+# 2. build + run
+docker compose up --build
+# → UI: http://localhost           (nginx serves frontend/dist, proxies /api)
+# → API health: http://localhost:8000/api/health
+```
+
+Notes:
+
+- The backend container mounts a named volume at `/data` so raw + derived data
+  survive container rebuilds (`DATA_ROOT=/data`).
+- The backend image installs `requirements.txt` (pinned Python 3.14 verified
+  versions) and runs `uvicorn backend.app.main:app`.
+- The frontend image builds `frontend/dist` from source (no committed bundle)
+  and serves it with nginx; `ssr-smoke.mjs` is excluded from the image.
+- Health checks are wired for the backend service; the UI reports honestly when
+  the backend is unreachable.
+- For a non-Docker production run, serve `frontend/dist` with any static host
+  and point `/api` at the backend (see `frontend/nginx.conf` for the proxy
+  configuration).
+
 ## Environment variables
 
 See `.env.example` for the full annotated list. Key items:
@@ -195,7 +266,11 @@ See `.env.example` for the full annotated list. Key items:
 | `BACKEND_HOST/PORT`| no       | uvicorn bind target                            |
 | `CORS_ORIGINS`     | no       | comma-separated browser origins                |
 | `LOG_LEVEL`        | no       | Python logging level                           |
-| `AUTH_SECRET_KEY`  | later    | JWT signing secret; generated via `token_urlsafe(64)` |
+| `AUTH_SECRET_KEY`  | auth*  | JWT signing secret; required to enable auth (fail-closed 501 without it). Generate via `python -c "import secrets; print(secrets.token_urlsafe(64))"` |
+| `AUTH_BOOTSTRAP_ADMIN_USERNAME/PASSWORD` | auth* | admin created on first startup when both are set |
+| `AUTH_ACCESS_TTL_SECONDS` | no   | access-token lifetime (default 900s)            |
+| `AUTH_REFRESH_TTL_SECONDS`| no   | refresh-session lifetime (default 604800s)      |
+| `AUTH_REGISTER_ENABLED`  | no   | allow self-registration (default true)         |
 | `GEMINI_API_KEY`   | later    | backend-only Gemini key; never sent to the browser |
 
 `.env` is git-ignored. **Never commit secrets.**
@@ -253,21 +328,44 @@ normalised grid and per-cell evidence, connected components + fragmentation,
 service block), manifest provenance (POSIX relative-only paths), npz provenance
 fields + determinism + cap enforcement, reset scoping, and a 22-case bug hunt
 (boundary tolerance, homogeneous-w exclusion, confidence absence, path leaks,
-UTF-8, NaN-free scene arrays, re-entrancy, orientation). The environment smoke
-test runs **49 checks** over a live HTTP stack
-(backend endpoints, frontend render, vite proxy).
+UTF-8, NaN-free scene arrays, re-entrancy, orientation). The M6 suite adds:
+registration configuration registration/load/endpoint, tile-local → sensor-pixel
+conversions, strict npz loader hardening (missing keys, length mismatch,
+non-finite, `scene_side` validity, scene bounds), homography/affine fit +
+fallback + validation verdicts on synthetic correspondences, the warp pipeline
+(max output-dimension bounds, interpolation, `uint16` dtype enforcement),
+independence (seeded-RANSAC determinism, residual + symmetric-transfer
+recomputation), transform `source_space`/`target_space` declarations, the full
+registration lifecycle over a real M5 run (COMPLETE / INSUFFICIENT / BLOCKED,
+reset isolation), manifest + provenance (relative paths only, SHA-256),
+diagnostics + validation artefacts, the `/visualizations`,
+`/registered-product` and `/selected-evidence` endpoints, and a bug-hunt
+regression set. The M7 suite adds metrics configuration/engine/service coverage,
+lifecycle runs over real M6 outputs, honest overview, manifest/provenance and
+reset scoping. The M8 suite adds the deep-matcher expansion (router decisions,
+benchmark harness over available matchers, honest unavailable reporting). The
+M9 suite adds the AI assistant boundary (NOT_CONFIGURED-safe status, grounding
+rules, no-secret guarantees, task endpoints). The M10 suite adds full
+authentication/authorization coverage: configuration fail-closed behaviour,
+login/refresh rotation, role matrix (viewer/analyst/admin), password rules,
+account disable, audit + security summary, rate limiting, and a 30-case bug
+hunt (JWT tampering, session revocation, secret-leak scans, privilege
+boundaries, refresh replay). The environment smoke
+test runs dozens of checks over a live HTTP stack
+(backend endpoints, auth login + bearer probes, frontend render, vite proxy).
 
 ## Repository structure
 
 ```
 CHANDRASUTRA/
 ├── backend/            FastAPI application
+│   ├── Dockerfile          backend container (uvicorn, pinned requirements)
 │   └── app/
 │       ├── main.py         app factory + lifespan
-│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1/m2/m3/m4/m5_config
+│       ├── config.py       Settings (env/.env) + PipelineConfig (YAML) + m1…m9_config
 │       ├── logging_conf.py structured logging setup
 │       ├── errors.py       unified error envelope + handlers
-│       ├── security.py     auth/authorization foundation
+│       ├── security.py     role/authz rules (viewer/analyst/admin) + route dependencies
 │       ├── state.py        app singletons
 │       ├── data.py         data architecture service
 │       ├── loader.py       M1 PDS4 parser + CH-2 product loader/previews
@@ -276,20 +374,33 @@ CHANDRASUTRA/
 │       ├── matching/       M3 MATCH engine (adapters, routing, candidates, manifest)
 │       ├── trust/          M4 Trust Gate engine (geometry, spatial, degeneracy, service, manifest)
 │       ├── spatial/        M5 spatial reliability (mapping, grid, reliability, selection, service, manifest)
+│       ├── registration/   M6 registration engine (config, engine, warp, coordinator, loader,
+│       │                   diagnostics, visualize, manifest, provenance, service, states)
+│       ├── metrics/        M7 metrics engine (config, engine, service, manifest)
+│       ├── matching/m8     M8 deep-matcher expansion + benchmarks (deep adapters, routing, benchmark)
+│       ├── auth/           M10 authentication (config, models, password hashing, tokens,
+│       │                   sessions, audit, dependencies)
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, meta, data, pairs, processing, matching, trust, spatial, auth, ai routers
+│       └── api/            health, meta, data, pairs, processing, matching, trust, spatial, registration, metrics, auth, ai routers
 ├── frontend/           React + Vite + Tailwind UI
-│   └── src/components, src/pages        (incl. Analysis workspace — M2/M3/M4/M5)
-├── configs/app.yaml    engineering defaults + m1/m2/m3/m4/m5 sections (no scientific thresholds)
+│   ├── Dockerfile          two-stage build → nginx static host + /api proxy
+│   ├── nginx.conf          SPA server block + /api reverse proxy
+│   └── src/components, src/pages        (incl. Analysis workspace, Account + admin Security)
+├── configs/app.yaml    engineering defaults + m1….m9 sections (no scientific thresholds)
+├── docker-compose.yml  backend + frontend services (named /data volume)
 ├── data/               raw (immutable) / derived (reproducible) — see data/README.md
 │   ├── metadata/       pairs.json, pairs.csv, pair_validation.json (M1 records)
+│   ├── auth/           SQLite auth db — users, sessions, audit/security events (M10)
 │   ├── derived/processing/   per-pair PREPARE outputs (M2: status, manifest, masks, crops, conditions)
-│   ├── derived/matches/      per-pair MATCH outputs (M3: status, manifest, decisions, candidates)
+│   ├── derived/matches/      per-pair MATCH outputs (M3: status, manifest, decisions, candidates, m8/)
 │   ├── derived/trust/        per-pair TRUST outputs (M4: gate status, manifest, tile verdicts)
-│   └── derived/spatial/      per-pair SPATIAL outputs (M5: status, summary, reliability map, components, selection, npz)
-├── tests/              pytest suite (incl. test_m1.py … test_m5.py + fixturegen.py)
-├── reports/            milestone reports (M0_REPORT.md … M5_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + M3 + M4 + M5 checks, 49 total)
+│   ├── derived/spatial/      per-pair SPATIAL outputs (M5: status, summary, reliability map, components, selection, npz)
+│   ├── derived/registration/ per-pair REGISTRATION outputs (M6: status, transform, diagnostics,
+│   │                         validation, registered/, visualizations/, manifest, provenance)
+│   └── derived/metrics/      per-pair METRICS outputs (M7: status, summary, manifest)
+├── tests/              pytest suite (incl. test_m1.py … test_m10.py + auth_helpers/conftest)
+├── reports/            milestone reports (M0_REPORT.md … M10_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + … + M10 — incl. auth login/token)
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -330,11 +441,11 @@ see `reports/M1_REPORT.md`).
 | M3 | **Matcher adapters & adaptive strategy selection, candidate correspondences** — engineering DONE; real-data execution BLOCKED, see `reports/M3_REPORT.md` |
 | M4 | **Trust Gate — independent geometric verification** (RANSAC geometry, degeneracy + residual + spatial reliability checks, symmetric cross-check, binary gate over candidate correspondences) — engineering DONE; real-data execution BLOCKED, see `reports/M4_REPORT.md` |
 | M5 | **Spatial reliability & reliability-aware selection** (overlap-normalised scene grid, per-cell verified evidence, connected regions, SUPPORTED_REGION selection → selected_correspondences.npz) — engineering DONE; real-data execution BLOCKED, see `reports/M5_REPORT.md` |
-| M6 | Registration (homography/affine) + diagnostics — LOCKED until M5 evidence is runnable on real data |
-| M7 | Metrics, visualization, SUCCESS / FAILURE / ABSTAIN reporting    |
-| M8 | Deep matcher adapters + benchmarking vs baselines                |
-| M9 | Real Gemini explanatory layer                                    |
-| M10 | Authentication/authorization completion                          |
+| M6 | Registration (homography/affine) + diagnostics | **DONE (engineering)** — real-data execution BLOCKED, see `reports/M6_REPORT.md` |
+| M7 | Metrics, visualization, SUCCESS / FAILURE / ABSTAIN reporting — **DONE (engineering)**, see `reports/M7_REPORT.md` |
+| M8 | Deep matcher adapters + benchmarking vs baselines — **DONE (engineering)**, see `reports/M8_REPORT.md` |
+| M9 | Real Gemini explanatory layer — **DONE (engineering)**, see `reports/M9_REPORT.md` |
+| M10 | Authentication/authorization completion (users, sessions, roles, audit) — **DONE (engineering)**, see `reports/M10_REPORT.md` |
 | M11 | Hardening, performance, accessibility                           |
 | M12 | Full reproducibility suite, final validation & presentation      |
 
@@ -379,12 +490,24 @@ see `reports/M1_REPORT.md`).
   `selected_correspondences.npz`). The M5 outputs are **measured spatial
   evidence positions**, not a final registration/alignment model and not an
   accuracy claim; real-data spatial runs remain BLOCKED for the same reason.
+- M6 has executed **Registration** on correlated synthetic fixtures (4
+  correspondences, homography fit + affine fallback, warped registered output,
+  validation verdict, diagnostics, manifest + provenance chain M2→M6, all
+  deterministic). M6 outputs are **verified alignment measurements, not proof
+  of physical lunar registration**; real-data registration runs remain BLOCKED
+  for the same reason. Diagnostics never fabricate `confidence`, `accuracy` or
+  a CE90/LE90 claim.
 - No OHRC–TMC-2 pair is downloaded or registered yet: official downloads require
   a PRADAN account with administrator approval (see `reports/M1_REPORT.md` for
   the exact blocker and unblocking steps). The registry and the M2 overview are
   kept honestly empty/BLOCKED.
-- Auth endpoints are contract stubs (`501 NOT_CONFIGURED`) until the real
-  authentication milestone.
+- Auth (M10) is **real server-side authentication**: SQLite users, Argon2id-ish
+  (PBKDF2-SHA-256) password hashing, short-lived JWT access tokens, rotating
+  refresh sessions stored as SHA-256 hashes in an HttpOnly SameSite cookie,
+  viewer/analyst/admin roles enforced at the router level, a full security/
+  audit event log, and rate limiting on login/refresh. No fake login exists —
+  without `AUTH_SECRET_KEY` every protected endpoint fails closed with
+  `501 AUTH_NOT_CONFIGURED`.
 - AI explanations are only available after real Gemini integration + key.
 - Requirements are pinned for Windows / Python 3.14 as installed and verified;
   re-verify before promoting to another platform.

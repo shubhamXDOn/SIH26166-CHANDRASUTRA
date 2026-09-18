@@ -16,9 +16,10 @@ from ..pairs import PairRegistry
 from ..trust.config import TrustConfig
 from ..trust.service import TrustService
 from .deps import get_settings
+from ..auth.dependencies import AnalystUser, current_user_dep
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/trust", tags=["trust"])
+router = APIRouter(prefix="/trust", tags=["trust"], dependencies=[Depends(current_user_dep)])
 
 VALID_TRUST_CONFIG_IDS = {"TG-M4-001"}
 
@@ -103,7 +104,8 @@ class RunRequest(BaseModel):
 
 
 @router.post("/{pair_id}/run")
-def run_trust(pair_id: str, req: RunRequest, settings: Settings = Depends(get_settings)) -> dict:
+def run_trust(pair_id: str, current: AnalystUser, req: RunRequest, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     _require_pair(settings, pair_id)
     trust_cfg_id = req.trust_configuration_id or "TG-M4-001"
     if trust_cfg_id not in VALID_TRUST_CONFIG_IDS:
@@ -113,7 +115,8 @@ def run_trust(pair_id: str, req: RunRequest, settings: Settings = Depends(get_se
 
 
 @router.post("/{pair_id}/reset")
-def reset_pair(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+def reset_pair(pair_id: str, current: AnalystUser, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     _require_pair(settings, pair_id)
     service = _service(settings)
     service.reset(pair_id)

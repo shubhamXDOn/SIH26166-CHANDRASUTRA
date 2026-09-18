@@ -17,6 +17,15 @@ class AppState:
         self.settings = settings
         self.guard = security.configure_auth_guard(settings)
         self.assistant = ai.build_assistant(settings)
+        self._auth = None
+
+    @property
+    def auth(self):
+        from .auth.service import AuthService
+
+        if self._auth is None:
+            self._auth = AuthService(self.settings)
+        return self._auth
 
 
 app_state: AppState | None = None

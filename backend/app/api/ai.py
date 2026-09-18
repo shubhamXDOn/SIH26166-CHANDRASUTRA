@@ -1,42 +1,107 @@
-"""AI assistant endpoints — FOUNDATION ONLY (M0).
+"""AI assistant endpoints — REAL Gemini assistant (M9), M10-authenticated.
 
 The frontend always talks to *this* backend for AI. The Gemini key is a
 backend-only secret and is never exposed to the browser.
+
+Every task returns the M9 envelope on success:
+    {status, request_id, task, pair_id, answer, evidence[], limitations[],
+     suggested_inspections[], usage, ai, created_at}
+Failures (not configured, provider errors, validation refusals) surface
+through the unified error envelope — never as a fabricated answer.
+
+Since M10, the AI *execution* endpoints require an authenticated session
+(any role). Identity is recorded only as contextual provenance metadata and
+never enters the scientific digests.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 
-from ..ai import AIServiceStatus
-from ..config import Settings
-from ..errors import NotConfiguredError
+from ..ai import AIRequest, AITask
+from ..auth.dependencies import AuthServiceDeps, CurrentUser, current_user_dep
 from ..state import get_state
-from .deps import get_settings
 
-router = APIRouter(prefix="/ai", tags=["ai"])
+router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(current_user_dep)])
+
+
+def _assistant():
+    return get_state().assistant
+
+
+def _identity(current) -> dict[str, str] | None:
+    if current is None:
+        return None
+    return {"user_id": current.id, "username": current.username, "role": current.role}
+
+
+def _run(task: str, payload: AIRequest, current: CurrentUser) -> dict:
+    return _assistant().execute(
+        task=task,
+        pair_id=payload.pair_id,
+        scope=payload.scope,
+        question=payload.question,
+        session_id=payload.session_id,
+        experiment_id=payload.experiment_id,
+        executed_by=_identity(current),
+    )
 
 
 @router.get("/status")
 def ai_status() -> dict:
-    assistant = get_state().assistant
-    return assistant.status_dict()
+    return _assistant().status_dict()
 
 
 @router.post("/explain")
-def ai_explain(_settings: Settings = Depends(get_settings)) -> dict:
-    """Contract stub: real explanations arrive with Gemini integration.
+def ai_explain(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded analysis for a pair, grounded in real evidence."""
+    del service
+    return _run(AITask.EXPLAIN.value, payload or AIRequest(), current)
 
-    In M0 this is never fabricated — it always reports the true state.
-    """
-    assistant = get_state().assistant
-    if assistant.status is AIServiceStatus.NOT_CONFIGURED:
-        raise NotConfiguredError(
-            "No AI explanation can be generated because Gemini is not configured "
-            "(GEMINI_API_KEY is empty).",
-            details={"milestone": "M0", "status": "NOT_CONFIGURED"},
-        )
-    raise NotConfiguredError(
-        "AI explanation endpoint exists but Gemini streaming is not implemented yet.",
-        details={"milestone": "M0", "next": "Gemini integration milestone"},
-    )
+
+@router.post("/explain-failure")
+def ai_explain_failure(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded failure/blocker(s) for a pair from real evidence."""
+    del service
+    return _run(AITask.EXPLAIN_FAILURE.value, payload or AIRequest(), current)
+
+
+@router.post("/explain-routing")
+def ai_explain_routing(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded M3/M8 adaptive matcher routing decisions."""
+    del service
+    return _run(AITask.EXPLAIN_ROUTING.value, payload or AIRequest(), current)
+
+
+@router.post("/summarize-experiment")
+def ai_summarize_experiment(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Summarize the recorded experiment measurements for a pair."""
+    del service
+    return _run(AITask.SUMMARIZE_EXPERIMENT.value, payload or AIRequest(), current)
+
+
+@router.post("/chat")
+def ai_chat(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Answer a user question about a pair, grounded in recorded evidence."""
+    del service
+    return _run(AITask.CHAT.value, payload or AIRequest(), current)

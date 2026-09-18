@@ -17,6 +17,8 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from .security import redact_text
+
 LOG_FORMAT = (
     "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
     "%(context)s"
@@ -29,7 +31,9 @@ class ContextFilter(logging.Filter):
     """Append structured ``extra`` context fields to every log line.
 
     Redacts values whose field name looks like a secret even if a caller
-    mistakenly passes them through ``extra``.
+    mistakenly passes them through ``extra``, and scrubs common secret
+    patterns from the message itself (Authorization headers, Bearer tokens,
+    JWTs, API keys, refresh tokens).
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -44,6 +48,10 @@ class ContextFilter(logging.Filter):
             for field in _REDACTED_FIELDS:
                 if hasattr(record, field):
                     setattr(record, field, "***")
+        safe_msg = redact_text(str(record.getMessage()))
+        if safe_msg != str(record.getMessage()):
+            record.msg = safe_msg
+            record.args = ()
         return True
 
 

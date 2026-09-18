@@ -3,27 +3,32 @@ import { useCallback, useEffect, useState } from "react";
 import { Icon, ToastProvider, useToast } from "./components/ui.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { apiGet } from "./api.js";
+import { AuthProvider, useAuth } from "./auth.jsx";
+import AuthGate from "./pages/AuthGate.jsx";
 
 import Overview from "./pages/Overview.jsx";
 import Data from "./pages/Data.jsx";
 import Analysis from "./pages/Analysis.jsx";
 import Results from "./pages/Results.jsx";
 import AIInsights from "./pages/AIInsights.jsx";
-import Settings from "./pages/Settings.jsx";
+import Account from "./pages/Account.jsx";
+import Security from "./pages/Security.jsx";
 
 const PAGES = {
   overview: { title: "Overview", Component: Overview },
   data: { title: "Data", Component: Data },
   analysis: { title: "Analysis", Component: Analysis },
   results: { title: "Results", Component: Results },
-  ai: { title: "AI Insights", Component: AIInsights },
-  settings: { title: "Settings", Component: Settings },
+  ai: { title: "AI Copilot", Component: AIInsights },
+  account: { title: "Account", Component: Account },
+  security: { title: "Security", Component: Security, admin: true },
 };
 
 function Shell() {
   const [page, setPage] = useState("overview");
   const [backend, setBackend] = useState({ online: false, retrying: false });
   const notify = useToast();
+  const { user, isAdmin, signOut } = useAuth();
 
   const refreshHealth = useCallback(async () => {
     try {
@@ -42,14 +47,16 @@ function Shell() {
 
   const navigate = useCallback(
     (id) => {
+      if (PAGES[id]?.admin && !isAdmin) return;
       setPage(id);
       const timeout = window.setTimeout(() => (document.activeElement?.blur?.(null)), 0);
       window.clearTimeout(timeout);
     },
-    []
+    [isAdmin]
   );
 
-  const { title, Component } = PAGES[page];
+  const def = PAGES[page] ?? PAGES.overview;
+  const { title, Component } = def;
 
   return (
     <div className="min-h-screen">
@@ -65,8 +72,8 @@ function Shell() {
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] font-medium text-muted md:flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-orbit-400" />
-              M4 · Trust Gate + Geometric Verification
+              <Icon.Check className="h-3 w-3 text-ok" />
+              {user?.username} · <span className="capitalize text-lunar-300">{user?.role}</span>
             </span>
             <button
               onClick={() => {
@@ -77,6 +84,14 @@ function Shell() {
             >
               <Icon.Refresh className="h-3.5 w-3.5" />
               Refresh
+            </button>
+            <button
+              onClick={() => signOut()}
+              className="btn-ghost !px-3 !py-1.5 text-xs"
+              title="Sign out"
+            >
+              <Icon.Alert className="h-3.5 w-3.5" />
+              Sign out
             </button>
           </div>
         </div>
@@ -91,8 +106,12 @@ function Shell() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <Shell />
-    </ToastProvider>
+    <AuthProvider>
+      <AuthGate>
+        <ToastProvider>
+          <Shell />
+        </ToastProvider>
+      </AuthGate>
+    </AuthProvider>
   );
 }

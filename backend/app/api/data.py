@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
+from ..auth.dependencies import current_user_dep
 from ..config import Settings
 from ..data import data_directory_status, ensure_derived_directories
 from ..logging_conf import get_logger
@@ -16,7 +17,7 @@ from ..pairs import PairRegistry, metadata_completeness
 from .deps import get_settings
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/data", tags=["data"])
+router = APIRouter(prefix="/data", tags=["data"], dependencies=[Depends(current_user_dep)])
 
 
 def _directory_dicts(settings: Settings) -> list[dict]:

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Pipeline, { STAGE_STYLE } from "./Pipeline.jsx";
 import { Badge, Icon, Modal } from "./ui.jsx";
 import { apiGet, apiPost } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 const MATCH_STAGES = [
   { id: "building_match_tiles", label: "Align", desc: "IoU-aligned tile pairs" },
@@ -33,6 +34,7 @@ function matchStateTone(state) {
 }
 
 export default function MatchingPanel({ pairId, notify }) {
+  const { canMutate, user } = useAuth();
   const [status, setStatus] = useState(null);
   const [index, setIndex] = useState(null);
   const [decisions, setDecisions] = useState(null);
@@ -192,10 +194,10 @@ export default function MatchingPanel({ pairId, notify }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={runMatch}>
+            <button className="btn-primary" disabled={busy || !canMutate} title={canMutate ? "Run adaptive matching" : `Viewer access — ${user?.username ?? "you"} can read evidence but cannot run pipeline mutations`} onClick={runMatch}>
               <Icon.Activity className="h-4 w-4" /> {busy ? "Running…" : "Run MATCH"}
             </button>
-            <button className="btn-ghost" disabled={busy} onClick={resetMatch}>
+            <button className="btn-ghost" disabled={busy || !canMutate} title={canMutate ? "Reset pair state" : "Analyst or admin required"} onClick={resetMatch}>
               <Icon.Refresh className="h-4 w-4" /> Reset
             </button>
             <button className="btn-ghost" disabled={busy} onClick={openManifest} title="Matching provenance manifest">

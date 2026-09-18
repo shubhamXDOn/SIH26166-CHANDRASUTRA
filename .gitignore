@@ -43,6 +43,9 @@ data/derived/**
 data/metadata/*.csv
 data/metadata/*.json
 
+# --- Runtime auth artifacts (user db + security audit log — never commit) ---
+data/auth/
+
 # --- Editors / OS ---
 .vscode/
 .idea/

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge, Icon, Modal } from "./ui.jsx";
 import { apiGet, apiPost } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 const TYPE_STYLE = {
   TYPE_SELECTED: { label: "reliable + selected", dot: "bg-ok", cls: "bg-ok/[0.22] border-ok/50" },
@@ -19,6 +20,7 @@ function gateTone(state) {
 }
 
 export default function SpatialReliabilityPanel({ pairId, notify }) {
+  const { canMutate } = useAuth();
   const [status, setStatus] = useState(null);
   const [summary, setSummary] = useState(null);
   const [map, setMap] = useState(null);
@@ -160,10 +162,10 @@ export default function SpatialReliabilityPanel({ pairId, notify }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={runSpatial}>
+            <button className="btn-primary" disabled={busy || !canMutate} title={canMutate ? "Run spatial reliability gate" : "Analyst or admin required"} onClick={runSpatial}>
               <Icon.Activity className="h-4 w-4" /> {busy ? "Running…" : "Run SPATIAL"}
             </button>
-            <button className="btn-ghost" disabled={busy} onClick={resetSpatial}>
+            <button className="btn-ghost" disabled={busy || !canMutate} title={canMutate ? "Reset pair state" : "Analyst or admin required"} onClick={resetSpatial}>
               <Icon.Refresh className="h-4 w-4" /> Reset
             </button>
             <button
@@ -239,8 +241,9 @@ export default function SpatialReliabilityPanel({ pairId, notify }) {
           <span>
             M5 represents <strong className="text-warn">measurable spatial evidence</strong>: which cells of the overlap
             scene carry verified inliers, which reliable regions join into a supported component, and which
-            correspondences were selected for the future registration. It is not an absolute accuracy or
-            physical-registration claim — Registration (M6) is locked until it is implemented.
+            correspondences were selected for registration. It is not an absolute accuracy or
+            physical-registration claim — M6 consumes exactly this selection to fit, validate and warp;
+            every registration diagnostic is a measurement, never scientific truth.
           </span>
         </p>
       </div>

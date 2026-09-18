@@ -15,6 +15,8 @@ from fastapi.testclient import TestClient
 
 import fixturegen  # tests/ is on sys.path via conftest + pytest rootdir mode
 
+from auth_helpers import authed_client_for_app, configure_auth
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,8 +35,9 @@ def _api_harness(settings_factory):
     fixturegen.write_standard_fixtures(tmp)
     settings = Settings(data_root=str(tmp), _env_file=None)
     ensure_derived_directories(settings)
+    configure_auth(settings)
     app = create_app(settings=settings)
-    return TestClient(app), settings, tmp
+    return authed_client_for_app(app), settings, tmp
 
 
 # --------------------------------------------------------------------------
@@ -353,7 +356,7 @@ def test_api_register_then_list_detail_validate_and_status(settings_factory):
         assert vrec["scientific_matching"] == "NOT_RUN"
 
         stat = client.get("/api/data/status").json()
-        assert stat["milestone"] == "M5"
+        assert stat["milestone"] == "M10"
         assert stat["pairs_registered"] == 1
         assert stat["pairs_valid"] == 1
         assert stat["available_sensors"] == ["ohrc", "tmc2"]

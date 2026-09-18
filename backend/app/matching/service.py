@@ -193,8 +193,59 @@ class MatchingService:
             return None
         for proc in sorted(d for d in (self.base / pair_id).glob("*") if d.is_dir()):
             for matcher in sorted(d for d in proc.glob("*") if d.is_dir()):
+                if matcher.name == "m8":
+                    # M8 deep-match expansion runs live under their own layout
+                    # (derived/matches/<pair>/<proc_cfg>/m8/<cfg>/); they must
+                    # NEVER be picked up as an M3 matcher run.
+                    continue
                 return matcher
         return None
+
+    def build_match_tiles(self, pair_id: str) -> dict[str, Any]:
+        """Public M2->match-tile builder shared with the M8 expansion service.
+
+        Returns ``{ok, prereq, match_tiles, details}``; ``ok`` is False with a
+        blocker code/reason when the pair cannot produce match tiles.
+        """
+        pre = self.prerequisites(pair_id)
+        if not pre["ok"]:
+            return {
+                "ok": False,
+                "code": pre["code"],
+                "reason": pre["reason"],
+                "details": pre["details"],
+                "match_tiles": [],
+                "prereq": pre,
+            }
+        cfg = load_matcher_config()
+        try:
+            match_tiles = self._build_match_tiles(pre["details"], cfg)
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "ok": False,
+                "code": "BUILD_MATCH_TILES_EMPTY",
+                "reason": f"Failed to build match tiles: {exc}",
+                "details": pre["details"],
+                "match_tiles": [],
+                "prereq": pre,
+            }
+        if not match_tiles:
+            return {
+                "ok": False,
+                "code": "BUILD_MATCH_TILES_EMPTY",
+                "reason": "No usable sensor-aligned tile pairs could be assembled.",
+                "details": pre["details"],
+                "match_tiles": [],
+                "prereq": pre,
+            }
+        return {
+            "ok": True,
+            "code": "READY",
+            "reason": "Match tiles are ready for the M8 expansion run.",
+            "details": pre["details"],
+            "match_tiles": match_tiles,
+            "prereq": pre,
+        }
 
     def reset(self, pair_id: str) -> None:
         pair_dir = self.base / pair_id

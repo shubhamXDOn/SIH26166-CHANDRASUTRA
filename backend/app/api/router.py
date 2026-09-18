@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from . import ai, auth, data, health, matching, pairs, processing, spatial, trust
+from . import ai, auth, data, health, matching, metrics, pairs, processing, registration, spatial, trust
 
 api_router = APIRouter(prefix="/api")
 
@@ -27,6 +27,8 @@ api_router.include_router(processing.router)
 api_router.include_router(matching.router)
 api_router.include_router(trust.router)
 api_router.include_router(spatial.router)
+api_router.include_router(registration.router)
+api_router.include_router(metrics.router)
 api_router.include_router(ai.router)
 
 # Future namespaces registered here, never before they are real:

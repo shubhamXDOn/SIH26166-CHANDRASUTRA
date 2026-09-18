@@ -18,9 +18,10 @@ from ..logging_conf import get_logger
 from ..pairs import PairRegistry
 from ..spatial.service import SpatialService
 from .deps import get_settings
+from ..auth.dependencies import AnalystUser, current_user_dep
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/spatial", tags=["spatial"])
+router = APIRouter(prefix="/spatial", tags=["spatial"], dependencies=[Depends(current_user_dep)])
 
 VALID_SPATIAL_CONFIG_IDS = {"SR-M5-001"}
 
@@ -101,7 +102,8 @@ def pair_status(pair_id: str, settings: Settings = Depends(get_settings)) -> dic
 
 
 @router.post("/{pair_id}/run")
-def run_spatial(pair_id: str, req: RunRequest, settings: Settings = Depends(get_settings)) -> dict:
+def run_spatial(pair_id: str, current: AnalystUser, req: RunRequest, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     _require_pair(settings, pair_id)
     sr_cfg_id = req.spatial_reliability_configuration_id or "SR-M5-001"
     if sr_cfg_id not in VALID_SPATIAL_CONFIG_IDS:
@@ -111,7 +113,8 @@ def run_spatial(pair_id: str, req: RunRequest, settings: Settings = Depends(get_
 
 
 @router.post("/{pair_id}/reset")
-def reset_pair(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+def reset_pair(pair_id: str, current: AnalystUser, settings: Settings = Depends(get_settings)) -> dict:
+    del current
     _require_pair(settings, pair_id)
     service = _service(settings)
     service.reset(pair_id)

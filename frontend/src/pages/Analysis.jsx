@@ -5,7 +5,11 @@ import { Badge, EmptyState, Icon, Modal, PageSkeleton } from "../components/ui.j
 import MatchingPanel from "../components/MatchingPanel.jsx";
 import TrustPanel from "../components/TrustPanel.jsx";
 import SpatialReliabilityPanel from "../components/SpatialReliabilityPanel.jsx";
+import RegistrationPanel from "../components/RegistrationPanel.jsx";
+import MetricsPanel from "../components/MetricsPanel.jsx";
+import M8Workspace from "../components/M8Workspace.jsx";
 import { apiGet, apiPost } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 const M2_PIPELINE = [
   { id: "reading", label: "Read", desc: "Raw integrity re-verified" },
@@ -57,14 +61,21 @@ const MODULE_PLAN = [
     label: "Registration",
     desc: "Homography / affine fitting with diagnostics — low residual ≠ physically exact lunar registration.",
     milestone: "M6",
-    implemented: false,
+    implemented: true,
   },
   {
     id: "metrics",
     label: "Metrics & reporting",
-    desc: "Measurable diagnostics and SUCCESS / FAILURE / ABSTAIN outcomes.",
+    desc: "Quantitative diagnostics, reproducible experiment reports and independent recomputation — measurements, never accuracy claims.",
     milestone: "M7",
-    implemented: false,
+    implemented: true,
+  },
+  {
+    id: "m8",
+    label: "Deep matcher expansion",
+    desc: "Adaptive expansion over deep + classical matchers with honest capability probing; benchmark rows are measurement comparisons — no winner, no accuracy claim.",
+    milestone: "M8",
+    implemented: true,
   },
 ];
 
@@ -107,6 +118,7 @@ function fmtUtc(v) {
 }
 
 export default function Analysis({ notify, onNavigate }) {
+  const { canMutate, user } = useAuth();
   const [pairs, setPairs] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [overview, setOverview] = useState(null);
@@ -311,10 +323,10 @@ export default function Analysis({ notify, onNavigate }) {
             <p className="text-[11px] text-muted">{configs[0]?.note ?? "Registered M2 engineering defaults — no scientific thresholds."}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={!sel || busy} onClick={() => runPrepare(sel)}>
+            <button className="btn-primary" disabled={!sel || busy || !canMutate} title={canMutate ? "Run honest PREPARE to the matcher boundary" : "Analyst or admin required"} onClick={() => runPrepare(sel)}>
               <Icon.Activity className="h-4 w-4" /> {busy ? "Running…" : "PREPARE for matching"}
             </button>
-            <button className="btn-ghost" disabled={!sel || busy} onClick={() => reset(sel)}>
+            <button className="btn-ghost" disabled={!sel || busy || !canMutate} title={canMutate ? "Reset derived artifacts" : "Analyst or admin required"} onClick={() => reset(sel)}>
               <Icon.Refresh className="h-4 w-4" /> Reset
             </button>
           </div>
@@ -485,6 +497,62 @@ export default function Analysis({ notify, onNavigate }) {
             <Badge tone="gold">SR-M5-001 config</Badge>
           </div>
           <SpatialReliabilityPanel key={`${sel}-spatial`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M6 registration workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Registration · M6</h3>
+              <p className="text-xs text-muted">
+                Runs when M5 selected correspondences exist: homography / affine transform fit,
+                validation diagnostics, warp output and provenance. Low residual does not mean exact
+                physical registration.
+              </p>
+            </div>
+            <Badge tone="gold">RG-M6-001 config</Badge>
+          </div>
+          <RegistrationPanel key={`${sel}-registration`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M7 metrics workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Metrics &amp; reporting · M7</h3>
+              <p className="text-xs text-muted">
+                Runs when M6 registration is complete: quantitative metrics, deterministic
+                experiment reports and independent recomputation over the M2→M6 evidence chain.
+                Every value is a measurement of artefacts — never a scientific accuracy claim.
+              </p>
+            </div>
+            <Badge tone="gold">MT-M7-001 config</Badge>
+          </div>
+          <MetricsPanel key={`${sel}-metrics`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M8 deep matcher expansion workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Deep matcher expansion &amp; benchmark · M8</h3>
+              <p className="text-xs text-muted">
+                Runs when M2/M3 prerequisites are met: honest capability probing, adaptive
+                strategy expansion over deep + classical matchers, candidate localisation under
+                the M8 contract and optional per-matcher benchmark rows. Deep matchers are
+                declared unavailable unless their runtime and weights are provisioned — nothing
+                is simulated, no winner is ever declared.
+              </p>
+            </div>
+            <Badge tone="gold">DM-M8-001 config</Badge>
+          </div>
+          <M8Workspace key={`${sel}-m8`} pairId={sel} notify={notify} />
         </section>
       )}
 

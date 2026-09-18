@@ -7,8 +7,8 @@ export const PIPELINE = [
   { id: "match", label: "Match", desc: "Correspondence search" },
   { id: "trust", label: "Trust", desc: "Adaptive reliability gate" },
   { id: "reliability", label: "Reliability", desc: "Spatial selection" },
-  { id: "register", label: "Register", desc: "Spatial model" },
-  { id: "report", label: "Report", desc: "Metrics & visualization" },
+  { id: "register", label: "Register", desc: "Transform fit & warp" },
+  { id: "metrics", label: "Metrics", desc: "Reproducible reports" },
 ];
 
 export const STAGE_STYLE = {
