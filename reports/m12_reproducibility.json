@@ -1,0 +1,79 @@
+{
+  "evidence": {
+    "drifted_subjects": [],
+    "runs": {
+      "A": {
+        "FUNNEL_M3_CANDIDATES": 100,
+        "FUNNEL_M4_TRUSTED_CORRESPONDENCES": 84,
+        "FUNNEL_M5_SELECTED_CORRESPONDENCES": 19,
+        "FUNNEL_M6_REGISTERED_CORRESPONDENCES": 19,
+        "RECOMPUTE_MISMATCH_COUNT": 0,
+        "RESIDUAL_MEAN_RECOMPUTE_PX": null,
+        "configuration_fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce",
+        "experiment_id": "EXP-EE0EBE7187E5",
+        "m3_total_candidates": 2,
+        "m4_trusted_tiles": 2,
+        "m5_selected_count": 19,
+        "m7_available_count": 53,
+        "m7_metric_count": 61,
+        "report_md_sha256": "21e9be448ee46c6b76ed72585b782044d8f1213f2bb032271b444a2f7d06434a",
+        "transform_matrix_hash": "2d84fa017d18ef5548c257f4cdace84b188dc8f764cc5d835c77eaf8c7e2bc1b"
+      },
+      "B": {
+        "FUNNEL_M3_CANDIDATES": 100,
+        "FUNNEL_M4_TRUSTED_CORRESPONDENCES": 84,
+        "FUNNEL_M5_SELECTED_CORRESPONDENCES": 19,
+        "FUNNEL_M6_REGISTERED_CORRESPONDENCES": 19,
+        "RECOMPUTE_MISMATCH_COUNT": 0,
+        "RESIDUAL_MEAN_RECOMPUTE_PX": null,
+        "configuration_fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce",
+        "experiment_id": "EXP-EE0EBE7187E5",
+        "m3_total_candidates": 2,
+        "m4_trusted_tiles": 2,
+        "m5_selected_count": 19,
+        "m7_available_count": 53,
+        "m7_metric_count": 61,
+        "report_md_sha256": "21e9be448ee46c6b76ed72585b782044d8f1213f2bb032271b444a2f7d06434a",
+        "transform_matrix_hash": "2d84fa017d18ef5548c257f4cdace84b188dc8f764cc5d835c77eaf8c7e2bc1b"
+      },
+      "C": {
+        "FUNNEL_M3_CANDIDATES": 100,
+        "FUNNEL_M4_TRUSTED_CORRESPONDENCES": 84,
+        "FUNNEL_M5_SELECTED_CORRESPONDENCES": 19,
+        "FUNNEL_M6_REGISTERED_CORRESPONDENCES": 19,
+        "RECOMPUTE_MISMATCH_COUNT": 0,
+        "RESIDUAL_MEAN_RECOMPUTE_PX": null,
+        "configuration_fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce",
+        "experiment_id": "EXP-EE0EBE7187E5",
+        "m3_total_candidates": 2,
+        "m4_trusted_tiles": 2,
+        "m5_selected_count": 19,
+        "m7_available_count": 53,
+        "m7_metric_count": 61,
+        "report_md_sha256": "21e9be448ee46c6b76ed72585b782044d8f1213f2bb032271b444a2f7d06434a",
+        "transform_matrix_hash": "2d84fa017d18ef5548c257f4cdace84b188dc8f764cc5d835c77eaf8c7e2bc1b"
+      }
+    },
+    "schema_version": "M12-REPRO-001",
+    "status": "REPRODUCIBLE",
+    "subjects": {
+      "FUNNEL_M3_CANDIDATES": "IDENTICAL",
+      "FUNNEL_M4_TRUSTED_CORRESPONDENCES": "IDENTICAL",
+      "FUNNEL_M5_SELECTED_CORRESPONDENCES": "IDENTICAL",
+      "FUNNEL_M6_REGISTERED_CORRESPONDENCES": "IDENTICAL",
+      "RECOMPUTE_MISMATCH_COUNT": "IDENTICAL",
+      "RESIDUAL_MEAN_RECOMPUTE_PX": "IDENTICAL",
+      "configuration_fingerprint": "IDENTICAL",
+      "experiment_id": "IDENTICAL",
+      "m3_total_candidates": "IDENTICAL",
+      "m4_trusted_tiles": "IDENTICAL",
+      "m5_selected_count": "IDENTICAL",
+      "m7_available_count": "IDENTICAL",
+      "m7_metric_count": "IDENTICAL",
+      "report_md_sha256": "IDENTICAL",
+      "transform_matrix_hash": "IDENTICAL"
+    }
+  },
+  "note": "Synthetic correlated pair; engineering determinism proof only \u2014 no scientific claim. Configuration freeze fingerprint equal across all three runs is the primary check.",
+  "schema_version": "M12-REPRO-RUN"
+}

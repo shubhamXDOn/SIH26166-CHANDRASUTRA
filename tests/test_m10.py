@@ -107,8 +107,8 @@ def test_m10_meta_is_m10_and_leaks_no_secrets(client_factory):
         r = client.get("/api/meta")
         assert r.status_code == 200
         body = r.json()
-        assert body["milestone"] == "M10"
-        assert body["version"] == "0.10.0"
+        assert body["milestone"] == "M11"
+        assert body["version"] == "0.11.0"
         assert AUTH_TEST_SECRET not in json.dumps(body)
 
 

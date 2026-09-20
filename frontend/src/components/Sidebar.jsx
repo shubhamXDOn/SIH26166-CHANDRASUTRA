@@ -3,6 +3,7 @@ import { useAuth } from "../auth.jsx";
 
 const NAV = [
   { id: "overview", label: "Overview", icon: Icon.Grid },
+  { id: "evidence", label: "Evidence", icon: Icon.File },
   { id: "data", label: "Data", icon: Icon.Database },
   { id: "analysis", label: "Analysis", icon: Icon.Activity },
   { id: "results", label: "Results", icon: Icon.Chart },

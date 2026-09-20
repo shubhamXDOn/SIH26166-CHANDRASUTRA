@@ -17,6 +17,7 @@ from ..errors import NotFoundError
 from ..logging_conf import get_logger
 from ..pairs import PairRegistry
 from ..spatial.service import SpatialService
+from ..run_guard import guard_run
 from .deps import get_settings
 from ..auth.dependencies import AnalystUser, current_user_dep
 
@@ -109,7 +110,11 @@ def run_spatial(pair_id: str, current: AnalystUser, req: RunRequest, settings: S
     if sr_cfg_id not in VALID_SPATIAL_CONFIG_IDS:
         raise NotFoundError(f"Unknown spatial reliability configuration: {sr_cfg_id}")
     service = _service(settings)
-    return service.run(pair_id, spatial_config_id=sr_cfg_id)
+    return guard_run(
+        settings, derived_stage="spatial", pair_id=pair_id,
+        configuration_id=sr_cfg_id, tag="m5_spatial",
+        fn=lambda: service.run(pair_id, spatial_config_id=sr_cfg_id),
+    )
 
 
 @router.post("/{pair_id}/reset")

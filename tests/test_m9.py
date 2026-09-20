@@ -929,7 +929,7 @@ def test_m9_api_configured_but_bad_body(authed_client_factory):
 def test_m9_api_meta_exposes_m9_config(client_factory):
     with client_factory() as client:
         meta = client.get("/api/meta").json()
-        assert meta["milestone"] == "M10"
+        assert meta["milestone"] == "M11"
         assert meta["m9_config"]["ai_configuration_id"] == "AI-M9-001"
         assert "constraints" in meta["m9_config"]
         assert "grounding_rules" in meta["m9_config"]

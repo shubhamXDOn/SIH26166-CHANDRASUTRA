@@ -1,0 +1,12 @@
+{
+  "pair_id": "CS-P001",
+  "state": "COMPLETE",
+  "coordinate_space": "pair_overlap_normalized",
+  "processing_configuration_id": "PC-M2-001",
+  "matcher_configuration_id": "MC-M3-001",
+  "trust_configuration_id": "TG-M4-001",
+  "spatial_reliability_configuration_id": "SR-M5-001",
+  "block_code": null,
+  "reasons": [],
+  "updated_at": "2026-09-20T07:04:25+00:00"
+}

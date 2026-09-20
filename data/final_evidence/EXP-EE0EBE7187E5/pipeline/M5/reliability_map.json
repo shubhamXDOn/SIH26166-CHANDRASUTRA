@@ -1,0 +1,1846 @@
+{
+  "grid": {
+    "rows": 8,
+    "cols": 8
+  },
+  "coordinate_space": "pair_overlap_normalized",
+  "cells": [
+    {
+      "cell_id": "R00C00",
+      "r": 0,
+      "c": 0,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 4,
+      "usable_correspondence_count": 5,
+      "spatial_density": 256.0,
+      "side_a": {
+        "verified_inliers": 4,
+        "usable_correspondences": 5
+      },
+      "side_b": {
+        "verified_inliers": 3,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 1,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C01",
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C01",
+      "r": 0,
+      "c": 1,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 3,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 2,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C02",
+      "r": 0,
+      "c": 2,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 3,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 2,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C03",
+      "r": 0,
+      "c": 3,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 2,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 2
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C04",
+      "r": 0,
+      "c": 4,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C05",
+      "r": 0,
+      "c": 5,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C06",
+      "r": 0,
+      "c": 6,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R00C07",
+      "r": 0,
+      "c": 7,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C00",
+      "r": 1,
+      "c": 0,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 4,
+      "usable_correspondence_count": 4,
+      "spatial_density": 256.0,
+      "side_a": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 2,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C01",
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C01",
+      "r": 1,
+      "c": 1,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 1,
+      "usable_correspondence_count": 1,
+      "spatial_density": 64.0,
+      "side_a": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 3,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C02",
+      "r": 1,
+      "c": 2,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 4,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 2,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C03",
+      "r": 1,
+      "c": 3,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 3,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C04",
+      "r": 1,
+      "c": 4,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C05",
+      "r": 1,
+      "c": 5,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C06",
+      "r": 1,
+      "c": 6,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R01C07",
+      "r": 1,
+      "c": 7,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C00",
+      "r": 2,
+      "c": 0,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 4,
+      "usable_correspondence_count": 5,
+      "spatial_density": 256.0,
+      "side_a": {
+        "verified_inliers": 4,
+        "usable_correspondences": 5
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 5
+      },
+      "neighbor_support": 1,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C01",
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C01",
+      "r": 2,
+      "c": 1,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 4,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 3,
+        "usable_correspondences": 5
+      },
+      "neighbor_support": 3,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C02",
+      "r": 2,
+      "c": 2,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C03",
+      "r": 2,
+      "c": 3,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 1,
+      "usable_correspondence_count": 2,
+      "spatial_density": 64.0,
+      "side_a": {
+        "verified_inliers": 1,
+        "usable_correspondences": 2
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 2
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C04",
+      "r": 2,
+      "c": 4,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C05",
+      "r": 2,
+      "c": 5,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C06",
+      "r": 2,
+      "c": 6,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R02C07",
+      "r": 2,
+      "c": 7,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C00",
+      "r": 3,
+      "c": 0,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 2,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 2
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C01",
+      "r": 3,
+      "c": 1,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 4,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 2,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C02",
+      "r": 3,
+      "c": 2,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 6,
+      "usable_correspondence_count": 6,
+      "spatial_density": 384.0,
+      "side_a": {
+        "verified_inliers": 6,
+        "usable_correspondences": 6
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 0,
+      "reliable": true,
+      "supported": false,
+      "component_id": "C02",
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C03",
+      "r": 3,
+      "c": 3,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 2,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 2
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C04",
+      "r": 3,
+      "c": 4,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C05",
+      "r": 3,
+      "c": 5,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C06",
+      "r": 3,
+      "c": 6,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R03C07",
+      "r": 3,
+      "c": 7,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C00",
+      "r": 4,
+      "c": 0,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C01",
+      "r": 4,
+      "c": 1,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C02",
+      "r": 4,
+      "c": 2,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C03",
+      "r": 4,
+      "c": 3,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C04",
+      "r": 4,
+      "c": 4,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 3,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C05",
+      "r": 4,
+      "c": 5,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 3,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 2,
+        "usable_correspondences": 2
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C06",
+      "r": 4,
+      "c": 6,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 3,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 2,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R04C07",
+      "r": 4,
+      "c": 7,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 4,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 2
+      },
+      "neighbor_support": 1,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C00",
+      "r": 5,
+      "c": 0,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C01",
+      "r": 5,
+      "c": 1,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C02",
+      "r": 5,
+      "c": 2,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C03",
+      "r": 5,
+      "c": 3,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C04",
+      "r": 5,
+      "c": 4,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 1,
+      "usable_correspondence_count": 4,
+      "spatial_density": 64.0,
+      "side_a": {
+        "verified_inliers": 1,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C05",
+      "r": 5,
+      "c": 5,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 1,
+      "usable_correspondence_count": 3,
+      "spatial_density": 64.0,
+      "side_a": {
+        "verified_inliers": 1,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 2,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R05C06",
+      "r": 5,
+      "c": 6,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 4,
+      "usable_correspondence_count": 4,
+      "spatial_density": 256.0,
+      "side_a": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 2,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C03",
+      "edge_touching": false,
+      "selected": true
+    },
+    {
+      "cell_id": "R05C07",
+      "r": 5,
+      "c": 7,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 3,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "neighbor_support": 3,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C00",
+      "r": 6,
+      "c": 0,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C01",
+      "r": 6,
+      "c": 1,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C02",
+      "r": 6,
+      "c": 2,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C03",
+      "r": 6,
+      "c": 3,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C04",
+      "r": 6,
+      "c": 4,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 1,
+      "usable_correspondence_count": 1,
+      "spatial_density": 64.0,
+      "side_a": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C05",
+      "r": 6,
+      "c": 5,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 3,
+      "usable_correspondence_count": 3,
+      "spatial_density": 192.0,
+      "side_a": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "side_b": {
+        "verified_inliers": 3,
+        "usable_correspondences": 3
+      },
+      "neighbor_support": 3,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": false,
+      "selected": false
+    },
+    {
+      "cell_id": "R06C06",
+      "r": 6,
+      "c": 6,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 4,
+      "usable_correspondence_count": 5,
+      "spatial_density": 256.0,
+      "side_a": {
+        "verified_inliers": 4,
+        "usable_correspondences": 5
+      },
+      "side_b": {
+        "verified_inliers": 4,
+        "usable_correspondences": 5
+      },
+      "neighbor_support": 3,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C03",
+      "edge_touching": false,
+      "selected": true
+    },
+    {
+      "cell_id": "R06C07",
+      "r": 6,
+      "c": 7,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 7,
+      "usable_correspondence_count": 7,
+      "spatial_density": 448.0,
+      "side_a": {
+        "verified_inliers": 7,
+        "usable_correspondences": 7
+      },
+      "side_b": {
+        "verified_inliers": 5,
+        "usable_correspondences": 5
+      },
+      "neighbor_support": 3,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C03",
+      "edge_touching": true,
+      "selected": true
+    },
+    {
+      "cell_id": "R07C00",
+      "r": 7,
+      "c": 0,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R07C01",
+      "r": 7,
+      "c": 1,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R07C02",
+      "r": 7,
+      "c": 2,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R07C03",
+      "r": 7,
+      "c": 3,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R07C04",
+      "r": 7,
+      "c": 4,
+      "observed": false,
+      "trusted_tile_count": 0,
+      "verified_inlier_count": 0,
+      "usable_correspondence_count": 0,
+      "spatial_density": 0.0,
+      "side_a": {
+        "verified_inliers": 0,
+        "usable_correspondences": 0
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 0,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R07C05",
+      "r": 7,
+      "c": 5,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 2,
+      "usable_correspondence_count": 2,
+      "spatial_density": 128.0,
+      "side_a": {
+        "verified_inliers": 2,
+        "usable_correspondences": 2
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 2,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    },
+    {
+      "cell_id": "R07C06",
+      "r": 7,
+      "c": 6,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 4,
+      "usable_correspondence_count": 4,
+      "spatial_density": 256.0,
+      "side_a": {
+        "verified_inliers": 4,
+        "usable_correspondences": 4
+      },
+      "side_b": {
+        "verified_inliers": 5,
+        "usable_correspondences": 5
+      },
+      "neighbor_support": 2,
+      "reliable": true,
+      "supported": true,
+      "component_id": "C03",
+      "edge_touching": true,
+      "selected": true
+    },
+    {
+      "cell_id": "R07C07",
+      "r": 7,
+      "c": 7,
+      "observed": true,
+      "trusted_tile_count": 1,
+      "verified_inlier_count": 1,
+      "usable_correspondence_count": 1,
+      "spatial_density": 64.0,
+      "side_a": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "side_b": {
+        "verified_inliers": 1,
+        "usable_correspondences": 1
+      },
+      "neighbor_support": 3,
+      "reliable": false,
+      "supported": false,
+      "component_id": null,
+      "edge_touching": true,
+      "selected": false
+    }
+  ],
+  "fragmentation": {
+    "total_reliable_cells": 8,
+    "connected_components": 3,
+    "largest_component_size": 4,
+    "largest_component_ratio": 0.5,
+    "isolated_cell_count": 1,
+    "mean_component_size": 2.666667
+  },
+  "boundary": {
+    "edge_touching_cells": 5,
+    "edge_fraction": 0.625,
+    "boundary_concentration": 0.178571
+  },
+  "visualization": {
+    "legend": {
+      "TYPE_NOT_APPLICABLE": "outer cell",
+      "TYPE_NEEDS_TILES": "observed but below thresholds",
+      "TYPE_CONFIRMED": "reliable",
+      "TYPE_SELECTED": "reliable + selected for registration"
+    },
+    "grid": [
+      [
+        {
+          "cell_id": "R00C00",
+          "state": "TYPE_CONFIRMED"
+        },
+        {
+          "cell_id": "R00C01",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R00C02",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R00C03",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R00C04",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R00C05",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R00C06",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R00C07",
+          "state": "TYPE_NOT_APPLICABLE"
+        }
+      ],
+      [
+        {
+          "cell_id": "R01C00",
+          "state": "TYPE_CONFIRMED"
+        },
+        {
+          "cell_id": "R01C01",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R01C02",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R01C03",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R01C04",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R01C05",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R01C06",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R01C07",
+          "state": "TYPE_NOT_APPLICABLE"
+        }
+      ],
+      [
+        {
+          "cell_id": "R02C00",
+          "state": "TYPE_CONFIRMED"
+        },
+        {
+          "cell_id": "R02C01",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R02C02",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R02C03",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R02C04",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R02C05",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R02C06",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R02C07",
+          "state": "TYPE_NOT_APPLICABLE"
+        }
+      ],
+      [
+        {
+          "cell_id": "R03C00",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R03C01",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R03C02",
+          "state": "TYPE_CONFIRMED"
+        },
+        {
+          "cell_id": "R03C03",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R03C04",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R03C05",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R03C06",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R03C07",
+          "state": "TYPE_NOT_APPLICABLE"
+        }
+      ],
+      [
+        {
+          "cell_id": "R04C00",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R04C01",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R04C02",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R04C03",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R04C04",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R04C05",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R04C06",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R04C07",
+          "state": "TYPE_NEEDS_TILES"
+        }
+      ],
+      [
+        {
+          "cell_id": "R05C00",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R05C01",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R05C02",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R05C03",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R05C04",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R05C05",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R05C06",
+          "state": "TYPE_SELECTED"
+        },
+        {
+          "cell_id": "R05C07",
+          "state": "TYPE_NEEDS_TILES"
+        }
+      ],
+      [
+        {
+          "cell_id": "R06C00",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R06C01",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R06C02",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R06C03",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R06C04",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R06C05",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R06C06",
+          "state": "TYPE_SELECTED"
+        },
+        {
+          "cell_id": "R06C07",
+          "state": "TYPE_SELECTED"
+        }
+      ],
+      [
+        {
+          "cell_id": "R07C00",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R07C01",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R07C02",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R07C03",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R07C04",
+          "state": "TYPE_NOT_APPLICABLE"
+        },
+        {
+          "cell_id": "R07C05",
+          "state": "TYPE_NEEDS_TILES"
+        },
+        {
+          "cell_id": "R07C06",
+          "state": "TYPE_SELECTED"
+        },
+        {
+          "cell_id": "R07C07",
+          "state": "TYPE_NEEDS_TILES"
+        }
+      ]
+    ],
+    "selected_cell_ids": [
+      "R05C06",
+      "R06C06",
+      "R06C07",
+      "R07C06"
+    ]
+  }
+}

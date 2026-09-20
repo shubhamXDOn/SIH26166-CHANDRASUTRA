@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./auth.jsx";
 import AuthGate from "./pages/AuthGate.jsx";
 
 import Overview from "./pages/Overview.jsx";
+import Evidence from "./pages/Evidence.jsx";
 import Data from "./pages/Data.jsx";
 import Analysis from "./pages/Analysis.jsx";
 import Results from "./pages/Results.jsx";
@@ -16,6 +17,7 @@ import Security from "./pages/Security.jsx";
 
 const PAGES = {
   overview: { title: "Overview", Component: Overview },
+  evidence: { title: "Evidence", Component: Evidence },
   data: { title: "Data", Component: Data },
   analysis: { title: "Analysis", Component: Analysis },
   results: { title: "Results", Component: Results },

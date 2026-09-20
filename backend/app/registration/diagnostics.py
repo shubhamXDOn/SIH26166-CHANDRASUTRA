@@ -47,7 +47,6 @@ def diagnostics_to_dict(
             "seed_used": diag.seed_used,
         },
         "matrix": _matrix_safe(diag.matrix),
-        "runtime_seconds": round(result.runtime_seconds, 4),
         "error": result.error,
     }
 

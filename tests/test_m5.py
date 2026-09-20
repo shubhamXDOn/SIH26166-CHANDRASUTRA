@@ -254,7 +254,7 @@ def test_m5_health_meta_includes_m5_config():
     c = TC(app)
     with c:
         meta = c.get("/api/meta").json()
-        assert meta["milestone"] == "M10"
+        assert meta["milestone"] == "M11"
         assert meta["m5_config"]["spatial_reliability_configuration_id"] == "SR-M5-001"
 
 

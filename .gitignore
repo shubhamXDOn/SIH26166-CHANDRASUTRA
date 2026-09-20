@@ -51,3 +51,8 @@ data/auth/
 .idea/
 .DS_Store
 Thumbs.db
+# --- Reproducibility workspace intermediates (never commit bulky pipelines) ---
+perf/m12_master_workspace/raw/**
+perf/m12_master_workspace/derived/**
+perf/m12_master_workspace/final_evidence/EXP-784F9A1A00A3/**
+perf/m12_master_workspace/final_evidence/EXP-984453D92835/**

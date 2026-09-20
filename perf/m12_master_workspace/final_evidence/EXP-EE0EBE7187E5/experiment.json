@@ -1,0 +1,135 @@
+{
+  "application": "CHANDRASUTRA (SIH26166)",
+  "schema_version": "M12-EVIDENCE-001",
+  "experiment_id": "EXP-EE0EBE7187E5",
+  "pair_id": "CS-P001",
+  "gate": {
+    "pair_id": "CS-P001",
+    "status": "SYNTHETIC_DATA_ONLY",
+    "real_data_available": false,
+    "checks": [
+      {
+        "check": "source_official",
+        "status": "PASS",
+        "detail": "archive=ISRO / ISSDC PRADAN \u2014 Chandrayaan-2 url=https://pradan.issdc.gov.in/ch2/"
+      },
+      {
+        "check": "products_identified",
+        "status": "PASS",
+        "detail": "A=urn:fixture:ch2:ohrc:ch2_ohr_ncp_20211228T2209123959_d_img_d18 B=urn:fixture:ch2:tmc2:ch2_tmc_ncn_20200207T0716469418_d_img_d18"
+      },
+      {
+        "check": "image_a_readable",
+        "status": "PASS",
+        "detail": "unreadable"
+      },
+      {
+        "check": "image_a_dims_match",
+        "status": "FAIL",
+        "detail": "recorded=256x200"
+      },
+      {
+        "check": "image_a_gsd_known",
+        "status": "PASS",
+        "detail": "gsd=0.5"
+      },
+      {
+        "check": "image_a_acquisition_known",
+        "status": "PASS",
+        "detail": "acquisition=2021-12-28T22:09:12.395Z"
+      },
+      {
+        "check": "image_a_footprint_evidence",
+        "status": "PASS",
+        "detail": "footprint=fixture_bbox"
+      },
+      {
+        "check": "image_b_readable",
+        "status": "PASS",
+        "detail": "unreadable"
+      },
+      {
+        "check": "image_b_dims_match",
+        "status": "FAIL",
+        "detail": "recorded=384x300"
+      },
+      {
+        "check": "image_b_gsd_known",
+        "status": "PASS",
+        "detail": "gsd=0.5"
+      },
+      {
+        "check": "image_b_acquisition_known",
+        "status": "PASS",
+        "detail": "acquisition=2020-02-07T07:16:46.418Z"
+      },
+      {
+        "check": "image_b_footprint_evidence",
+        "status": "PASS",
+        "detail": "footprint=fixture_bbox"
+      },
+      {
+        "check": "overlap_status_recorded",
+        "status": "PASS",
+        "detail": "CONFIRMED_OVERLAP"
+      },
+      {
+        "check": "overlap_evidence",
+        "status": "PASS",
+        "detail": "status=CONFIRMED_OVERLAP evidence=present"
+      },
+      {
+        "check": "raw_integrity_verified",
+        "status": "PASS",
+        "detail": "VERIFIED"
+      },
+      {
+        "check": "geometry_real",
+        "status": "FAIL",
+        "detail": "geometry source=TEST_FIXTURE"
+      }
+    ],
+    "integrity": {
+      "pair_id": "CS-P001",
+      "status": "VERIFIED",
+      "sides": [
+        {
+          "side": "image_a",
+          "checks": [
+            {
+              "check": "sha256",
+              "status": "PASS",
+              "detail": "recomputed == recorded"
+            }
+          ],
+          "image_exists": true,
+          "label_exists": true,
+          "recorded_hash": "37304f6d9339fec6d030eccf1754a0b05af4ba681a68a1facf71c6548be63ac6",
+          "recomputed_hash": "37304f6d9339fec6d030eccf1754a0b05af4ba681a68a1facf71c6548be63ac6"
+        },
+        {
+          "side": "image_b",
+          "checks": [
+            {
+              "check": "sha256",
+              "status": "PASS",
+              "detail": "recomputed == recorded"
+            }
+          ],
+          "image_exists": true,
+          "label_exists": true,
+          "recorded_hash": "cacba243bfa5a3eb11dd1427fc7baae6a86bd5c6bfbefad2ee7ef629549c14a6",
+          "recomputed_hash": "cacba243bfa5a3eb11dd1427fc7baae6a86bd5c6bfbefad2ee7ef629549c14a6"
+        }
+      ],
+      "note": "SHA-256 of raw image files recomputed at evidence time and compared to the registered hashes."
+    },
+    "decision": {
+      "path_a": false,
+      "path_b": true,
+      "reason": "PATH B: real-data credentials not certified; deterministic synthetic TEST_FIXTURE engineering proof only."
+    }
+  },
+  "notes": "Master workspace M12 final evidence (synthetic TEST_FIXTURE, PATH B).",
+  "generated_at_utc": "2026-09-20T12:01:43+00:00"
+}

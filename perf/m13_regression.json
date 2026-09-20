@@ -1,0 +1,131 @@
+{
+  "schema_version": "M13-REGRESSION-001",
+  "application": "CHANDRASUTRA (SIH26166)",
+  "engineered_at_utc": "2026-09-20T13:30:12+00:00",
+  "pytest": {
+    "totals": {
+      "passed": 561,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0
+    },
+    "files": {
+      "test_backend": {
+        "passed": 11,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_config": {
+        "passed": 6,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_dirs": {
+        "passed": 4,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m1": {
+        "passed": 28,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m10": {
+        "passed": 31,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m11": {
+        "passed": 42,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m12": {
+        "passed": 37,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m13": {
+        "passed": 40,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m2": {
+        "passed": 18,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m3": {
+        "passed": 25,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m4": {
+        "passed": 34,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m5": {
+        "passed": 67,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m6": {
+        "passed": 83,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m7": {
+        "passed": 47,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m8": {
+        "passed": 13,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_m9": {
+        "passed": 68,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "test_security": {
+        "passed": 7,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "environment_smoke": {
+    "status": "PASS",
+    "checks": 101,
+    "passed": 101,
+    "failed": 0
+  },
+  "frontend": {
+    "build": "PASS",
+    "ssr_smoke": "PASS"
+  },
+  "docker_compose": {
+    "config": "VALID"
+  },
+  "note": "Executed locally against the frozen v1.0.0 candidate; hosted checks remain NOT_MEASURED/unprovisioned."
+}

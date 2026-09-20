@@ -110,6 +110,8 @@ m2:
         - tiles_generated
         - tiles_usable
         - condition_evaluated
+    execution:
+      max_runtime_seconds: 300
 
 # ------------------------------------------------------------
 # M3 — adaptive matcher intelligence & candidate correspondences.

@@ -1,0 +1,16 @@
+{
+  "configuration": {
+    "configuration_id": "PC-M2-001"
+  },
+  "geometry": {
+    "source": "TEST_FIXTURE",
+    "products": {
+      "ohrc": {
+        "gsd_m": 0.5
+      },
+      "tmc2": {
+        "gsd_m": 0.5
+      }
+    }
+  }
+}

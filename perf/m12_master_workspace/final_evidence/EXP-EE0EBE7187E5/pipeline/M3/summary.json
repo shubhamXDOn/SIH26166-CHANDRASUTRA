@@ -1,0 +1,23 @@
+{
+  "pair_id": "CS-P001",
+  "configuration_id": "MC-M3-001",
+  "processing_configuration_id": "PC-M2-001",
+  "tiles": 2,
+  "total_candidates": 100,
+  "per_tile": [
+    {
+      "match_tile_id": "CS-P001-M001",
+      "outcome": "SUCCESS",
+      "candidates": 50,
+      "strategy_used": "sift",
+      "proposed_strategy": "sift"
+    },
+    {
+      "match_tile_id": "CS-P001-M002",
+      "outcome": "SUCCESS",
+      "candidates": 50,
+      "strategy_used": "sift",
+      "proposed_strategy": "sift"
+    }
+  ]
+}

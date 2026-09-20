@@ -1,0 +1,87 @@
+{
+  "experiment_id": "EXP-EE0EBE7187E5",
+  "freeze": {
+    "schema_version": "M12-CONFIG-FREEZE-001",
+    "fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce",
+    "chain": [
+      {
+        "milestone": "M1",
+        "stage": "core",
+        "configuration_id": null,
+        "configuration_version": null,
+        "sha256": "23e65988dcc837be3bd1c6cab8b2ac783ca91bb852b085439a927818f23fd630"
+      },
+      {
+        "milestone": "M2",
+        "stage": "processing",
+        "configuration_id": "PC-M2-001",
+        "configuration_version": 1,
+        "sha256": "c2aab33b7b1261d02f67b831bf9e9c3481be95c8b0c97955c8870f364155a323"
+      },
+      {
+        "milestone": "M3",
+        "stage": "matching",
+        "configuration_id": "MC-M3-001",
+        "configuration_version": 1,
+        "sha256": "c917fee7f8fd0fb16973d024bfbba0a9024b0661fa9ecf75abaa1f94fe177cfa"
+      },
+      {
+        "milestone": "M4",
+        "stage": "trust",
+        "configuration_id": "TG-M4-001",
+        "configuration_version": 1,
+        "sha256": "ec335c8434fdd32fc1cf7f9e9c2a459fbd929a804491d908c9c7786e5c0e7ce8"
+      },
+      {
+        "milestone": "M5",
+        "stage": "spatial",
+        "configuration_id": "SR-M5-001",
+        "configuration_version": 1,
+        "sha256": "c0a1461f9f3a7e8fc04110d0290eb96be144fee77f6e7e83e26fc1564006514b"
+      },
+      {
+        "milestone": "M6",
+        "stage": "registration",
+        "configuration_id": "RG-M6-001",
+        "configuration_version": 1,
+        "sha256": "8e7b992b07be304ef602a2e3ccc711d5be7618c3f2bd54680bacf63f574b4eaf"
+      },
+      {
+        "milestone": "M7",
+        "stage": "metrics",
+        "configuration_id": "MT-M7-001",
+        "configuration_version": 1,
+        "sha256": "fac5ff07ea6ac570a3f3c8fcddf40c2c690ffa95b2ba6e12a3001497bd93f57d"
+      },
+      {
+        "milestone": "M8",
+        "stage": "deep_matching",
+        "configuration_id": "DM-M8-001",
+        "configuration_version": 1,
+        "sha256": "bf98f42d4dc9d0a986d7eddec35806c62f52b9e0942ab7a1c821f7e095b261b1"
+      },
+      {
+        "milestone": "M9",
+        "stage": "ai_explanations",
+        "configuration_id": "AI-M9-001",
+        "configuration_version": 1,
+        "sha256": "2fb0e4205f4ddac37ac5baef6f7ad8af865f48fbb6e46de1bdedae6db79b8881"
+      },
+      {
+        "milestone": "M10",
+        "stage": "authentication",
+        "configuration_id": "AU-M10-001",
+        "configuration_version": 1,
+        "sha256": "7c4a3bae3442182a08af6a17c74d8b0d3cc4819e66043e9beb8d2d2ad198baff"
+      },
+      {
+        "milestone": "M11",
+        "stage": "operations",
+        "configuration_id": "0.11.0",
+        "configuration_version": null,
+        "sha256": "dc0050660f4563116c4baa1ed52ef52f7abadf59059d9ede5ffb766b1f394083"
+      }
+    ],
+    "note": "Canonical sorted-key digests; source paths excluded; equal chains -> equal fingerprints."
+  }
+}

@@ -1,0 +1,1 @@
+Experiment EXP-EE0EBE7187E5 ran the synthetic TEST_FIXTURE pipeline through M7. The registration fit has residual mean None px in sensor pixel space; this is an engineering diagnostic on synthetic data and carries no claim about ground-truth positioning. Real-data science remains BLOCKED pending PRADAN approval.

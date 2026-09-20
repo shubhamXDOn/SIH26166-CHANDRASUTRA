@@ -26,6 +26,7 @@ import numpy as np
 
 from ..config import Settings
 from ..errors import AppError, NotFoundError, ValidationError
+from ..hardening import RunLock, TimeBudget, atomic_write_json, elapsed_ms, record_run_event
 from ..logging_conf import get_logger
 from ..pairs import PairRegistry
 from ..processing.manifest import load_manifest, rel_string
@@ -77,10 +78,7 @@ class MatchingService:
         return self.run_dir(pair_id, proc_cfg, matcher_cfg) / "matching_status.json"
 
     def _write_json(self, path: Path, payload: dict) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
-        tmp.replace(path)
+        atomic_write_json(path, payload)
 
     # ------------------------------------------------------------------
     # prerequisites (honest blockers)

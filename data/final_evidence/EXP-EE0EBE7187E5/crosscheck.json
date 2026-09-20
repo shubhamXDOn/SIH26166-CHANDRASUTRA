@@ -1,0 +1,12 @@
+{
+  "status": "CLEAR",
+  "violations": [],
+  "claimed_numbers": [
+    "18"
+  ],
+  "packet_integrity": {
+    "status": "VERIFIED",
+    "recomputed_digest": "sha256:e51c592170b1622be0f66240c311ec8551555cf7716ed25ff9afcd10a6179126",
+    "recorded_digest": null
+  }
+}

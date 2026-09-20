@@ -1,0 +1,48 @@
+{
+  "transform_type": "HOMOGRAPHY",
+  "selection_reason": "PREFERRED",
+  "correspondences": {
+    "selected_total": 19,
+    "finite_usable": 19,
+    "valid_for_fit": 19,
+    "inliers": 19,
+    "outliers": 0,
+    "inlier_ratio": 1.0
+  },
+  "residuals": {
+    "mean_px": 0.969228,
+    "median_px": 0.978944,
+    "p95_px": 2.452155,
+    "max_px": 2.673452
+  },
+  "symmetric_transfer": {
+    "mean_px": 0.970708,
+    "max_px": 2.673452,
+    "passed": true
+  },
+  "numerics": {
+    "determinant": 0.96804257,
+    "condition_number": 1.047204,
+    "degeneracy_flags": [],
+    "iterations_used": 2000,
+    "seed_used": 42
+  },
+  "matrix": [
+    [
+      1.0026888992,
+      -0.0344140077,
+      13.3623793112
+    ],
+    [
+      0.0089215028,
+      0.9651403783,
+      2.9026715356
+    ],
+    [
+      1.98891e-05,
+      -4.71454e-05,
+      1.0
+    ]
+  ],
+  "error": null
+}

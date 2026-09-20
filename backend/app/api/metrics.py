@@ -17,6 +17,7 @@ from ..errors import NotFoundError
 from ..logging_conf import get_logger
 from ..metrics.service import MetricsService
 from ..pairs import PairRegistry
+from ..run_guard import guard_run
 from .deps import get_settings
 from ..auth.dependencies import AnalystUser, current_user_dep
 
@@ -121,7 +122,12 @@ def run_metrics(pair_id: str, current: AnalystUser, req: RunRequest, settings: S
     config_id = req.metrics_configuration_id or "MT-M7-001"
     if config_id not in VALID_METRICS_CONFIG_IDS:
         raise NotFoundError(f"Unknown metrics configuration: {config_id}")
-    return _service(settings).run(pair_id, metrics_config_id=config_id)
+    service = _service(settings)
+    return guard_run(
+        settings, derived_stage="metrics", pair_id=pair_id,
+        configuration_id=config_id, tag="m7_metrics",
+        fn=lambda: service.run(pair_id, metrics_config_id=config_id),
+    )
 
 
 @router.post("/{pair_id}/reset")

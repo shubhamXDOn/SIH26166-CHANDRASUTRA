@@ -142,7 +142,7 @@ def test_m7_health_meta_includes_m7_config():
     with TC(app) as c:
         meta = c.get("/api/meta").json()
         assert meta["m7_config"]["metrics_configuration_id"] == MT
-        assert meta["milestone"] == "M10"
+        assert meta["milestone"] == "M11"
 
 
 def test_m7_state_vocabulary():

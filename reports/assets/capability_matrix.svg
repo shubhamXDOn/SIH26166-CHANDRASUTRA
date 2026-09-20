@@ -1,0 +1,27 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='560' viewBox='0 0 1200 560'><rect x='0' y='0' width='100%' height='92' fill='#101733'/>
+<text x='24' y='40' font-size='20' fill='#ffffff' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >CHANDRASUTRA — honest capability matrix</text>
+<text x='24' y='66' font-size='12' fill='#69e3d2'  text-anchor='start' font-family='Consolas,Menlo,monospace' >every cell is the real recorded state; abstention is a first-class result</text>
+<rect x='40' y='140' width='560' height='116' rx='12' fill='#ffffff' stroke='#69e3d2' stroke-width='2'/>
+<text x='64' y='174' font-size='12' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >REPRODUCIBILITY</text>
+<text x='64' y='208' font-size='20' fill='#69e3d2' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >REPRODUCIBLE</text>
+<text x='64' y='234' font-size='11' fill='#274060'  text-anchor='start' font-family='Consolas,Menlo,monospace' >RUN A/B/C byte-identical signatures</text>
+<rect x='640' y='140' width='560' height='116' rx='12' fill='#ffffff' stroke='#e05b6d' stroke-width='2'/>
+<text x='664' y='174' font-size='12' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >REAL MISSION DATA</text>
+<text x='664' y='208' font-size='20' fill='#e05b6d' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >BLOCKED</text>
+<text x='664' y='234' font-size='11' fill='#274060'  text-anchor='start' font-family='Consolas,Menlo,monospace' >official PRADAN access pending</text>
+<rect x='40' y='292' width='560' height='116' rx='12' fill='#ffffff' stroke='#e05b6d' stroke-width='2'/>
+<text x='64' y='326' font-size='12' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >REFERENCE DATASET</text>
+<text x='64' y='360' font-size='20' fill='#e05b6d' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >NOT_AVAILABLE</text>
+<text x='64' y='386' font-size='11' fill='#274060'  text-anchor='start' font-family='Consolas,Menlo,monospace' >no certified reference in this release</text>
+<rect x='640' y='292' width='560' height='116' rx='12' fill='#ffffff' stroke='#e05b6d' stroke-width='2'/>
+<text x='664' y='326' font-size='12' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >REGISTRATION ACCURACY</text>
+<text x='664' y='360' font-size='20' fill='#e05b6d' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >NOT_CLAIMED</text>
+<text x='664' y='386' font-size='11' fill='#274060'  text-anchor='start' font-family='Consolas,Menlo,monospace' >cannot claim without reference data</text>
+<rect x='40' y='444' width='560' height='116' rx='12' fill='#ffffff' stroke='#f4c95d' stroke-width='2'/>
+<text x='64' y='478' font-size='12' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >PROVENANCE</text>
+<text x='64' y='512' font-size='20' fill='#f4c95d' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >PARTIAL · HOLD</text>
+<text x='64' y='538' font-size='11' fill='#274060'  text-anchor='start' font-family='Consolas,Menlo,monospace' >M1–M7 complete; M8/M9 honestly NOT_RUN</text>
+<rect x='640' y='444' width='560' height='116' rx='12' fill='#ffffff' stroke='#e05b6d' stroke-width='2'/>
+<text x='664' y='478' font-size='12' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >HOSTED LATENCY</text>
+<text x='664' y='512' font-size='20' fill='#e05b6d' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >NOT_MEASURED</text>
+<text x='664' y='538' font-size='11' fill='#274060'  text-anchor='start' font-family='Consolas,Menlo,monospace' >no public deployment was provisioned</text></svg>

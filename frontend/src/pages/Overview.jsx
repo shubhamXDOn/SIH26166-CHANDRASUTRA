@@ -126,6 +126,21 @@ function useMetricsOverview() {
   return { overview, error };
 }
 
+function useReleaseStatus() {
+  const [release, setRelease] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiGet("/m13/status")
+      .then((r) => alive && setRelease(r))
+      .catch((e) => alive && setError(e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return { release, error };
+}
+
 function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
   const valueTone = {
     neutral: "text-slate-100",
@@ -149,6 +164,7 @@ function StatCard({ label, value, sub, tone = "neutral", pulse = false }) {
 export default function Overview({ backend, onNavigate }) {
   const { meta, error: metaError } = useMeta(backend?.online === true);
   const { status, error: statusError } = useDataStatus();
+  const { release, error: releaseError } = useReleaseStatus();
   const { overview, error: procError } = useProcessingOverview();
   const { overview: mOverview, error: mError } = useMatchingOverview();
   const { overview: tOverview, error: tError } = useTrustOverview();
@@ -276,9 +292,52 @@ export default function Overview({ backend, onNavigate }) {
   }));
 
   const anchor = backend?.online ? "green" : "gray";
+  const rev = release?.app?.release_version ?? "1.0.0";
+  const revEv = release?.evidence || {};
+  const revReal = release?.real_data || {};
+  const revProv = release?.provenance || {};
 
   return (
     <div className="space-y-6">
+      {/* M13 final release presentation */}
+      <section className="card border-lunar-500/20 bg-gradient-to-br from-space-800/70 to-space-950/60 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-2xl space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="gold">CHANDRASUTRA v{rev} · M13 Final Release</Badge>
+              <Badge tone="neutral">{settings.app_name ?? "SIH26166"}</Badge>
+              {revReal.status === "BLOCKED" && (
+                <Badge tone="warn">Synthetic demonstration — not a real lunar observation</Badge>
+              )}
+            </div>
+            <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100">
+              Trustworthy <span className="text-lunar-400 text-glow">lunar image</span> intelligence
+              <span className="text-lunar-400"> — freeze complete</span>
+            </h2>
+            <p className="text-sm leading-relaxed text-muted">
+              {revEv.verify_status === "VERIFIED"
+                ? `Evidence experiment ${revEv.experiment_id} (pair ${revEv.pair_id}) is frozen and re-verified under digest ${(revEv.final_evidence_sha256 ?? "").slice(0, 16)}… ${revProv.missing_stages?.length ? `Provenance is PARTIAL / HOLD (M8, M9 open).` : "Provenance complete."}`
+                : "The published evidence package is being verified."}{" "}
+              Real mission validation is gated by authorized PRADAN access; physical accuracy is NOT_CLAIMED
+              without a reference dataset. Nothing below is simulated.
+            </p>
+            {releaseError && (
+              <p className="flex items-center gap-2 text-xs text-danger">
+                <Icon.Alert /> {String(releaseError.message)}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <button onClick={() => onNavigate("analysis")} className="btn-primary">
+              <Icon.Activity className="h-4 w-4" /> Launch demonstration
+            </button>
+            <button onClick={() => onNavigate("evidence")} className="btn-ghost">
+              <Icon.File className="h-4 w-4" /> Explore evidence
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Hero */}
       <section className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-2xl space-y-3">

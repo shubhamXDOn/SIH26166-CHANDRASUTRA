@@ -1,0 +1,195 @@
+{
+  "pair_id": "CS-P001",
+  "status": "INCOMPLETE",
+  "missing_stages": [
+    "M8"
+  ],
+  "generated_at": "2026-09-20T12:01:24+00:00",
+  "chain": [
+    {
+      "milestone": "M1",
+      "role": "pair registration & validation",
+      "status": "COMPLETE",
+      "configuration_id": null,
+      "artifacts": [
+        {
+          "path": "metadata/pairs.json",
+          "kind": "m1_pairs",
+          "sha256": "6bed715b6262c470cad068f032b9598e39ef4081ca97a2678aacb9cc14b3c7ad"
+        }
+      ],
+      "note": "Pair identity, product metadata, raw SHA-256 recorded at registration."
+    },
+    {
+      "milestone": "M2",
+      "role": "sensor-native scene condition tiles + overlap geometry",
+      "status": "COMPLETE",
+      "configuration_id": "PC-M2-001",
+      "artifacts": [
+        {
+          "path": "derived/processing/CS-P001/PC-M2-001/processing_manifest.json",
+          "kind": "m2_manifest",
+          "sha256": "6c6d4bc4f94ab4d19422759abd228682e32f05e406aca8fbebacfddb08e0eac7"
+        },
+        {
+          "path": "derived/processing/CS-P001/PC-M2-001/diagnostics/overlap.json",
+          "kind": "m2_overlap",
+          "sha256": "3951826c044cbb40b54893a7a140e4a35efbd73de6ff9ddecd203b235e1d6fe5"
+        },
+        {
+          "path": "derived/processing/CS-P001/PC-M2-001/crops/tiles.json",
+          "kind": "m2_tiles",
+          "sha256": "1fae0a9a91bf0771ec48854bf8980e6970e12578c0d9cca559670ed90cd9d42e"
+        }
+      ],
+      "note": "No resampling, per M2 policy."
+    },
+    {
+      "milestone": "M3",
+      "role": "adaptive matcher candidate correspondences per tile",
+      "status": "COMPLETE",
+      "configuration_id": "MC-M3-001",
+      "artifacts": [
+        {
+          "path": "derived/matches/CS-P001/PC-M2-001/MC-M3-001/matching_status.json",
+          "kind": "m3_status",
+          "sha256": "f453d1c55214633c5667b21581afe8097ba90b12e20a0a2a0777c043e78addd9"
+        },
+        {
+          "path": "derived/matches/CS-P001/PC-M2-001/MC-M3-001/summary.json",
+          "kind": "m3_summary",
+          "sha256": "2622ed719ee690f88cd94369ee08e59fb7fa8097146dfedf736660412856ca33"
+        }
+      ],
+      "note": "Candidate correspondences are raw matcher output, not scientific claims."
+    },
+    {
+      "milestone": "M4",
+      "role": "independent geometric verification / trust gate",
+      "status": "COMPLETE",
+      "configuration_id": "TG-M4-001",
+      "artifacts": [
+        {
+          "path": "derived/trust/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/trust_status.json",
+          "kind": "m4_trust_status",
+          "sha256": "fecea0d6cf5068d61f3088d4db498f7dc5828fcb475ba0220b912e8ae072fa31"
+        },
+        {
+          "path": "derived/trust/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/tile_trust.json",
+          "kind": "m4_tile_trust",
+          "sha256": "271e6beab23b28f77d2f686cbd16ac6750450705be5041c9a60dfb88e114b024"
+        }
+      ],
+      "note": "Only trusted tiles feed M5."
+    },
+    {
+      "milestone": "M5",
+      "role": "spatial reliability & reliability-aware selection",
+      "status": "COMPLETE",
+      "configuration_id": "SR-M5-001",
+      "artifacts": [
+        {
+          "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/status.json",
+          "kind": "m5_status",
+          "sha256": "32c0d46834666ada06b88b3958e0dbb4c7949587045f7773a6146e8c2c6f2e7f"
+        },
+        {
+          "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/spatial_manifest.json",
+          "kind": "m5_manifest",
+          "sha256": "e87207d59596ce4ec33d4424d68de4ad50d6175a24ce349c193b971245bc472a"
+        },
+        {
+          "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/selection.json",
+          "kind": "m5_selection",
+          "sha256": "78ea7a25f71eae0c21ac58910b6c4ffbd858ffac48621623243678a06be4df0b"
+        },
+        {
+          "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/selected_correspondences.npz",
+          "kind": "m5_selected_correspondences",
+          "sha256": "ce5678a6d10ab77826d7a22586af2ac8284764242db37a695530c0762d10e098"
+        },
+        {
+          "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/reliability_map.json",
+          "kind": "m5_reliability_map",
+          "sha256": "b55859a5d8f2630b9171b79ba15abd9674db0e97cff1e14d1da077f61cf47ea0"
+        }
+      ],
+      "note": "Reliability-aware selection restricts evidence; it is not a scientific claim."
+    },
+    {
+      "milestone": "M6",
+      "role": "registration engine & verified alignment",
+      "status": "COMPLETE",
+      "configuration_id": "RG-M6-001",
+      "artifacts": [
+        {
+          "path": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/status.json",
+          "kind": "m6_status",
+          "sha256": "bfb840751d60be038ac8c68660ef632a331964c019973bb34e63995e7be5b392"
+        },
+        {
+          "path": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/summary.json",
+          "kind": "m6_summary",
+          "sha256": "1e85675375d0f672ad2b6bd4a4be1d11008c699910c376c4416371590e9304e9"
+        },
+        {
+          "path": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/transform.json",
+          "kind": "m6_transform",
+          "sha256": "0f193f69710955fc24ad1916c1bdf2b782262181e4c83e38cc1c7882063c15bb"
+        },
+        {
+          "path": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/validation.json",
+          "kind": "m6_validation",
+          "sha256": "459a1588d373b93754cf5e2d9218fb68649488a018c59d100fb245f547e8665a"
+        },
+        {
+          "path": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/diagnostics.json",
+          "kind": "m6_diagnostics",
+          "sha256": "287b617d2d9eff22fbc2a1e852d7d6659d04e7e68eb41eaaab2d51653ae2b5ad"
+        }
+      ],
+      "note": "Transform fit on M5-selected evidence; diagnostics are measurements, not proof."
+    },
+    {
+      "milestone": "M7",
+      "role": "reproducible experiment metrics",
+      "status": "COMPLETE",
+      "configuration_id": "MT-M7-001",
+      "artifacts": [
+        {
+          "path": "derived/metrics/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/MT-M7-001/status.json",
+          "kind": "m7_status",
+          "sha256": "9e6a7c050c97a1219949df7e070c2badb385e2e819fab1a0c604fbd7f0e4d15d"
+        },
+        {
+          "path": "derived/metrics/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/MT-M7-001/report.json",
+          "kind": "m7_report",
+          "sha256": "be3c3ff753538047e444ebc47e0f22d920dca38934a6460b2ba394e069b912b5"
+        },
+        {
+          "path": "derived/metrics/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/MT-M7-001/report.md",
+          "kind": "m7_report_markdown",
+          "sha256": "21e9be448ee46c6b76ed72585b782044d8f1213f2bb032271b444a2f7d06434a"
+        }
+      ],
+      "note": "Metrics are measurements of pipeline evidence; physical accuracy is NOT_AVAILABLE."
+    },
+    {
+      "milestone": "M8",
+      "role": "deep matcher expansion & adaptive routing",
+      "status": "NOT_RUN",
+      "configuration_id": null,
+      "artifacts": [],
+      "note": "No deep-matcher run."
+    },
+    {
+      "milestone": "M9",
+      "role": "AI explanation evidence",
+      "status": "NOT_RUN",
+      "configuration_id": null,
+      "artifacts": [],
+      "note": "M9 reasoning evidence packet is built on demand per explanation; AI claims are independently validated by m12.crosscheck."
+    }
+  ],
+  "note": "No absolute/home paths; sha256 over every referenced artifact; missing stages report NOT_RUN."
+}

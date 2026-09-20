@@ -21,8 +21,11 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from .hardening import current_request_id
 
 
 def _logger():
@@ -199,8 +202,41 @@ class AuthRateLimitedError(AuthenticationError):
     retryable = True
 
 
+# ---------------------------------------------------------------------------
+# M11 hardening & resource-limit errors
+# ---------------------------------------------------------------------------
+
+class JobAlreadyRunningError(AppError):
+    code = "JOB_ALREADY_RUNNING"
+    http_status = 409
+    user_message = "A run for this pair is already executing. Wait for it to finish before starting another."
+    retryable = True
+
+
+class PayloadTooLargeError(AppError):
+    code = "LIMIT_EXCEEDED"
+    http_status = 413
+    user_message = "The request body exceeds the configured size limit. No data was processed."
+    retryable = False
+
+
+class ResourceLimitError(AppError):
+    code = "RESOURCE_LIMIT"
+    http_status = 422
+    user_message = "The request exceeds a configured engineering resource limit. No data was processed."
+    retryable = False
+
+
+class IntegrityFailedError(AppError):
+    code = "INTEGRITY_FAILED"
+    http_status = 422
+    user_message = "A stored scientific artifact failed integrity verification and is not trusted."
+    retryable = False
+
+
 def error_envelope(exc: AppError) -> dict[str, Any]:
-    return {
+    request_id = current_request_id()
+    envelope: dict[str, Any] = {
         "error": {
             "code": exc.code,
             "message": exc.message,
@@ -210,6 +246,9 @@ def error_envelope(exc: AppError) -> dict[str, Any]:
             "details": exc.details or {},
         }
     }
+    if request_id:
+        envelope["error"]["request_id"] = request_id
+    return envelope
 
 
 def install_error_handlers(app: FastAPI) -> None:
@@ -218,10 +257,31 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
         _logger().error(
-            "AppError %s -> %s", exc.code, exc.message,
+            "AppError %s -> %s req=%s", exc.code, exc.message, current_request_id(),
             extra={"operation": "error_handler", "status": "failed"},
         )
         return JSONResponse(status_code=exc.http_status, content=error_envelope(exc))
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = []
+        for err in exc.errors():
+            loc = ".".join(str(p) for p in err.get("loc", ()))
+            errors.append({"location": loc or "request", "message": err.get("msg", "invalid value")})
+        wrapped = AppError(
+            "Request validation failed.",
+            severity="warning",
+            details={"fields": errors},
+        )
+        wrapped.code = "VALIDATION_ERROR"
+        wrapped.http_status = 422
+        wrapped.user_message = "The request payload is invalid. Check the reported fields and retry."
+        wrapped.retryable = True
+        _logger().warning(
+            "RequestValidationError req=%s fields=%s",
+            current_request_id(), [e["location"] for e in errors],
+        )
+        return JSONResponse(status_code=422, content=error_envelope(wrapped))
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error_handler(_request: Request, exc: StarletteHTTPException) -> JSONResponse:

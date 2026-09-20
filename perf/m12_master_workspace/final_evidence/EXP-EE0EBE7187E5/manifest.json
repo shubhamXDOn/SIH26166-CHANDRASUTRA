@@ -1,0 +1,185 @@
+{
+  "schema_version": "M12-EVIDENCE-MANIFEST-001",
+  "application": "CHANDRASUTRA (SIH26166)",
+  "experiment_id": "EXP-EE0EBE7187E5",
+  "pair_id": "CS-P001",
+  "artifact_count": 29,
+  "pipeline_artifact_count": 21,
+  "artifacts": [
+    {
+      "path": "audits.json",
+      "size": 4094,
+      "sha256": "45866a2629e2e67d677283bcff273899008110396ec61de4cbd49f00cd1ed1a7",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "configurations.json",
+      "size": 3007,
+      "sha256": "8524921796bea74f85d07c22d513ce91bcbe9237f9c5dec3b689feb36504d499",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "crosscheck.json",
+      "size": 276,
+      "sha256": "3ad30b4d5c9ab4b142f06101e9ab6c309129e019cce868384268c7c59ed10626",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "experiment.json",
+      "size": 4092,
+      "sha256": "2ed81570a3b313c6a6aca5c3091c4988f164aa39c997aea94126f858995bba98",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "pair.json",
+      "size": 2464,
+      "sha256": "2708bf93488163a247e96d2bcad9da248513e05c806d68f3be3a5b43f4b9fffb",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "pipeline/M1/pairs.json",
+      "size": 2878,
+      "sha256": "6bed715b6262c470cad068f032b9598e39ef4081ca97a2678aacb9cc14b3c7ad",
+      "copied_from": "metadata/pairs.json"
+    },
+    {
+      "path": "pipeline/M2/overlap.json",
+      "size": 271,
+      "sha256": "3951826c044cbb40b54893a7a140e4a35efbd73de6ff9ddecd203b235e1d6fe5",
+      "copied_from": "derived/processing/CS-P001/PC-M2-001/diagnostics/overlap.json"
+    },
+    {
+      "path": "pipeline/M2/processing_manifest.json",
+      "size": 245,
+      "sha256": "6c6d4bc4f94ab4d19422759abd228682e32f05e406aca8fbebacfddb08e0eac7",
+      "copied_from": "derived/processing/CS-P001/PC-M2-001/processing_manifest.json"
+    },
+    {
+      "path": "pipeline/M2/tiles.json",
+      "size": 1586,
+      "sha256": "1fae0a9a91bf0771ec48854bf8980e6970e12578c0d9cca559670ed90cd9d42e",
+      "copied_from": "derived/processing/CS-P001/PC-M2-001/crops/tiles.json"
+    },
+    {
+      "path": "pipeline/M3/matching_status.json",
+      "size": 63,
+      "sha256": "f453d1c55214633c5667b21581afe8097ba90b12e20a0a2a0777c043e78addd9",
+      "copied_from": "derived/matches/CS-P001/PC-M2-001/MC-M3-001/matching_status.json"
+    },
+    {
+      "path": "pipeline/M3/summary.json",
+      "size": 528,
+      "sha256": "2622ed719ee690f88cd94369ee08e59fb7fa8097146dfedf736660412856ca33",
+      "copied_from": "derived/matches/CS-P001/PC-M2-001/MC-M3-001/summary.json"
+    },
+    {
+      "path": "pipeline/M4/tile_trust.json",
+      "size": 1015,
+      "sha256": "271e6beab23b28f77d2f686cbd16ac6750450705be5041c9a60dfb88e114b024",
+      "copied_from": "derived/trust/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/tile_trust.json"
+    },
+    {
+      "path": "pipeline/M4/trust_status.json",
+      "size": 231,
+      "sha256": "fecea0d6cf5068d61f3088d4db498f7dc5828fcb475ba0220b912e8ae072fa31",
+      "copied_from": "derived/trust/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/trust_status.json"
+    },
+    {
+      "path": "pipeline/M5/reliability_map.json",
+      "size": 43768,
+      "sha256": "b55859a5d8f2630b9171b79ba15abd9674db0e97cff1e14d1da077f61cf47ea0",
+      "copied_from": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/reliability_map.json"
+    },
+    {
+      "path": "pipeline/M5/selected_correspondences.npz",
+      "size": 3882,
+      "sha256": "ce5678a6d10ab77826d7a22586af2ac8284764242db37a695530c0762d10e098",
+      "copied_from": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/selected_correspondences.npz"
+    },
+    {
+      "path": "pipeline/M5/selection.json",
+      "size": 887,
+      "sha256": "78ea7a25f71eae0c21ac58910b6c4ffbd858ffac48621623243678a06be4df0b",
+      "copied_from": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/selection.json"
+    },
+    {
+      "path": "pipeline/M5/spatial_manifest.json",
+      "size": 2599,
+      "sha256": "e87207d59596ce4ec33d4424d68de4ad50d6175a24ce349c193b971245bc472a",
+      "copied_from": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/spatial_manifest.json"
+    },
+    {
+      "path": "pipeline/M5/status.json",
+      "size": 368,
+      "sha256": "32c0d46834666ada06b88b3958e0dbb4c7949587045f7773a6146e8c2c6f2e7f",
+      "copied_from": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/status.json"
+    },
+    {
+      "path": "pipeline/M6/diagnostics.json",
+      "size": 864,
+      "sha256": "287b617d2d9eff22fbc2a1e852d7d6659d04e7e68eb41eaaab2d51653ae2b5ad",
+      "copied_from": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/diagnostics.json"
+    },
+    {
+      "path": "pipeline/M6/status.json",
+      "size": 494,
+      "sha256": "bfb840751d60be038ac8c68660ef632a331964c019973bb34e63995e7be5b392",
+      "copied_from": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/status.json"
+    },
+    {
+      "path": "pipeline/M6/summary.json",
+      "size": 779,
+      "sha256": "1e85675375d0f672ad2b6bd4a4be1d11008c699910c376c4416371590e9304e9",
+      "copied_from": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/summary.json"
+    },
+    {
+      "path": "pipeline/M6/transform.json",
+      "size": 944,
+      "sha256": "0f193f69710955fc24ad1916c1bdf2b782262181e4c83e38cc1c7882063c15bb",
+      "copied_from": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/transform.json"
+    },
+    {
+      "path": "pipeline/M6/validation.json",
+      "size": 805,
+      "sha256": "459a1588d373b93754cf5e2d9218fb68649488a018c59d100fb245f547e8665a",
+      "copied_from": "derived/registration/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/validation.json"
+    },
+    {
+      "path": "pipeline/M7/report.json",
+      "size": 37677,
+      "sha256": "be3c3ff753538047e444ebc47e0f22d920dca38934a6460b2ba394e069b912b5",
+      "copied_from": "derived/metrics/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/MT-M7-001/report.json"
+    },
+    {
+      "path": "pipeline/M7/report.md",
+      "size": 7526,
+      "sha256": "21e9be448ee46c6b76ed72585b782044d8f1213f2bb032271b444a2f7d06434a",
+      "copied_from": "derived/metrics/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/MT-M7-001/report.md"
+    },
+    {
+      "path": "pipeline/M7/status.json",
+      "size": 583,
+      "sha256": "9e6a7c050c97a1219949df7e070c2badb385e2e819fab1a0c604fbd7f0e4d15d",
+      "copied_from": "derived/metrics/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/RG-M6-001/MT-M7-001/status.json"
+    },
+    {
+      "path": "provenance.json",
+      "size": 7941,
+      "sha256": "bb30e6124ec1130f088ec137c6f2f348334726133273cf9da1e02ddeb1e75171",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "report.md",
+      "size": 313,
+      "sha256": "ebdad22345f2ac8953ed75bf081b2ce01866d03db895162a0f180d8861554028",
+      "copied_from": "generated-in-package"
+    },
+    {
+      "path": "security.json",
+      "size": 42,
+      "sha256": "719c2ab9f3fdd9d4ce12897b14de3ecae975201aca22c939a3f4c54ac3a51dc1",
+      "copied_from": "generated-in-package"
+    }
+  ],
+  "note": "Raw images are referenced by the pair record + registered SHA-256 and are never copied. The FINAL_EVIDENCE_SHA256 digest is the hash of this manifest; any post-freeze modification changes the digest."
+}

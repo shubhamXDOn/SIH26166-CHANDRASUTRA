@@ -1,0 +1,37 @@
+{
+  "mode": "SUPPORTED_REGION",
+  "selection_outcome": "SELECTED",
+  "decision_reason": "SUPPORTED_REGION_SELECTED",
+  "selected_component_ids": [
+    "C03"
+  ],
+  "selected_cell_ids": [
+    "R05C06",
+    "R06C06",
+    "R06C07",
+    "R07C06"
+  ],
+  "selected_correspondence_count": 19,
+  "capped_at_limit": false,
+  "limit": 4000,
+  "reason_counts": {
+    "SR_SELECTED_SUPPORTED_REGION": 19,
+    "SR_SELECTED_NEIGHBOR_SUPPORTED": 19,
+    "SR_SELECTED_SPATIAL_COVERAGE": 19
+  },
+  "trace": {
+    "policy": {
+      "mode": "SUPPORTED_REGION",
+      "min_component_cells": 4,
+      "min_component_correspondences": 16,
+      "min_selected_region_cells": 4,
+      "max_selected_correspondences": 4000,
+      "deterministic_ordering": "largest_evidence_first"
+    },
+    "component_ids": [
+      "C03"
+    ],
+    "selected_cell_count": 4,
+    "edge_touching_components_excluded": false
+  }
+}

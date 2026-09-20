@@ -1,0 +1,62 @@
+{
+  "pair_id": "CS-P001",
+  "spatial_reliability_configuration_id": "SR-M5-001",
+  "spatial_reliability_configuration_version": "1",
+  "coordinate_space": "pair_overlap_normalized",
+  "processing_configuration_id": "PC-M2-001",
+  "matcher_configuration_id": "MC-M3-001",
+  "trust_configuration_id": "TG-M4-001",
+  "generated_at": "2026-09-20T07:04:26+00:00",
+  "note": "Engineering/policy defaults only; no scientifically tuned lunar thresholds exist yet. Selection reflects measured spatial evidence, not a scientific alignment claim.",
+  "summary": {
+    "scene_cells_observed": 0,
+    "reliable_cells": 0,
+    "connected_components": 0,
+    "verified_inlier_count": 0,
+    "selected_correspondence_count": 0,
+    "selection_outcome": "SELECTED",
+    "runtime_seconds": 3.4387
+  },
+  "artifacts": [
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/summary.json",
+      "kind": "summary",
+      "sha256": "cf04ef2fde06555301dc769c491e4e446f3bf3f05f5ef48c05ad6587b39d7ce7"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/reliability_map.json",
+      "kind": "reliability_map",
+      "sha256": "b55859a5d8f2630b9171b79ba15abd9674db0e97cff1e14d1da077f61cf47ea0"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/components.json",
+      "kind": "components",
+      "sha256": "d7aaffb251dbf237f2c4f5c24863bff383f7faef7c47915cf8d6d655ecbbce76"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/cells.json",
+      "kind": "cells",
+      "sha256": "13d9cd8f477fc1457b4fdfa6dc5ee646c1e5e83f0f1b33d8db571c2d00839799"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/selection.json",
+      "kind": "selection",
+      "sha256": "78ea7a25f71eae0c21ac58910b6c4ffbd858ffac48621623243678a06be4df0b"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/mapping.json",
+      "kind": "mapping",
+      "sha256": "6d8cd6ac6f5e85a06bc5041b6fa4c4e9c02a055f0d88465a1cbdd9315b5e4c32"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/policies/applied.json",
+      "kind": "policies_applied",
+      "sha256": "cc13c4044fefe9bf43344c50ba389bb3d2018f6685f73af22b5298ed898a4c20"
+    },
+    {
+      "path": "derived/spatial/CS-P001/PC-M2-001/MC-M3-001/TG-M4-001/SR-M5-001/selected_correspondences.npz",
+      "kind": "selected_correspondences",
+      "sha256": "ce5678a6d10ab77826d7a22586af2ac8284764242db37a695530c0762d10e098"
+    }
+  ]
+}

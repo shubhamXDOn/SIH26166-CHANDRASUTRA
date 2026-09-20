@@ -12,6 +12,7 @@ import shutil
 from pathlib import Path
 
 from backend.app.config import rfc3339_now
+from backend.app.hardening import atomic_write_json, atomic_write_text
 from backend.app.metrics.comparison import build_comparison
 from backend.app.metrics.config import (
     METRICS_CONFIGURATION_ID,
@@ -271,7 +272,7 @@ class MetricsService:
 
         self._write_json(run_dir / "experiment.json", experiment)
         self._write_json(run_dir / "report.json", report)
-        (run_dir / "report.md").write_text(markdown, encoding="utf-8")
+        atomic_write_text(run_dir / "report.md", markdown)
         self._write_registration_metrics(run_dir, pair_id, collected)
         self._write_summary(run_dir, pair_id, MetricsRunState.COMPLETE, cfg,
                             experiment["experiment_id"], validation, recompute)
@@ -465,8 +466,7 @@ class MetricsService:
             return fallback
 
     def _write_json(self, path: Path, payload) -> None:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        atomic_write_json(path, payload)
 
     def reset_run(self, pair_id: str) -> dict:
         return self.reset(pair_id)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from ..config import (
     Settings,
@@ -20,6 +20,7 @@ from ..config import (
     to_jsonable,
 )
 from ..data import data_directory_status
+from ..ops import readiness_payload
 from .deps import get_settings
 
 router = APIRouter(tags=["system"])
@@ -36,10 +37,24 @@ def health(settings: Settings = Depends(get_settings)) -> dict:
         "milestone": settings.milestone,
         "version": settings.app_version,
         "environment": settings.app_env,
+        "demo_mode": settings.demo_mode,
         "timestamp": rfc3339_now(),
         "auth": {"configured": settings.auth_configured},
         "ai": {"service": "Gemini", "configured": settings.gemini_configured},
     }
+
+
+@router.get("/ready")
+def ready(response: Response, settings: Settings = Depends(get_settings)) -> dict:
+    """M11 readiness probe.
+
+    Liveness is ``/api/health`` (process alive). Readiness here reflects safe
+    operational dependencies. Optional capabilities (Gemini, deep matchers) and
+    a BLOCKED real-data availability never make the service unhealthy.
+    """
+    status_code, payload = readiness_payload(settings)
+    response.status_code = status_code
+    return payload
 
 
 @router.get("/meta")

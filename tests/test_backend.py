@@ -30,7 +30,7 @@ def test_health_endpoint(client_factory):
         assert body["status"] == "ok"
         assert body["application"] == "CHANDRASUTRA"
         assert body["project"] == "SIH26166"
-        assert body["milestone"] == "M10"
+        assert body["milestone"] == "M11"
         assert "version" in body
         assert "environment" in body
         assert "timestamp" in body
@@ -69,7 +69,7 @@ def test_data_status_requires_auth_then_reports_no_pairs(client_factory, authed_
         assert resp.status_code == 200
         body = resp.json()
         assert body["pairs_registered"] == 0
-        assert body["milestone"] == "M10"
+        assert body["milestone"] == "M11"
         assert body["summary"]["total"] >= 4
         assert "directories" in body
         assert body["source"]["archive"] == "PRADAN"

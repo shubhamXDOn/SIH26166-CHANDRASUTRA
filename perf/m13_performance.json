@@ -1,0 +1,75 @@
+{
+  "schema_version": "M13-PERF-001",
+  "application": "CHANDRASUTRA (SIH26166)",
+  "status": "MEASURED_LOCALLY",
+  "hosted": "NOT_MEASURED",
+  "hosted_note": "No public deployment was provisioned from this offline environment; hosted latency was not measured and is not estimated.",
+  "measured_at_utc": "2026-09-20T12:38:15+00:00",
+  "environment": "local development runtime",
+  "warmup": "one un-timed call per route before sampling",
+  "routes": {
+    "/api/health": {
+      "method": "GET",
+      "median_ms": 15.6,
+      "min_ms": 13.8,
+      "max_ms": 16.8,
+      "samples": 4
+    },
+    "/api/m13/status": {
+      "method": "GET",
+      "median_ms": 157.2,
+      "min_ms": 146.5,
+      "max_ms": 261.7,
+      "samples": 4
+    },
+    "/api/m13/evidence": {
+      "method": "GET",
+      "median_ms": 108.1,
+      "min_ms": 69.9,
+      "max_ms": 147.8,
+      "samples": 4
+    },
+    "/api/m13/evidence/EXP-EE0EBE7187E5": {
+      "method": "GET",
+      "median_ms": 177.2,
+      "min_ms": 83.5,
+      "max_ms": 246.3,
+      "samples": 4
+    },
+    "/api/m13/reports": {
+      "method": "GET",
+      "median_ms": 42.4,
+      "min_ms": 41.1,
+      "max_ms": 45.1,
+      "samples": 4
+    },
+    "/api/m13/report/M12_FINAL_SCIENTIFIC_REPORT.md": {
+      "method": "GET",
+      "median_ms": 37.7,
+      "min_ms": 32.8,
+      "max_ms": 40.7,
+      "samples": 4
+    },
+    "/api/m13/record/reproducibility": {
+      "method": "GET",
+      "median_ms": 40.9,
+      "min_ms": 39.6,
+      "max_ms": 158.3,
+      "samples": 4
+    },
+    "/api/m13/provenance": {
+      "method": "GET",
+      "median_ms": 56.6,
+      "min_ms": 34.6,
+      "max_ms": 131.0,
+      "samples": 4
+    },
+    "/api/m13/demo/reset": {
+      "method": "POST",
+      "median_ms": 86.6,
+      "min_ms": 78.1,
+      "max_ms": 98.2,
+      "samples": 4
+    }
+  }
+}

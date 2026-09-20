@@ -1,4 +1,4 @@
-"""SIH26166 — Milestone M10 environment smoke test.
+"""SIH26166 — Milestone M11 environment smoke test.
 
 Validates, end to end:
     * Python environment
@@ -13,6 +13,8 @@ Validates, end to end:
     * M2..M9 pipeline endpoint honesty (clean repo -> BLOCKED/NOT_STARTED)
     * M10 authentication: auth status, login with HttpOnly cookie, /me,
       fail-closed anonymous 401/501 behaviour
+    * M11 hardening: /api/ready readiness probe, X-Request-ID echo,
+      error envelopes, 413 body-limit, admin-only /api/ops/overview
     * frontend render + frontend->backend connectivity
 
 Every milestone boots the real app with authentication ENABLED (a random
@@ -28,6 +30,7 @@ Exits non-zero if anything fails. NEVER reports PASS on failure.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import secrets
@@ -37,6 +40,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -103,7 +107,7 @@ def record(name: str, ok: bool, detail: str) -> None:
 
 
 def main() -> int:
-    print(f"CHANDRASUTRA (SIH26166) M1..M10 smoke test  |  repo root: {REPO_ROOT}")
+    print(f"CHANDRASUTRA (SIH26166) M1..M11 smoke test  |  repo root: {REPO_ROOT}")
     print(f"  Python           : {sys.version.split()[0]}  ({sys.executable})\n")
 
     # ---- 1. Python version ------------------------------------------------
@@ -188,6 +192,9 @@ def main() -> int:
 
     # ---- 5k. M10 auth endpoints over HTTP ----------------------------------
     record_m10_backend()
+
+    # ---- 5l. M11 hardening endpoints over HTTP ------------------------------
+    record_m11_backend()
 
     # ---- 6. frontend render + frontend->backend connectivity ----------------
     record_frontend()
@@ -354,7 +361,7 @@ def record_m1_backend() -> None:
         if not _require_token(base, "m1"):
             return
         meta = _get_json(f"{base}/meta")
-        record("m1-meta", bool(meta and meta.get("milestone") == "M10"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
+        record("m1-meta", bool(meta and meta.get("milestone") == "M11"), f"milestone={ (meta or {}).get('milestone') } tagline={(meta or {}).get('tagline')}")
         record(
             "m1-config",
             (((meta or {}).get("m1_config") or {}).get("hash_algorithm") or "").lower() == "sha256",
@@ -977,7 +984,7 @@ def record_m9_backend() -> None:
             and "constraints" in m9cfg,
             f"m9_config keys={list(m9cfg.keys())}",
         )
-        record("m9-milestone", meta.get("milestone") == "M10", f"milestone={meta.get('milestone')}")
+        record("m9-milestone", meta.get("milestone") == "M11", f"milestone={meta.get('milestone')}")
 
         ai_status = _get_json(f"{base}/ai/status") or {}
         record(
@@ -1118,6 +1125,116 @@ def is_int_ttl(value: object) -> bool:
     return isinstance(value, int) and value > 0
 
 
+def record_m11_backend() -> None:
+    """Probe the M11 hardening surface: readiness, request-id, envelopes, body
+    limit, and the admin-only operational overview (real HTTP)."""
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M11_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m11-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        health = _get_json(f"{base}/health") or {}
+        record(
+            "m11-health",
+            health.get("status") == "ok" and health.get("milestone") == "M11",
+            f"status={health.get('status')} milestone={health.get('milestone')}",
+        )
+
+        # Readiness probe: optional/BLOCKED dependencies degrade, never fail.
+        ready = _get_json(f"{base}/ready") or {}
+        svc_ids = [s.get("id") for s in ready.get("services") or []]
+        record(
+            "m11-ready",
+            ready.get("ready") is True
+            and ready.get("status") in ("READY", "DEGRADED")
+            and svc_ids == [
+                "backend", "database", "filesystem", "configuration",
+                "authentication", "ai_capability", "deep_matcher", "scientific_data",
+            ],
+            f"ready={ready.get('ready')} status={ready.get('status')} services={len(svc_ids)}",
+        )
+        sci = next((s for s in (ready.get("services") or []) if s.get("id") == "scientific_data"), {})
+        record(
+            "m11-ready-data-honest",
+            sci.get("state") == "BLOCKED" and "REAL_DATA_UNAVAILABLE" in (sci.get("detail") or ""),
+            f"scientific_data.state={sci.get('state')}",
+        )
+
+        # Request-ID echo + error envelope correlation over real HTTP.
+        rid = "smoke-m11-request-0001"
+        try:
+            req = urllib.request.Request(f"{base}/health", headers={"X-Request-ID": rid})
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+                echoed = resp.headers.get("X-Request-Id", "")
+                resp.read()
+        except Exception:  # noqa: BLE001
+            echoed = ""
+        record("m11-request-id-echo", echoed == rid, f"x-request-id echoed={echoed!r}")
+
+        err = _post_json(f"{base}/nope/1/2")
+        errc = ((err or {}).get("error") or {}).get("code")
+        err_id = ((err or {}).get("error") or {}).get("request_id")
+        record("m11-404-envelope", errc == "NOT_FOUND" and bool(err_id), f"404 error.code={errc} request_id={bool(err_id)}")
+
+        big = {"data": "x" * 8_100_000}
+        big_status = _oversized_status(f"http://127.0.0.1:{port}/api/auth/login", 8_100_002)
+        record("m11-body-limit", big_status == 413, f"oversized body -> HTTP {big_status}")
+
+        # Admin-only operational overview.
+        anon_ops = _anon_status(f"{base}/ops/overview")
+        record("m11-ops-admin-gated", anon_ops in (401, 403, 501), f"anonymous /ops/overview -> HTTP {anon_ops}")
+
+        if not _require_token(base, "m11"):
+            record("m11-ops-overview", False, "could not obtain admin token")
+            return
+        ops = _get_json(f"{base}/ops/overview") or {}
+        ops_ok = (
+            ops.get("system", {}).get("milestone") == "M11"
+            and len(ops.get("services") or []) == 8
+            and isinstance(ops.get("recent_runs"), list)
+            and isinstance(ops.get("recent_failures"), list)
+        )
+        record(
+            "m11-ops-overview",
+            ops_ok,
+            f"milestone={ops.get('system', {}).get('milestone')} services={len(ops.get('services') or [])} runs={len(ops.get('recent_runs') or [])}",
+        )
+        ops_secret = any(s in str(ops) for s in ("SMOKE_ADMIN", "auth_secret", "Bearer "))
+        record("m11-ops-no-secret", not ops_secret, "no credentials/paths/tracebacks in /ops/overview")
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m11-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
 def _login_cookies(base: str) -> list[str]:
     user, pw = _admin_creds()
     data = json.dumps({"username": user, "password": pw}).encode("utf-8")
@@ -1188,6 +1305,33 @@ def _get_status(url: str, method: str = "GET", payload: dict | None = None) -> i
     except urllib.error.HTTPError as exc:
         return exc.code
     except (urllib.error.URLError, OSError):
+        return -1
+
+
+def _oversized_status(url: str, declared_length: int) -> int:
+    """Status of a POST that *declares* an over-limit Content-Length.
+
+    Sends headers + an empty body so the server's up-front 413 guard answers
+    before the client ever streams the payload (deterministic even over real
+    HTTP where an early server close mid-write can reset the socket).
+    """
+    try:
+        parsed = urllib.parse.urlparse(url)
+        conn = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=10)
+        conn.request(
+            "POST",
+            parsed.path,
+            body=b"",
+            headers={"Content-Type": "application/json", "Content-Length": str(declared_length)},
+        )
+        resp = conn.getresponse()
+        status = resp.status
+        resp.read()
+        conn.close()
+        return status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except (urllib.error.URLError, OSError, http.client.HTTPException):
         return -1
 
 

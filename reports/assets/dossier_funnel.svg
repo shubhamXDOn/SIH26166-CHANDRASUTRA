@@ -1,0 +1,20 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='340' viewBox='0 0 1200 340'><rect x='0' y='0' width='100%' height='92' fill='#101733'/>
+<text x='24' y='40' font-size='20' fill='#ffffff' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >CHANDRASUTRA — deterministic evidence funnel</text>
+<text x='24' y='66' font-size='12' fill='#69e3d2'  text-anchor='start' font-family='Consolas,Menlo,monospace' >EXP-EE0EBE7187E5 · pipeline certification (M3→M6)</text>
+<rect x='75' y='80' width='150' height='130' fill='#e05b6d' opacity='0.9'/>
+<text x='150.0' y='70.0' font-size='26' fill='#101733' font-weight='700' text-anchor='middle' font-family='Consolas,Menlo,monospace' >100</text>
+<text x='150.0' y='236.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >M3</text>
+<text x='150.0' y='254.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >candidates</text>
+<rect x='307' y='80' width='126' height='130' fill='#f4c95d' opacity='0.9'/>
+<text x='370.0' y='70.0' font-size='26' fill='#101733' font-weight='700' text-anchor='middle' font-family='Consolas,Menlo,monospace' >84</text>
+<text x='370.0' y='236.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >M4</text>
+<text x='370.0' y='254.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >trusted</text>
+<rect x='576' y='80' width='28' height='130' fill='#4ea3f5' opacity='0.9'/>
+<text x='590.0' y='70.0' font-size='26' fill='#101733' font-weight='700' text-anchor='middle' font-family='Consolas,Menlo,monospace' >19</text>
+<text x='590.0' y='236.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >M5</text>
+<text x='590.0' y='254.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >selected</text>
+<rect x='796' y='80' width='28' height='130' fill='#69e3d2' opacity='0.9'/>
+<text x='810.0' y='70.0' font-size='26' fill='#101733' font-weight='700' text-anchor='middle' font-family='Consolas,Menlo,monospace' >19</text>
+<text x='810.0' y='236.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >M6</text>
+<text x='810.0' y='254.0' font-size='12' fill='#274060'  text-anchor='middle' font-family='Consolas,Menlo,monospace' >registered</text>
+<text x='150.0' y='300.0' font-size='11' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >counts are observations from the certified run — byte-identical across RUN A/B/C (REPRODUCIBLE)</text></svg>

@@ -115,7 +115,7 @@ def test_meta_exposes_m8_config(settings_factory):
     with client:
         meta = client.get("/api/meta").json()
         assert meta["m8_config"]["configuration_id"] == "DM-M8-001"
-        assert meta["milestone"] == "M10"
+        assert meta["milestone"] == "M11"
 
 
 # ---------------------------------------------------------------------------

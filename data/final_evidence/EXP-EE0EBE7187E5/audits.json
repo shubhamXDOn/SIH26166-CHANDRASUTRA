@@ -1,0 +1,149 @@
+{
+  "pair_id": "CS-P001",
+  "status": "VERIFIED",
+  "audits": {
+    "candidate_funnel": {
+      "pair_id": "CS-P001",
+      "stage": "M3",
+      "status": "MATCH",
+      "reason": "recomputed funnel matches recorded",
+      "rows": [
+        {
+          "metric": "FUNNEL_M3_TILES",
+          "recorded": 2,
+          "recomputed": 2,
+          "match": true,
+          "source": "recomputed from candidates/*.npz"
+        },
+        {
+          "metric": "FUNNEL_M3_CANDIDATES",
+          "recorded": 100,
+          "recomputed": 100,
+          "match": true,
+          "source": "recomputed from candidates/*.npz"
+        },
+        {
+          "metric": "M3_STATE",
+          "recorded": "COMPLETE",
+          "recomputed": "COMPLETE",
+          "match": true,
+          "source": "recorded"
+        }
+      ]
+    },
+    "trust_gate": {
+      "pair_id": "CS-P001",
+      "stage": "M4",
+      "status": "MATCH",
+      "reason": "all tile verdicts recomputed identically",
+      "rows": [
+        {
+          "tile_id": "CS-P001-M001",
+          "recorded": "TRUSTED",
+          "recomputed": "TRUSTED",
+          "recorded_inlier_count": 42,
+          "recomputed_inlier_count": 42,
+          "match": true
+        },
+        {
+          "tile_id": "CS-P001-M002",
+          "recorded": "TRUSTED",
+          "recomputed": "TRUSTED",
+          "recorded_inlier_count": 42,
+          "recomputed_inlier_count": 42,
+          "match": true
+        }
+      ]
+    },
+    "spatial_selection": {
+      "pair_id": "CS-P001",
+      "stage": "M5",
+      "status": "MATCH",
+      "reason": "recomputed selection matches recorded",
+      "rows": [
+        {
+          "metric": "FUNNEL_M5_SELECTED",
+          "recorded": 19,
+          "recomputed": 19,
+          "match": true
+        },
+        {
+          "metric": "M5_STATE",
+          "recorded": "COMPLETE",
+          "recomputed": null,
+          "match": true,
+          "source": "recorded"
+        }
+      ]
+    },
+    "registration": {
+      "pair_id": "CS-P001",
+      "stage": "M6",
+      "status": "MATCH",
+      "reason": "registration evidence revalidated",
+      "rows": [
+        {
+          "metric": "TRANSFORM_DIRECTION",
+          "recorded": "sensor_a_pixel -> sensor_b_pixel",
+          "recomputed": null,
+          "match": true
+        },
+        {
+          "metric": "TRANSFORM_COORDINATE_SPACE",
+          "recorded": "sensor_a_pixel -> sensor_b_pixel",
+          "recomputed": null,
+          "match": true
+        },
+        {
+          "metric": "TRANSFORM_MATRIX",
+          "recorded": "present",
+          "recomputed": "present",
+          "match": true
+        },
+        {
+          "metric": "RECOMPUTE_STATUS",
+          "recorded": "COMPUTED",
+          "recomputed": "COMPUTED",
+          "match": true
+        },
+        {
+          "metric": "RESIDUAL_MEAN_PX",
+          "recorded": 0.969228,
+          "recomputed": 0.969228,
+          "match": true
+        },
+        {
+          "metric": "VALIDATION_INDEPENDENT",
+          "recorded": true,
+          "recomputed": true,
+          "match": true
+        },
+        {
+          "metric": "VALIDATION_VERDICT",
+          "recorded": "PASS",
+          "recomputed": null,
+          "match": true
+        }
+      ],
+      "recompute": {
+        "status": "COMPUTED",
+        "recomputed": true,
+        "method": "recompute forward residuals + symmetric transfer + policy-threshold inliers on the fitted matrix using M4 trust primitives",
+        "residual_mean_px": 0.969228,
+        "residual_median_px": 0.978944,
+        "residual_p95_px": 2.452155,
+        "symmetric_transfer_max_px": 2.673452,
+        "inlier_count": 19,
+        "inlier_threshold_px": 3.0,
+        "valid_projection_count": 19,
+        "consistent_with_fit": true,
+        "match_mismatch": []
+      },
+      "shapes_checked": [
+        "direction",
+        "coordinate_space",
+        "independent_revalidation"
+      ]
+    }
+  }
+}

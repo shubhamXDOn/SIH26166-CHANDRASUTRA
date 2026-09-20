@@ -73,6 +73,13 @@ export const Icon = {
       <path d="M12 10v4M12 17h.01" strokeLinecap="round" />
     </svg>
   ),
+  File: ({ className = "h-4 w-4" }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M6 2.5h8l4 4V21a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1z" />
+      <path d="M14 2.5V7h4" />
+      <path d="M9 12h6M9 16h6" strokeLinecap="round" />
+    </svg>
+  ),
 };
 
 /* ------------------------------------------------------------- status glyph */

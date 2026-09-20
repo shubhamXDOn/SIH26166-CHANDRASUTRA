@@ -140,6 +140,7 @@ class AuthService:
         conn = sqlite3.connect(self._db_path, timeout=10)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA busy_timeout = 5000")
         return conn
 
     @property
@@ -152,6 +153,9 @@ class AuthService:
             try:
                 conn.executescript(_USERS_SQL)
                 conn.executescript(_SESSIONS_SQL)
+                # WAL keeps reads/writes non-blocking and survives process kill without
+                # corrupting the main db file; persisted at the file level.
+                conn.execute("PRAGMA journal_mode = WAL")
                 # PRAGMA does not accept bound parameters in sqlite3.
                 conn.execute("PRAGMA user_version = %d" % int(_SCHEMA_VERSION))
                 conn.commit()

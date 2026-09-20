@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 
 from backend.app.config import rfc3339_now
+from backend.app.hardening import atomic_write_json, atomic_write_npy
 from backend.app.registration.config import RegistrationConfig
 from backend.app.registration.coord_space import (
     build_tile_geometry_map,
@@ -494,8 +495,8 @@ class RegistrationService:
         if product.warped.size == 0:
             return None
         warped = self._apply_warp_dtype(np.asarray(product.warped), cfg.warp.dtype)
-        np.save(str(run_dir / "registered" / "registered_image.npy"), warped)
-        np.save(str(run_dir / "registered" / "valid_mask.npy"), product.valid_mask)
+        atomic_write_npy(run_dir / "registered" / "registered_image.npy", warped)
+        atomic_write_npy(run_dir / "registered" / "valid_mask.npy", product.valid_mask)
 
         tile_mask = np.asarray(evidence.source_tile_id) == best_tile
         pts_a_local = np.column_stack([
@@ -571,8 +572,7 @@ class RegistrationService:
             return fallback
 
     def _write_json(self, path: Path, payload) -> None:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        atomic_write_json(path, payload)
 
     def _write_status(self, run_dir, pair_id, state, cfg, prereq, block_code=None, reasons=None) -> None:
         status = {

@@ -1,0 +1,28 @@
+{
+  "verdict": "PASS",
+  "checks": {
+    "min_inliers": true,
+    "min_inlier_ratio": true,
+    "residual_mean": true,
+    "residual_median": true,
+    "residual_p95": true,
+    "symmetric_transfer": true,
+    "determinant": true,
+    "condition_number": true,
+    "no_model_issues": true
+  },
+  "issues": [],
+  "independent_check": {
+    "recomputed": true,
+    "status": "COMPUTED",
+    "method": "recompute on fitted matrix using M4 trust primitives",
+    "residual_mean_px": 0.969228,
+    "residual_median_px": 0.978944,
+    "residual_p95_px": 2.452155,
+    "residual_all_point_count": 19,
+    "symmetric_transfer_max_px": 2.673452146603402,
+    "consistent_with_fit": true,
+    "note": "Independent recomputation of the fitted-matrix error; not a physical truth claim."
+  },
+  "state": "VALIDATED"
+}

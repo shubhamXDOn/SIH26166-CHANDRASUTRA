@@ -1,0 +1,66 @@
+{
+  "pair_id": "CS-P001",
+  "count": 4,
+  "tiles": [
+    {
+      "tile_id": "CS-P001-T001",
+      "sensor": "ohrc",
+      "side": "a",
+      "row_start": 0,
+      "col_start": 0,
+      "width": 500,
+      "height": 400,
+      "valid_fraction": 0.9,
+      "clipped": false,
+      "too_small": false,
+      "ground_box": {},
+      "array_filename": "CS-P001_001.npy",
+      "preview_filename": "CS-P001_001.png"
+    },
+    {
+      "tile_id": "CS-P001-T002",
+      "sensor": "tmc2",
+      "side": "b",
+      "row_start": 0,
+      "col_start": 0,
+      "width": 500,
+      "height": 400,
+      "valid_fraction": 0.9,
+      "clipped": false,
+      "too_small": false,
+      "ground_box": {},
+      "array_filename": "CS-P001_002.npy",
+      "preview_filename": "CS-P001_002.png"
+    },
+    {
+      "tile_id": "CS-P001-T003",
+      "sensor": "ohrc",
+      "side": "a",
+      "row_start": 400,
+      "col_start": 500,
+      "width": 500,
+      "height": 400,
+      "valid_fraction": 0.9,
+      "clipped": false,
+      "too_small": false,
+      "ground_box": {},
+      "array_filename": "CS-P001_003.npy",
+      "preview_filename": "CS-P001_003.png"
+    },
+    {
+      "tile_id": "CS-P001-T004",
+      "sensor": "tmc2",
+      "side": "b",
+      "row_start": 400,
+      "col_start": 500,
+      "width": 500,
+      "height": 400,
+      "valid_fraction": 0.9,
+      "clipped": false,
+      "too_small": false,
+      "ground_box": {},
+      "array_filename": "CS-P001_004.npy",
+      "preview_filename": "CS-P001_004.png"
+    }
+  ]
+}

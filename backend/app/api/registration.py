@@ -16,6 +16,7 @@ from ..errors import NotFoundError
 from ..logging_conf import get_logger
 from ..pairs import PairRegistry
 from ..registration.service import RegistrationService
+from ..run_guard import guard_run
 from .deps import get_settings
 from ..auth.dependencies import AnalystUser, current_user_dep
 
@@ -108,7 +109,11 @@ def run_registration(pair_id: str, current: AnalystUser, req: RunRequest, settin
     if rg_cfg_id not in VALID_REGISTRATION_CONFIG_IDS:
         raise NotFoundError(f"Unknown registration configuration: {rg_cfg_id}")
     service = _service(settings)
-    return service.run(pair_id, registration_config_id=rg_cfg_id)
+    return guard_run(
+        settings, derived_stage="registration", pair_id=pair_id,
+        configuration_id=rg_cfg_id, tag="m6_registration",
+        fn=lambda: service.run(pair_id, registration_config_id=rg_cfg_id),
+    )
 
 
 @router.post("/{pair_id}/reset")

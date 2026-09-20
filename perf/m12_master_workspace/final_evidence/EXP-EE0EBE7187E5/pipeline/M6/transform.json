@@ -1,0 +1,40 @@
+{
+  "transform_type": "HOMOGRAPHY",
+  "matrix_type": "homography",
+  "matrix": [
+    [
+      1.002688899218477,
+      -0.03441400773560972,
+      13.362379311179533
+    ],
+    [
+      0.008921502811828606,
+      0.9651403783266684,
+      2.9026715355844903
+    ],
+    [
+      1.988905493732858e-05,
+      -4.714537901206044e-05,
+      1.0
+    ]
+  ],
+  "source_space": {
+    "sensor": "a",
+    "side": "a",
+    "frame": "sensor_a_pixel",
+    "units": "pixel",
+    "description": "OHRC/TMC-2 sensor A pixel coordinates of the selected tile region."
+  },
+  "target_space": {
+    "sensor": "b",
+    "side": "b",
+    "frame": "sensor_b_pixel",
+    "units": "pixel",
+    "description": "OHRC/TMC-2 sensor B pixel coordinates of the selected tile region."
+  },
+  "direction": "sensor_a_pixel -> sensor_b_pixel",
+  "inlier_count": 19,
+  "inlier_ratio": 1.0,
+  "seed_used": 42,
+  "note": "Transform fit on M5-selected evidence in sensor pixel space."
+}

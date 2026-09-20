@@ -15,6 +15,7 @@ from ..logging_conf import get_logger
 from ..pairs import PairRegistry
 from ..trust.config import TrustConfig
 from ..trust.service import TrustService
+from ..run_guard import guard_run
 from .deps import get_settings
 from ..auth.dependencies import AnalystUser, current_user_dep
 
@@ -111,7 +112,11 @@ def run_trust(pair_id: str, current: AnalystUser, req: RunRequest, settings: Set
     if trust_cfg_id not in VALID_TRUST_CONFIG_IDS:
         raise NotFoundError(f"Unknown trust configuration: {trust_cfg_id}")
     service = _service(settings)
-    return service.run(pair_id, trust_config_id=trust_cfg_id)
+    return guard_run(
+        settings, derived_stage="trust", pair_id=pair_id,
+        configuration_id=trust_cfg_id, tag="m4_trust",
+        fn=lambda: service.run(pair_id, trust_config_id=trust_cfg_id),
+    )
 
 
 @router.post("/{pair_id}/reset")

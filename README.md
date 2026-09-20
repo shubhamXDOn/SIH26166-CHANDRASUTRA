@@ -7,16 +7,23 @@ heterogeneous lunar imagery** (Chandrayaan-2 OHRC ⇄ TMC-2), built around
 **adaptive reliability** — condition-aware matcher strategy, independent
 verification, measurable diagnostics, and principled abstention.
 
-> **Current milestone: M10 — Authentication/authorization.**
-> M7 (metrics), M8 (deep-matcher expansion + benchmarks) and M9 (real Gemini
-> explanatory layer) are complete. M10 now hardens the entire product with real
-> server-side authentication: SQLite-backed users, JWT access tokens +
-> rotating refresh sessions (HttpOnly cookie), viewer/analyst/admin roles
-> enforced server-side, and a full security/audit surface — **DONE (engineering)**
-> and fully tested (M10 suite plus the M0–M9 suites; smoke passes end to end).
-> Acquisition of the first real OHRC–TMC-2 pair is still **BLOCKED** on official
-> PRADAN account approval, so every real-data pipeline stage honestly reports a
-> BLOCKED/empty state on the live app; nothing is fabricated.
+> **Current milestone: M13 — Final release · CHANDRASUTRA v1.0.0 (SIH26166).**
+> M1–M12 are complete and frozen, and M13 packages the engineering proof for
+> jury presentation: an aggregate release-status API (`/api/m13`), an evidence
+> explorer and report centre in the app, honest measurements, release docs and
+> tooling, and a 40-case B01–B40 bug-hunt corpus. Full regression is green —
+> `pytest tests` 561/561, environment smoke 101/101, frontend build + SSR PASS,
+> Docker Compose config VALID. Frozen evidence is intact:
+> `EXP-EE0EBE7187E5` · `FINAL_EVIDENCE_SHA256`
+> `c8fbab19dee75ce92870755bdf5202ad1402ee97166a8bdbfc3db8dfd7557e37` ·
+> configuration fingerprint
+> `9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce` — and
+> every honesty contract holds: real mission data stays **BLOCKED** on official
+> PRADAN approval, reference is `NOT_AVAILABLE`, physical accuracy is
+> `NOT_CLAIMED`, provenance is **PARTIAL · HOLD** (M8/M9 honestly NOT_RUN), and
+> hosted latency is `NOT_MEASURED`. See `RELEASE_NOTES.md`,
+> `DEPLOYMENT.md`, `REAL_DATA_ONBOARDING.md` and
+> `M13_FINAL_RELEASE_REPORT.md`.
 
 ---
 
@@ -86,7 +93,8 @@ ABSTAIN when evidence is insufficient).
 | M8        | Mental-deep expansion — deep-matcher adapters + benchmark harness | **DONE (engineering)** — see `reports/M8_REPORT.md` |
 | M9        | AI assistant — real Gemini explanatory layer | **DONE (engineering)** — see `reports/M9_REPORT.md` |
 | M10       | Authentication/authorization — users, sessions, roles, audit | **DONE (engineering)** — see `reports/M10_REPORT.md` |
-| M11–M12   | Hardening, full reproducibility suite, final validation & presentation | pending |
+| M11       | Hardening — atomic writes, run guards, error envelope, timeout honesty, readiness/ops endpoints, frontend resilience, perf measurements | **DONE (engineering)** — see `reports/M11_REPORT.md` |
+| M12       | Full reproducibility suite, final validation & presentation | **DONE (engineering)** - see `reports/M12_FINAL_SCIENTIFIC_REPORT.md` |
 
 Milestone reports: `reports/M0_REPORT.md` (foundation),
 `reports/M1_REPORT.md` (real data & metadata),
@@ -97,8 +105,11 @@ Milestone reports: `reports/M0_REPORT.md` (foundation),
 `reports/M6_REPORT.md` (registration engine & verified alignment),
 `reports/M7_REPORT.md` (metrics & diagnostics),
 `reports/M8_REPORT.md` (deep-matcher expansion & benchmarks),
-`reports/M9_REPORT.md` (AI assistant & Gemini boundary),
-and `reports/M10_REPORT.md` (authentication/authorization).
+`reports/M9_REPORT.md` (AI assistant & Gemini boundary), and
+`reports/M10_REPORT.md` (authentication/authorization), and
+`reports/M11_REPORT.md` (hardening, performance, jury-readiness), and
+`reports/M12_FINAL_SCIENTIFIC_REPORT.md` (final evidence: reproducibility RUN A/B/C,
+raw-integrity gate, audits, cross-check, evidence freeze).
 
 ## Setup (backend)
 
@@ -249,6 +260,9 @@ Notes:
   versions) and runs `uvicorn backend.app.main:app`.
 - The frontend image builds `frontend/dist` from source (no committed bundle)
   and serves it with nginx; `ssr-smoke.mjs` is excluded from the image.
+- The nginx proxy (M11 hardened) caps request bodies at 8 MB, forwards
+  `X-Request-ID` correlation, keeps generous proxy timeouts, and adds baseline
+  security headers + CSP for the SPA.
 - Health checks are wired for the backend service; the UI reports honestly when
   the backend is unreachable.
 - For a non-Docker production run, serve `frontend/dist` with any static host
@@ -271,6 +285,10 @@ See `.env.example` for the full annotated list. Key items:
 | `AUTH_ACCESS_TTL_SECONDS` | no   | access-token lifetime (default 900s)            |
 | `AUTH_REFRESH_TTL_SECONDS`| no   | refresh-session lifetime (default 604800s)      |
 | `AUTH_REGISTER_ENABLED`  | no   | allow self-registration (default true)         |
+| `HTTP_MAX_BODY_BYTES`    | no   | request body cap (413 `LIMIT_EXCEEDED` beyond it; default 8000000) |
+| `RUN_STALE_BUDGET_SECONDS` | no | pipeline run lock age treated as interrupted/crashed (default 600s) |
+| `DEMO_MODE`              | no   | honest "synthetic demonstration" marker; never fabricates results |
+| `REQUEST_ID_HEADER`      | no   | header used/echoed for request correlation (default `x-request-id`) |
 | `GEMINI_API_KEY`   | later    | backend-only Gemini key; never sent to the browser |
 
 `.env` is git-ignored. **Never commit secrets.**
@@ -350,7 +368,15 @@ authentication/authorization coverage: configuration fail-closed behaviour,
 login/refresh rotation, role matrix (viewer/analyst/admin), password rules,
 account disable, audit + security summary, rate limiting, and a 30-case bug
 hunt (JWT tampering, session revocation, secret-leak scans, privilege
-boundaries, refresh replay). The environment smoke
+boundaries, refresh replay). The M11 hardening suite (`tests/test_m11.py`,
+B01–B40) adds: smoke/correlation probes, envelope behaviour (413 limit-exceeded,
+404/wrong-method 405, 422 schema/defaults, `x-request-id` echo), readiness +
+operator overview integrity (no path/secrets leakage), atomic write semantics
+(no partial JSON/NPY/NPZ; crash-safe), `RunLock`/`guard_run` single-writer
+behaviour (stale-lock reconciliation, serialized runs, run events capped),
+timeout honesty (M4 trust gate FAILED + `TIMEOUT`, M5 spatial FAILED +
+`SPATIAL_TIMEOUT`), auth/WAL interplay, and a posture sweep over auth-applied
+endpoints. The environment smoke
 test runs dozens of checks over a live HTTP stack
 (backend endpoints, auth login + bearer probes, frontend render, vite proxy).
 
@@ -380,8 +406,11 @@ CHANDRASUTRA/
 │       ├── matching/m8     M8 deep-matcher expansion + benchmarks (deep adapters, routing, benchmark)
 │       ├── auth/           M10 authentication (config, models, password hashing, tokens,
 │       │                   sessions, audit, dependencies)
+│       ├── hardening.py    M11 hardening (atomic writes, run lock, guarded runs, run events)
+│       ├── m12/            M12 reproducibility & final evidence (config_freeze, raw_integrity,
+│       │                   provenance, audits, crosscheck, package, report, reproducibility)
 │       ├── ai/service.py   Gemini boundary (NOT_CONFIGURED-safe)
-│       └── api/            health, meta, data, pairs, processing, matching, trust, spatial, registration, metrics, auth, ai routers
+│       └── api/            health, meta, data, pairs, processing, matching, trust, spatial, registration, metrics, auth, ai, ready, ops routers
 ├── frontend/           React + Vite + Tailwind UI
 │   ├── Dockerfile          two-stage build → nginx static host + /api proxy
 │   ├── nginx.conf          SPA server block + /api reverse proxy
@@ -398,9 +427,9 @@ CHANDRASUTRA/
 │   ├── derived/registration/ per-pair REGISTRATION outputs (M6: status, transform, diagnostics,
 │   │                         validation, registered/, visualizations/, manifest, provenance)
 │   └── derived/metrics/      per-pair METRICS outputs (M7: status, summary, manifest)
-├── tests/              pytest suite (incl. test_m1.py … test_m10.py + auth_helpers/conftest)
-├── reports/            milestone reports (M0_REPORT.md … M10_REPORT.md)
-├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + … + M10 — incl. auth login/token)
+├── tests/              pytest suite (incl. test_m1.py … test_m12.py + auth_helpers/conftest)
+├── reports/            milestone reports (M0_REPORT.md … M12_FINAL_SCIENTIFIC_REPORT.md)
+├── smoke_test.py       end-to-end environment smoke test (M1 + M2 + … + M12) — incl. auth login/token, ready, ops, request-id echo
 ├── requirements.txt    pinned Python dependencies
 ├── .env.example        environment template (secrets never committed)
 └── .gitignore
@@ -446,8 +475,8 @@ see `reports/M1_REPORT.md`).
 | M8 | Deep matcher adapters + benchmarking vs baselines — **DONE (engineering)**, see `reports/M8_REPORT.md` |
 | M9 | Real Gemini explanatory layer — **DONE (engineering)**, see `reports/M9_REPORT.md` |
 | M10 | Authentication/authorization completion (users, sessions, roles, audit) — **DONE (engineering)**, see `reports/M10_REPORT.md` |
-| M11 | Hardening, performance, accessibility                           |
-| M12 | Full reproducibility suite, final validation & presentation      |
+| M11 | Hardening & jury-readiness (atomic writes, run guards + stale-lock reconciliation, timeout honesty, unified error envelope, readiness/ops endpoints, frontend resilience, nginx/container hardening, measured performance) — **DONE (engineering)**, see `reports/M11_REPORT.md` |
+| M12 | Full reproducibility suite, final validation & presentation (configuration freeze, raw-integrity + real-data gate, provenance chain, independent audits, cross-check, sealed evidence package, RUN A/B/C reproducibility, deterministic final report) — **DONE (engineering)**, see `reports/M12_FINAL_SCIENTIFIC_REPORT.md` |
 
 (This is a working roadmap; milestones may be merged where engineering requires.)
 
@@ -509,5 +538,18 @@ see `reports/M1_REPORT.md`).
   without `AUTH_SECRET_KEY` every protected endpoint fails closed with
   `501 AUTH_NOT_CONFIGURED`.
 - AI explanations are only available after real Gemini integration + key.
+- M11 hardening is **all engineering-layer**: crash-safe atomic artifact writes,
+  a single-writer run lock with stale-lock (interrupted-run) reconciliation,
+  honest `TIMEOUT` verdicts for Trust Gate and Spatial Reliability, unified
+  404/413/422 envelopes with `X-Request-ID` correlation, readiness + operator
+  overview endpoints, and frontend fetch timeouts/retry semantics. It adds
+  **no new science**: real-data pipeline stages remain BLOCKED on PRADAN access.
+- M12 final validation is an **evidence layer, not new science**: it independently
+  re-verifies raw integrity, certifies the real-data gate decision (PATH B =
+  deterministic SYNTHETIC_DATA_ONLY proof while real data remains BLOCKED on PRADAN
+  approval), audits derived artifacts, cross-checks explanatory claims, and seals a
+  byte-identical reproducible evidence package (`FINAL_EVIDENCE_SHA256`,
+  RUN A/B/C reproducibly `REPRODUCIBLE`). Nothing is fabricated or presented as a
+  real-data scientific result.
 - Requirements are pinned for Windows / Python 3.14 as installed and verified;
   re-verify before promoting to another platform.

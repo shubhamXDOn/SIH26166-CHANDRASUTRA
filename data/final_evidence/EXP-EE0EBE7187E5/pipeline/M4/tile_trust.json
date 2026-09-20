@@ -1,0 +1,42 @@
+{
+  "pair_id": "CS-P001",
+  "trust_configuration_id": "TG-M4-001",
+  "tiles": [
+    {
+      "tile_id": "CS-P001-M001",
+      "trust_state": "TRUSTED",
+      "reasons": [
+        "TG_PASS_CANDIDATE_INTEGRITY",
+        "TG_PASS_GEOMETRY",
+        "TG_PASS_INLIERS",
+        "TG_PASS_RESIDUAL_POLICY",
+        "TG_PASS_SPATIAL_SUPPORT",
+        "TG_PASS_DEGENERACY_CHECKS",
+        "TG_PASS_CROSS_CHECK"
+      ],
+      "block_code": null,
+      "model": {
+        "inlier_count": 42,
+        "inlier_ratio": 0.84
+      }
+    },
+    {
+      "tile_id": "CS-P001-M002",
+      "trust_state": "TRUSTED",
+      "reasons": [
+        "TG_PASS_CANDIDATE_INTEGRITY",
+        "TG_PASS_GEOMETRY",
+        "TG_PASS_INLIERS",
+        "TG_PASS_RESIDUAL_POLICY",
+        "TG_PASS_SPATIAL_SUPPORT",
+        "TG_PASS_DEGENERACY_CHECKS",
+        "TG_PASS_CROSS_CHECK"
+      ],
+      "block_code": null,
+      "model": {
+        "inlier_count": 42,
+        "inlier_ratio": 0.84
+      }
+    }
+  ]
+}

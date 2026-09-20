@@ -31,6 +31,7 @@ try {
     AuthProvider: (await server.ssrLoadModule("/src/auth.jsx")).AuthProvider,
     AuthCtx: (await server.ssrLoadModule("/src/auth.jsx")).AuthCtx,
     Overview: (await server.ssrLoadModule("/src/pages/Overview.jsx")).default,
+    Evidence: (await server.ssrLoadModule("/src/pages/Evidence.jsx")).default,
     Data: (await server.ssrLoadModule("/src/pages/Data.jsx")).default,
     Analysis: (await server.ssrLoadModule("/src/pages/Analysis.jsx")).default,
     Results: (await server.ssrLoadModule("/src/pages/Results.jsx")).default,
@@ -87,6 +88,7 @@ try {
       onNavigate() {},
       notify() {},
     }),
+    Evidence: React.createElement(modules.Evidence, { notify() {} }),
     Data: withBooting(
       React.createElement(modules.Data, { notify() {} })
     ),

@@ -1,0 +1,12 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='300' viewBox='0 0 1200 300'><rect x='0' y='0' width='1200' height='300' fill='#101733'/>
+<text x='48' y='66' font-size='30' fill='#ffffff' font-weight='700' text-anchor='start' font-family='Consolas,Menlo,monospace' >CHANDRASUTRA  v1.0.0</text>
+<text x='48' y='96' font-size='12' fill='#69e3d2'  text-anchor='start' font-family='Consolas,Menlo,monospace' >Trustworthy Lunar Image Intelligence · SIH26166 · M13 Final Release</text>
+<text x='48' y='150' font-size='11' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >EXPERIMENT</text>
+<text x='48' y='176' font-size='16' fill='#69e3d2'  text-anchor='start' font-family='Consolas,Menlo,monospace' >EXP-EE0EBE7187E5</text>
+<text x='48' y='214' font-size='11' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >SUMMARY DIGEST</text>
+<text x='48' y='240' font-size='16' fill='#69e3d2'  text-anchor='start' font-family='Consolas,Menlo,monospace' >c8fbab19dee75ce92870755bdf5202ad1402ee97166a8bdbfc3db8dfd7557e37</text>
+<text x='672' y='150' font-size='11' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >CONFIGURATION FINGERPRINT</text>
+<text x='672' y='176' font-size='16' fill='#69e3d2'  text-anchor='start' font-family='Consolas,Menlo,monospace' >9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce</text>
+<text x='672' y='214' font-size='11' fill='#9aa7c0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >VERIFY STATUS</text>
+<text x='672' y='240' font-size='16' fill='#7fe3b0'  text-anchor='start' font-family='Consolas,Menlo,monospace' >VERIFIED</text>
+<text x='48' y='282' font-size='12' fill='#f4c95d'  text-anchor='start' font-family='Consolas,Menlo,monospace' >GATE: PATH B · SYNTHETIC_DATA_ONLY  (real mission data BLOCKED)</text></svg>

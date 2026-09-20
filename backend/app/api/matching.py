@@ -24,6 +24,7 @@ from ..matching.service import (
     default_matcher_configuration_id,
     matching_overview,
 )
+from ..run_guard import guard_run
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/matching", tags=["matching"], dependencies=[Depends(current_user_dep)])
@@ -102,10 +103,18 @@ def run_match(pair_id: str, current: AnalystUser, req: RunRequest, settings: Set
     del current
     _require_pair(settings, pair_id)
     if req.mode or req.benchmark:
-        return _m8_service(settings).run(pair_id, configuration_id=req.configuration_id,
-                                         mode=req.mode or "AUTO", benchmark=req.benchmark)
+        return guard_run(
+            settings, derived_stage="matches", pair_id=pair_id,
+            configuration_id=req.configuration_id, tag="m8_expand",
+            fn=lambda: _m8_service(settings).run(pair_id, configuration_id=req.configuration_id,
+                                                 mode=req.mode or "AUTO", benchmark=req.benchmark),
+        )
     service = _service(settings)
-    return service.run(pair_id, configuration_id=req.configuration_id)
+    return guard_run(
+        settings, derived_stage="matches", pair_id=pair_id,
+        configuration_id=req.configuration_id, tag="m3_match",
+        fn=lambda: service.run(pair_id, configuration_id=req.configuration_id),
+    )
 
 
 @router.post("/{pair_id}/reset")
@@ -221,8 +230,12 @@ def pair_summary(pair_id: str, settings: Settings = Depends(get_settings)) -> di
 def run_m8(pair_id: str, current: AnalystUser, req: RunRequest, settings: Settings = Depends(get_settings)) -> dict:
     del current
     _require_pair(settings, pair_id)
-    return _m8_service(settings).run(pair_id, configuration_id=req.configuration_id,
-                                     mode=req.mode or "AUTO", benchmark=req.benchmark)
+    return guard_run(
+        settings, derived_stage="matches", pair_id=pair_id,
+        configuration_id=req.configuration_id, tag="m8_expand",
+        fn=lambda: _m8_service(settings).run(pair_id, configuration_id=req.configuration_id,
+                                             mode=req.mode or "AUTO", benchmark=req.benchmark),
+    )
 
 
 @router.get("/{pair_id}/m8/status")

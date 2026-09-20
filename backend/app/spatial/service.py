@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 
 from backend.app.config import rfc3339_now
+from backend.app.hardening import atomic_write_json, atomic_write_npz
 from backend.app.spatial.config import SpatialReliabilityConfig
 from backend.app.spatial.grid import Grid
 from backend.app.spatial.manifest import artifact_spec, build_spatial_manifest
@@ -494,7 +495,7 @@ class SpatialService:
         if selected_count > 0:
             self._write_selected_npz(run_dir, verified_records, result, plan, final_sel, primary)
 
-        state = SpatialRunState.COMPLETE
+        state = SpatialRunState.FAILED if timeout_flagged else SpatialRunState.COMPLETE
         outcome = plan.selection_outcome
         summary = self._compose_summary(
             pair_id, run_dir, proc_cfg, matcher_cfg, trust_cfg_id, spatial_config_id,
@@ -504,7 +505,15 @@ class SpatialService:
             scene=scene, usable_candidates=usable_candidates, usable_inliers=usable_inliers,
         )
         self._write_summary(run_dir, pair_id, state, proc_cfg, matcher_cfg, trust_cfg_id, spatial_config_id, summary)
-        self._write_status(run_dir, pair_id, state, proc_cfg, matcher_cfg, trust_cfg_id, spatial_config_id)
+        if timeout_flagged:
+            self._write_status(
+                run_dir, pair_id, SpatialRunState.FAILED, proc_cfg, matcher_cfg,
+                trust_cfg_id, spatial_config_id,
+                block_code=SpatialBlockCode.SPATIAL_TIMEOUT.value,
+                reasons=["SPATIAL_RUNTIME_TIMEOUT"],
+            )
+        else:
+            self._write_status(run_dir, pair_id, state, proc_cfg, matcher_cfg, trust_cfg_id, spatial_config_id)
         self._write_manifest(run_dir, pair_id, sr_cfg, proc_cfg, matcher_cfg, trust_cfg_id, summary, spatial_config_id)
         return self.read_status(pair_id)
 
@@ -542,8 +551,7 @@ class SpatialService:
             return fallback
 
     def _write_json(self, path: Path, payload) -> None:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        atomic_write_json(path, payload)
 
     def _write_status(self, run_dir, pair_id, state, proc_cfg, matcher_cfg, trust_cfg, sr_cfg, block_code=None, reasons=None) -> None:
         status = {
@@ -778,8 +786,8 @@ class SpatialService:
         if not sel:
             return
         n = len(sel)
-        np.savez_compressed(
-            str(run_dir / "selected_correspondences.npz"),
+        atomic_write_npz(
+            run_dir / "selected_correspondences.npz",
             x_a=np.array([r["x_a"] for r in sel], dtype=np.float64),
             y_a=np.array([r["y_a"] for r in sel], dtype=np.float64),
             x_b=np.array([r["x_b"] for r in sel], dtype=np.float64),

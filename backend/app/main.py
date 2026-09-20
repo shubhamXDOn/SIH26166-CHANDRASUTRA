@@ -18,10 +18,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import api_router
-from .config import BASE_DIR, Settings, load_pipeline_config
+from .config import BASE_DIR, Settings, load_pipeline_config, validate_runtime_config
 from .data import ensure_derived_directories
 from .errors import install_error_handlers
 from .logging_conf import get_logger, setup_logging
+from .middleware import BodySizeLimitMiddleware, RequestContextMiddleware
 from .state import create_state
 
 logger = get_logger(__name__)
@@ -34,6 +35,7 @@ def create_app(settings: Settings | None = None, *, config_file: Path | None = N
 
     if settings is None:
         settings = Settings()
+    validate_runtime_config(settings)  # fails fast on unsafe production/demo config
     create_state(settings)
     setup_logging(level=settings.log_level, log_dir=BASE_DIR / "logs")
     ensure_derived_directories(settings)
@@ -85,6 +87,9 @@ def create_app(settings: Settings | None = None, *, config_file: Path | None = N
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.http_max_body_bytes)
+    app.add_middleware(RequestContextMiddleware, header=settings.request_id_header)
 
     install_error_handlers(app)
     app.include_router(api_router)

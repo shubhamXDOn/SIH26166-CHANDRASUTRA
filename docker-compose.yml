@@ -7,8 +7,13 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
+      APP_VERSION: "0.11.0"
       BACKEND_HOST: 0.0.0.0
       BACKEND_PORT: 8000
+      HTTP_MAX_BODY_BYTES: ${HTTP_MAX_BODY_BYTES:-8000000}
+      RUN_STALE_BUDGET_SECONDS: ${RUN_STALE_BUDGET_SECONDS:-600}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      REQUEST_ID_HEADER: ${REQUEST_ID_HEADER:-x-request-id}
       AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:-}            # from .env — never committed
       AUTH_ACCESS_TTL_SECONDS: ${AUTH_ACCESS_TTL_SECONDS:-900}
       AUTH_REFRESH_TTL_SECONDS: ${AUTH_REFRESH_TTL_SECONDS:-604800}

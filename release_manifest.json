@@ -1,0 +1,191 @@
+{
+  "schema_version": "M13-RELEASE-MANIFEST-001",
+  "application": "CHANDRASUTRA (SIH26166)",
+  "release_version": "1.0.0",
+  "release_milestone": "M13",
+  "engineering_version": "0.11.0",
+  "engineering_milestone": "M11",
+  "generated_at_utc": "2026-09-20T13:30:20+00:00",
+  "evidence": [
+    {
+      "experiment_id": "EXP-EE0EBE7187E5",
+      "pair_id": "CS-P001",
+      "artifact_count": 29,
+      "final_evidence_sha256": "c8fbab19dee75ce92870755bdf5202ad1402ee97166a8bdbfc3db8dfd7557e37",
+      "verify_status": "VERIFIED"
+    }
+  ],
+  "configuration": {
+    "recorded_fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce",
+    "recomputed_fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce",
+    "fingerprint_matches": true
+  },
+  "reproducibility": {
+    "status": "REPRODUCIBLE",
+    "runs": [
+      "A",
+      "B",
+      "C"
+    ],
+    "subject_verdicts": {
+      "FUNNEL_M3_CANDIDATES": "IDENTICAL",
+      "FUNNEL_M4_TRUSTED_CORRESPONDENCES": "IDENTICAL",
+      "FUNNEL_M5_SELECTED_CORRESPONDENCES": "IDENTICAL",
+      "FUNNEL_M6_REGISTERED_CORRESPONDENCES": "IDENTICAL",
+      "RECOMPUTE_MISMATCH_COUNT": "IDENTICAL",
+      "RESIDUAL_MEAN_RECOMPUTE_PX": "IDENTICAL",
+      "configuration_fingerprint": "IDENTICAL",
+      "experiment_id": "IDENTICAL",
+      "m3_total_candidates": "IDENTICAL",
+      "m4_trusted_tiles": "IDENTICAL",
+      "m5_selected_count": "IDENTICAL",
+      "m7_available_count": "IDENTICAL",
+      "m7_metric_count": "IDENTICAL",
+      "report_md_sha256": "IDENTICAL",
+      "transform_matrix_hash": "IDENTICAL"
+    },
+    "recorded_fingerprint": "9b2a2f7ca15e9ffcfcc970bd2ff1eeb76bd41326a412483842c682d53e32dbce"
+  },
+  "regression": {
+    "schema_version": "M13-REGRESSION-001",
+    "application": "CHANDRASUTRA (SIH26166)",
+    "engineered_at_utc": "2026-09-20T13:30:12+00:00",
+    "pytest": {
+      "totals": {
+        "passed": 561,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0
+      },
+      "files": {
+        "test_backend": {
+          "passed": 11,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_config": {
+          "passed": 6,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_dirs": {
+          "passed": 4,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m1": {
+          "passed": 28,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m10": {
+          "passed": 31,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m11": {
+          "passed": 42,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m12": {
+          "passed": 37,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m13": {
+          "passed": 40,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m2": {
+          "passed": 18,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m3": {
+          "passed": 25,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m4": {
+          "passed": 34,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m5": {
+          "passed": 67,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m6": {
+          "passed": 83,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m7": {
+          "passed": 47,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m8": {
+          "passed": 13,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_m9": {
+          "passed": 68,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        },
+        "test_security": {
+          "passed": 7,
+          "failed": 0,
+          "error": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "environment_smoke": {
+      "status": "PASS",
+      "checks": 101,
+      "passed": 101,
+      "failed": 0
+    },
+    "frontend": {
+      "build": "PASS",
+      "ssr_smoke": "PASS"
+    },
+    "docker_compose": {
+      "config": "VALID"
+    },
+    "note": "Executed locally against the frozen v1.0.0 candidate; hosted checks remain NOT_MEASURED/unprovisioned."
+  },
+  "measurements": {
+    "status": "MEASURED_LOCALLY",
+    "hosted": "NOT_MEASURED"
+  },
+  "honest_limits": {
+    "real_data": "BLOCKED",
+    "reference": "NOT_AVAILABLE",
+    "physical_accuracy": "NOT_CLAIMED",
+    "provenance": "PARTIAL_HOLD",
+    "hosted_url": "NOT_AVAILABLE"
+  }
+}

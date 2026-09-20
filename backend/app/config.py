@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Root of the repository, resolved from the location of this file.
@@ -31,6 +31,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_ROOT_DEFAULT = BASE_DIR / "data"
 CONFIG_FILE_DEFAULT = BASE_DIR / "configs" / "app.yaml"
+
+# M11 environment separation: the only values APP_ENV may take.
+_APP_ENVS = ("development", "demo", "production", "test")
 
 
 class Settings(BaseSettings):
@@ -46,10 +49,49 @@ class Settings(BaseSettings):
     app_name: str = "SIH26166"
     product_name: str = "CHANDRASUTRA"
     tagline: str = "Trustworthy Lunar Image Intelligence"
-    milestone: str = "M10"
-    app_env: str = "development"  # development | production
+    milestone: str = "M11"
+    app_env: str = "development"  # development | demo | production | test
     app_debug: bool = True
-    app_version: str = "0.10.0"
+    app_version: str = "0.11.0"
+
+    # M13 final release presentation. Kept distinct from app_version on
+    # purpose: app_version is the M11 operations stage identity recorded in
+    # the frozen configuration chain, so it must not change or the M12
+    # configuration freeze reports DRIFT. These release fields are present-
+    # ation only and never enter the frozen fingerprint.
+    release_version: str = "1.0.0"
+    release_milestone: str = "M13"
+
+    # M11 environment separation. ``demo`` is like production but is allowed to
+    # show clearly-labelled synthetic workflows (never as real lunar evidence).
+    # Normalized/validated by the app_env field validator below.
+    http_max_body_bytes: int = 8_000_000
+
+    # M11 operational hygiene: a stale RUNNING run whose lock is older than
+    # this many seconds is treated as an interrupted run, never as a live one.
+    run_stale_budget_seconds: int = 600
+
+    # M11 demo mode: when true the UI/API add a persistent, explicit
+    # "Synthetic demonstration — not a real lunar observation" marker. The
+    # scientific pipeline never uses this flag to fabricate real-looking
+    # results; it only makes the distinction visible.
+    demo_mode: bool = False
+
+    # M11 request correlation: the header we accept/emit for a stable request
+    # ID. Incoming values are validated before they are echoed back.
+    request_id_header: str = "x-request-id"
+
+    @field_validator("app_env", mode="before")
+    @classmethod
+    def _normalize_app_env(cls, value: Any) -> str:
+        if value is None:
+            return "development"
+        env = str(value).strip().lower()
+        if env not in _APP_ENVS:
+            raise ValueError(
+                f"APP_ENV must be one of {', '.join(_APP_ENVS)}; got {value!r}"
+            )
+        return env
 
     # M8 deep matcher model/location configuration. Weights are NEVER
     # downloaded by the application. When this directory (or the default
@@ -143,10 +185,13 @@ class Settings(BaseSettings):
             "milestone": self.milestone,
             "app_env": self.app_env,
             "app_debug": self.app_debug,
+            "demo_mode": self.demo_mode,
             "app_version": self.app_version,
             "cors_origins": self.cors_origin_list,
             "log_level": self.log_level,
             "data_root": str(self.data_root_path),
+            "http_max_body_bytes": self.http_max_body_bytes,
+            "run_stale_budget_seconds": self.run_stale_budget_seconds,
             "auth": {
                 "configured": self.auth_configured,
                 "algorithm": self.auth_algorithm,
@@ -335,6 +380,7 @@ _M2_DEFAULTS: dict[str, Any] = {
                 "tiles_generated", "tiles_usable", "condition_evaluated",
             ]
         },
+        "execution": {"max_runtime_seconds": 300},
     },
 }
 
@@ -890,6 +936,32 @@ def rfc3339_now() -> str:
 
 class AppConfigError(Exception):
     """Raised when application configuration cannot be loaded."""
+
+
+def validate_runtime_config(settings: "Settings") -> None:
+    """Fail fast on unsafe runtime configurations.
+
+    M11 environment separation: ``production`` and ``demo`` must never run
+    with debug behaviour, permissive CORS, or insecure auth cookies enabled.
+    ``development``/``test`` keep full flexibility. Raises ``AppConfigError``
+    with an explicit, non-secret reason so deployment mistakes are loud.
+    """
+    if settings.app_env not in ("production", "demo"):
+        return
+    problems: list[str] = []
+    if settings.app_debug:
+        problems.append("APP_DEBUG must be false (debug responses are disabled here)")
+    if any(origin == "*" for origin in settings.cors_origin_list):
+        problems.append("CORS_ORIGINS must not contain '*' (permissive cross-origin is disabled)")
+    if settings.log_level and settings.log_level.strip().upper() == "DEBUG":
+        problems.append("LOG_LEVEL must not be DEBUG in this environment")
+    if settings.auth_cookie_secure is False and settings.app_env == "production":
+        problems.append("AUTH_COOKIE_SECURE cannot be forced off in production")
+    if problems:
+        raise AppConfigError(
+            "Unsafe runtime configuration for environment '%s': %s"
+            % (settings.app_env, "; ".join(problems))
+        )
 
 
 # ---- Pydantic JSON serialization helpers --------------------------------

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,14 @@ import numpy as np
 
 from ..config import Settings
 from ..errors import AppError, NotFoundError, ValidationError
+from ..hardening import (
+    RunLock,
+    TimeBudget,
+    atomic_write_json,
+    atomic_write_npy,
+    elapsed_ms,
+    record_run_event,
+)
 from ..loader import load_product
 from ..logging_conf import get_logger
 from ..pairs import PairRegistry, _rel_or_filename, resolve_raw_path, validate_record
@@ -77,10 +86,7 @@ class ProcessingService:
         return self.run_dir(pair_id, configuration_id) / "processing_manifest.json"
 
     def _write_json(self, path: Path, payload: dict) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
-        tmp.replace(path)
+        atomic_write_json(path, payload)
 
     def read_status(self, pair_id: str, configuration_id: str = "") -> dict[str, Any]:
         cfg_id = configuration_id or default_configuration_id()
@@ -124,26 +130,37 @@ class ProcessingService:
 
         run = self.run_dir(pair_id, cfg.configuration_id)
         run.mkdir(parents=True, exist_ok=True)
-        status = {
-            "pair_id": pair_id,
-            "configuration_id": cfg.configuration_id,
-            "configuration_version": cfg.configuration_version,
-            "state": ProcessingState.READING.value,
-            "state_label": STATE_LABELS[ProcessingState.READING.value],
-            "progress": 5,
-            "started_at": _now(),
-            "finished_at": None,
-            "stages": initial_stages(),
-            "blocked": None,
-            "error": None,
-            "matcher_readiness": None,
-            "geometry_source": None,
-            "note": "",
-        }
-        return self._prepare_main(status, run, cfg, record, pair_id, geometry)
+        budget = TimeBudget(cfg.p("execution", "max_runtime_seconds", default=300))
+        started = time.perf_counter()
+        with RunLock(run, budget_seconds=self.settings.run_stale_budget_seconds, tag="m2_processing"):
+            status = {
+                "pair_id": pair_id,
+                "configuration_id": cfg.configuration_id,
+                "configuration_version": cfg.configuration_version,
+                "state": ProcessingState.READING.value,
+                "state_label": STATE_LABELS[ProcessingState.READING.value],
+                "progress": 5,
+                "started_at": _now(),
+                "finished_at": None,
+                "stages": initial_stages(),
+                "blocked": None,
+                "error": None,
+                "matcher_readiness": None,
+                "geometry_source": None,
+                "note": "",
+            }
+            try:
+                result = self._prepare_main(status, run, cfg, record, pair_id, geometry, budget)
+                record_run_event("m2_prepare", pair_id, cfg.configuration_id,
+                                 status.get("state", "DONE"), elapsed_ms(started))
+                return result
+            except Exception as exc:  # noqa: BLE001
+                record_run_event("m2_prepare", pair_id, cfg.configuration_id, "FAILED",
+                                 elapsed_ms(started), error_code=getattr(exc, "code", None))
+                raise
 
     # ------------------------------------------------------------------
-    def _prepare_main(self, status, run, cfg, record, pair_id, geometry) -> dict:
+    def _prepare_main(self, status, run, cfg, record, pair_id, geometry, budget) -> dict:
         data_root = self.root
         stages = {s["id"]: s for s in status["stages"]}
         manifest = ManifestBuilder(
@@ -238,6 +255,7 @@ class ProcessingService:
         manifest.finish_step(outputs=[])
         status["progress"] = 20
         self.write_status(status)
+        self._check_timeout(budget, status, stages, manifest, run, "reading")
 
         # ---------------- stage 2: PREPROCESSING (mask + display) ---------
         stages["preprocessing"]["started_at"] = _now()
@@ -259,8 +277,8 @@ class ProcessingService:
                 display_path = sensor_dir / "preprocessed_display_u16.npy"
                 mask_path = sensor_dir / "invalid_mask_u8.npy"
                 stats_path = sensor_dir / "stats.json"
-                np.save(display_path, display)
-                np.save(mask_path, mask)
+                atomic_write_npy(display_path, display)
+                atomic_write_npy(mask_path, mask)
                 self._write_json(stats_path, {
                     "side": p["side"], "sensor": p["sensor"],
                     "dimensions": {"width": int(info.width), "height": int(info.height)},
@@ -291,6 +309,7 @@ class ProcessingService:
         }
         status["progress"] = 45
         self.write_status(status)
+        self._check_timeout(budget, status, stages, manifest, run, "preprocessing")
 
         # ---------------- stage 3: PREPARING_OVERLAP ----------------------
         stages["preparing_overlap"]["started_at"] = _now()
@@ -325,6 +344,7 @@ class ProcessingService:
         manifest.finish_step(outputs=[run / "diagnostics" / "overlap.json"])
         status["progress"] = 65
         self.write_status(status)
+        self._check_timeout(budget, status, stages, manifest, run, "preparing_overlap")
 
         # ---------------- stage 4: GENERATING_CROPS -----------------------
         stages["generating_crops"]["started_at"] = _now()
@@ -346,7 +366,7 @@ class ProcessingService:
                     window = pp["display"][tile.row_start:tile.row_start + tile.height,
                                            tile.col_start:tile.col_start + tile.width]
                     tpath = crops_dir / tile.array_filename
-                    np.save(tpath, window)
+                    atomic_write_npy(tpath, window)
                     if tile.ground_box is None:
                         tile.ground_box = ground_box_for(geom, tile).to_dict()
                     rec = tile_to_dict(tile)
@@ -383,6 +403,7 @@ class ProcessingService:
         status["tiles"] = {"count": len(all_tiles), "per_sensor": tiles_generated, "usable": usable_counts}
         status["progress"] = 80
         self.write_status(status)
+        self._check_timeout(budget, status, stages, manifest, run, "generating_crops")
 
         # ---------------- stage 5: ANALYZING_CONDITION ---------------------
         stages["analyzing_condition"]["started_at"] = _now()
@@ -421,6 +442,7 @@ class ProcessingService:
         manifest.finish_step(outputs=[run / "diagnostics" / "conditions.json"])
         status["progress"] = 95
         self.write_status(status)
+        self._check_timeout(budget, status, stages, manifest, run, "analyzing_condition")
 
         # ---------------- matcher-readiness contract -----------------------
         readiness = self._matcher_readiness(
@@ -498,7 +520,22 @@ class ProcessingService:
         }
 
     # ------------------------------------------------------------------
-    def _fail(self, status, stages, stage_id: str, message: str, manifest: ManifestBuilder, run: Path) -> dict:
+    def _check_timeout(self, budget, status, stages, manifest, run, stage_id: str) -> dict | None:
+        """Honest M11 timeout: a run that exceeds its time budget becomes a
+        FAILED/TIMEOUT run at the last clean stage boundary — never a silent
+        PARTIAL run presented as success."""
+        if not budget.expired():
+            return None
+        return self._fail(
+            status, stages, stage_id,
+            "PREPARE run exceeded its time budget; stopped at the last completed stage. "
+            "No data was skipped, guessed or presented as complete.",
+            manifest, run, code="TIMEOUT",
+        )
+
+    # ------------------------------------------------------------------
+    def _fail(self, status, stages, stage_id: str, message: str, manifest: ManifestBuilder,
+              run: Path, *, code: str = "PROCESSING_FAILED") -> dict:
         stage = stages.get(stage_id)
         if stage is not None:
             stage["state"] = "failed"
@@ -506,7 +543,7 @@ class ProcessingService:
         status["state"] = ProcessingState.FAILED.value
         status["state_label"] = STATE_LABELS[ProcessingState.FAILED.value]
         status["error"] = {
-            "code": "PROCESSING_FAILED",
+            "code": code,
             "message": message,
             "severity": "error",
             "retryable": True,
@@ -515,10 +552,10 @@ class ProcessingService:
         status["finished_at"] = _now()
         stages["run"]["state"] = "failed"
         self.write_status(status)
-        logger.error("Processing failed at %s: %s", stage_id, message,
+        logger.error("Processing failed at %s (%s): %s", stage_id, code, message,
                      extra={"operation": "m2_prepare", "status": "failed"})
         exc = AppError(message, details={"stage": stage_id})
-        exc.code = "PROCESSING_FAILED"
+        exc.code = code
         raise exc
 
     # ------------------------------------------------------------------
@@ -590,7 +627,13 @@ class ProcessingService:
             a = a[::step, ::step]
         img = (np.asarray(a, dtype=np.float32) / 257.0).astype(np.uint8)
         (run / "diagnostics").mkdir(parents=True, exist_ok=True)
-        Image.fromarray(img, mode="L").save(preview, format="PNG")
+        import io
+
+        from ..hardening import atomic_write_bytes
+
+        buf = io.BytesIO()
+        Image.fromarray(img, mode="L").save(buf, format="PNG")
+        atomic_write_bytes(preview, buf.getvalue())
         return preview
 
 

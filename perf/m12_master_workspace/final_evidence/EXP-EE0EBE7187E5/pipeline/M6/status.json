@@ -1,0 +1,14 @@
+{
+  "pair_id": "CS-P001",
+  "state": "COMPLETE",
+  "processing_configuration_id": "PC-M2-001",
+  "matcher_configuration_id": "MC-M3-001",
+  "trust_configuration_id": "TG-M4-001",
+  "spatial_reliability_configuration_id": "SR-M5-001",
+  "registration_configuration_id": "RG-M6-001",
+  "registration_configuration_version": "1",
+  "block_code": null,
+  "reasons": [],
+  "scientific_note": "No claim of physical truth; diagnostics are measurements.",
+  "updated_at": "2026-09-20T12:01:22+00:00"
+}

@@ -1,0 +1,34 @@
+{
+  "pair_id": "CS-P001",
+  "state": "COMPLETE",
+  "registration_configuration_id": "RG-M6-001",
+  "transform_type": "HOMOGRAPHY",
+  "selection_reason": "PREFERRED",
+  "validation_verdict": "PASS",
+  "source_space": {
+    "sensor": "a",
+    "frame": "sensor_a_pixel",
+    "units": "pixel"
+  },
+  "target_space": {
+    "sensor": "b",
+    "frame": "sensor_b_pixel",
+    "units": "pixel"
+  },
+  "direction": "sensor_a_pixel -> sensor_b_pixel",
+  "correspondences": {
+    "selected_total": 19,
+    "finite_usable": 19,
+    "fit_used": 19,
+    "inliers": 19,
+    "outlier": 0
+  },
+  "warp": {
+    "source_tile_id": "CS-P001-M002",
+    "registered_shown": true,
+    "out_rows": 400,
+    "out_cols": 500
+  },
+  "runtime_seconds": 0.6256,
+  "generated_at": "2026-09-20T12:01:22+00:00"
+}

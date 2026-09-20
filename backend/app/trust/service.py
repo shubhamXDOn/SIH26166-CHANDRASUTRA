@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from backend.app.config import rfc3339_now
+from backend.app.hardening import atomic_write_json, atomic_write_npz
 from backend.app.trust.config import TrustConfig
 from backend.app.trust.engine import evaluate_tile, tile_to_dict
 from backend.app.trust.manifest import build_trust_manifest
@@ -187,8 +188,7 @@ class TrustService:
             tile_dict = tile_to_dict(result)
             tile_results.append(tile_dict)
             tile_out = tiles_dir / f"{tile_id}.json"
-            with open(tile_out, "w", encoding="utf-8") as f:
-                json.dump(tile_dict, f, indent=2)
+            atomic_write_json(tile_out, tile_dict)
             for r in result.reasons:
                 reason_counts[r] = reason_counts.get(r, 0) + 1
             if result.trust_state == TileTrustState.TRUSTED:
@@ -211,11 +211,17 @@ class TrustService:
             else:
                 failed_tiles += 1
         total_runtime = time.time() - t_start
+        timed_out = any(((isinstance(t.get("block_code"), str) and t.get("block_code") == "TIMEOUT"))
+                        for t in tile_results)
         gate_state = TrustGateState.COMPLETE if trusted_tiles > 0 else TrustGateState.FAILED
-        self._write_status(pair_id, trust_run, gate_state, proc_cfg, matcher_cfg, trust_config_id)
+        if timed_out:
+            gate_state = TrustGateState.FAILED
+        self._write_status(pair_id, trust_run, gate_state, proc_cfg, matcher_cfg, trust_config_id,
+                           block_code="TIMEOUT" if timed_out else None,
+                           reasons=[TrustReasonCode.TG_NOT_RUN.value] if timed_out else None)
         if all_xa:
-            np.savez_compressed(
-                str(trust_run / "trusted_correspondences.npz"),
+            atomic_write_npz(
+                trust_run / "trusted_correspondences.npz",
                 x_a=np.concatenate(all_xa),
                 y_a=np.concatenate(all_ya),
                 x_b=np.concatenate(all_xb),
@@ -233,8 +239,7 @@ class TrustService:
             total_runtime=total_runtime,
             reason_counts=reason_counts,
         )
-        with open(trust_run / "trust_manifest.json", "w", encoding="utf-8") as f:
-            json.dump(manifest, f, indent=2)
+        atomic_write_json(trust_run / "trust_manifest.json", manifest)
         summary = {
             "pair_id": pair_id,
             "trust_configuration_id": trust_config_id,
@@ -247,17 +252,16 @@ class TrustService:
             "failed_tiles": failed_tiles,
             "total_runtime_seconds": round(total_runtime, 4),
             "reason_distribution": reason_counts,
+            "timed_out": timed_out,
             "generated_at": rfc3339_now(),
         }
-        with open(trust_run / "summary.json", "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
+        atomic_write_json(trust_run / "summary.json", summary)
         tile_trust_index = {
             "pair_id": pair_id,
             "trust_configuration_id": trust_config_id,
             "tiles": tile_results,
         }
-        with open(trust_run / "tile_trust.json", "w", encoding="utf-8") as f:
-            json.dump(tile_trust_index, f, indent=2)
+        atomic_write_json(trust_run / "tile_trust.json", tile_trust_index)
         return self.read_status(pair_id)
 
     def reset(self, pair_id: str) -> dict:
@@ -332,8 +336,7 @@ class TrustService:
             "reasons": reasons or [],
             "updated_at": rfc3339_now(),
         }
-        with open(run_dir / "trust_status.json", "w", encoding="utf-8") as f:
-            json.dump(status, f, indent=2)
+        atomic_write_json(run_dir / "trust_status.json", status)
 
     def _synthetic_status(
         self, pair_id: str, state: TrustGateState,
