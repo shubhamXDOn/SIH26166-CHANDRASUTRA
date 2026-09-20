@@ -3,7 +3,8 @@
 **Project:** SIH26166 · Trustworthy Lunar Image Intelligence
 **Release candidate:** CHANDRASUTRA **v1.0.0** (engineering build `0.11.0`)
 **Report date:** 2026-09-20
-**Suggested tag:** `chandrasutra-v1.0.0` (pending the maintainer's go-ahead for the commit/tag)
+**Release tag:** `chandrasutra-v1.0.0` (commit `e92f168`)
+**Status:** COMPLETE — all gates green, release committed and tagged
 
 > **What this release is and is not.** It is a completed, deterministic,
 > evidence-frozen engineering proof, packaged for jury presentation. It is
@@ -158,11 +159,14 @@ docker compose config -q                              # compose validity
 
 ## 11. Verdict
 
-**RELEASE CANDIDATE v1.0.0 IS READY.** All automated gates are green and the
+**RELEASE v1.0.0 IS COMPLETE.** All automated gates are green and the
 scientific honesty contract holds: every real-data-relevant stage reports its
 true BLOCKED/NOT_AVAILABLE/NOT_RUN state, and the frozen evidence digests are
 re-verified clean at every layer the release exposes.
 
-Next step (maintainer decision): commit the release snapshot and tag
-**`chandrasutra-v1.0.0`**; then optionally build/run the Docker stack with a
-true `.env` and present via the Evidence page.
+The release snapshot was committed (`e92f168`) and tagged
+**`chandrasutra-v1.0.0`**. The performance/regression/evidence records in
+`perf/` and `release_manifest.json` were regenerated after the final runs;
+intermediates and superseded experiments were excluded from the snapshot.
+To present the release, build the Docker stack with a real `.env` and use the
+Evidence page.
