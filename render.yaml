@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: chandrasutra-backend
+    runtime: docker
+    plan: free
+    branch: main
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_VERSION
+        value: "0.11.0"
+      - key: BACKEND_HOST
+        value: "0.0.0.0"
+      - key: BACKEND_PORT
+        value: "8000"
+      - key: DATA_ROOT
+        value: "/data"
+      - key: DEMO_MODE
+        value: "false"
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: AUTH_BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: AUTH_BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: AUTH_REGISTER_ENABLED
+        value: "true"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
