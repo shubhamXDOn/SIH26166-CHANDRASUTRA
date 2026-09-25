@@ -1,4 +1,24 @@
-const API_BASE = "/api";
+/* API root resolution.
+   - Default: same-origin "/api" (dev Vite proxy, docker-compose nginx gateway).
+   - Deployed split hosting (Netlify UI + Render API): set VITE_API_BASE_URL to
+     the backend origin at build time, e.g. https://<service>.onrender.com
+     Both "https://host" and "https://host/api" are accepted.
+   `import.meta.env` is read as a whole object (not via optional chaining on the
+   member) so Vite statically substitutes the VITE_* values into the bundle. */
+const viteEnv = import.meta.env ?? {};
+
+function resolveApiBase() {
+  const configured = (viteEnv.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+  if (!configured) return "/api";
+  return /\/api$/.test(configured) ? configured : `${configured}/api`;
+}
+
+const API_BASE = resolveApiBase();
+
+/* Cross-origin deployments must send/store the HttpOnly refresh cookie, which
+   requires credentials on every call (the backend answers with
+   Access-Control-Allow-Credentials). Same-origin requests are unaffected. */
+const API_CREDENTIALS = API_BASE.startsWith("/") ? "same-origin" : "include";
 
 /* M11 resilience: a stable per-session request id correlates every call with
    backend envelopes/logs, and a fetch timeout guarantees the UI never hangs
@@ -66,6 +86,7 @@ async function refreshSession() {
   const res = await fetch(API_BASE + "/auth/refresh", {
     method: "POST",
     headers: { Accept: "application/json" },
+    credentials: API_CREDENTIALS,
   });
   if (!res.ok) {
     setAccessToken(null);
@@ -106,7 +127,7 @@ function authFetch(path, { method = "GET", payload, auth = true, timeoutMs } = {
     };
     if (payload !== undefined) headers["Content-Type"] = "application/json";
     if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
-    const init = { method, headers };
+    const init = { method, headers, credentials: API_CREDENTIALS };
     if (payload !== undefined) init.body = JSON.stringify(payload);
     return rawFetch(path, init, timeoutMs);
   };

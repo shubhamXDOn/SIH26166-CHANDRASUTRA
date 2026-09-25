@@ -1722,7 +1722,12 @@ def validate_runtime_config(settings: "Settings") -> None:
         problems.append("CORS_ORIGINS must not contain '*' (permissive cross-origin is disabled)")
     if settings.log_level and settings.log_level.strip().upper() == "DEBUG":
         problems.append("LOG_LEVEL must not be DEBUG in this environment")
-    if settings.auth_cookie_secure is False and settings.app_env == "production":
+    # Production forces the Secure flag on via auth_cookie_secure_effective, so
+    # the raw default (False) must not be treated as an unsafe configuration --
+    # otherwise a correct production deploy crashes on startup. Guard the
+    # *effective* value so a future regression that stops forcing Secure is
+    # still caught loudly.
+    if settings.app_env == "production" and not settings.auth_cookie_secure_effective:
         problems.append("AUTH_COOKIE_SECURE cannot be forced off in production")
     if problems:
         raise AppConfigError(

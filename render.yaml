@@ -23,6 +23,15 @@ services:
         value: "/data"
       - key: DEMO_MODE
         value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      # Cross-origin deployment (Netlify UI -> Render API): the HttpOnly refresh
+      # cookie is third-party, so it must be Secure + SameSite=None to survive.
+      # Secure is already forced on in production; stated explicitly for clarity.
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: AUTH_COOKIE_SAMESITE
+        value: none
       - key: AUTH_SECRET_KEY
         generateValue: true
       - key: AUTH_BOOTSTRAP_ADMIN_USERNAME
@@ -31,6 +40,8 @@ services:
         sync: false
       - key: AUTH_REGISTER_ENABLED
         value: "true"
+      # Must be the exact deployed frontend origin, e.g. https://<site>.netlify.app
+      # ("*" is rejected by the production config validator). Left as a prompt.
       - key: CORS_ORIGINS
         sync: false
       - key: GEMINI_API_KEY
