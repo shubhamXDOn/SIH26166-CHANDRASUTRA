@@ -1,0 +1,22 @@
+# Netlify build configuration for the CHANDRASUTRA frontend.
+#
+# The API is a separate Render service, so the browser calls it cross-origin.
+# Vite inlines VITE_* variables at BUILD time, so this must be set here for the
+# production bundle to target the live backend instead of the same-origin
+# "/api" fallback (which would 404 against Netlify).
+#
+# Keep this URL in sync with the backend's CORS_ORIGINS, which must allow the
+# exact frontend origin below.
+
+[build]
+  # The Vite app lives in frontend/; the repository root has no package.json.
+  base = "frontend"
+  command = "npm run build"
+  # Relative to `base`, i.e. frontend/dist
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Backend origin only - no trailing slash, no /api suffix.
+  # frontend/src/api.js appends "/api" and sends credentials cross-origin.
+  VITE_API_BASE_URL = "https://sih26166-chandrasutra-3.onrender.com"
