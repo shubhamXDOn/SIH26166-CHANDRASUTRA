@@ -10,7 +10,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend ./backend
-COPY configs ./configs
+RUN mkdir -p /app/configs
+COPY backend/app.yaml /app/configs/app.yaml
 
 EXPOSE 8000
 

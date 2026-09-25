@@ -1,0 +1,1091 @@
+# ============================================================
+# SIH26166 — Pipeline placeholder configuration
+#
+# M0 engineering defaults ONLY. There are intentionally NO
+# scientifically tuned thresholds in this file.
+#
+# Every future experimental value must be linked to a Pair ID and a
+# Configuration ID and recorded in results/reports. Do not edit this
+# file to "make a result look good."
+#
+# Source of truth for runtime/secrets: environment variables + .env
+# (see backend/app/config.py Settings).
+# ============================================================
+
+pipeline_stages:
+  - id: data
+    label: Data
+  - id: validate
+    label: Validate
+  - id: preprocess
+    label: Preprocess
+  - id: match
+    label: Match
+  - id: trust
+    label: Trust
+  - id: register
+    label: Register
+  - id: report
+    label: Report
+
+# ------------------------------------------------------------
+# M1 — engineering configuration (no scientific thresholds).
+# ------------------------------------------------------------
+m1:
+  # Where real raw products are allowed to be referenced from.
+  allowed_raw_locations:
+    - raw/ohrc
+    - raw/tmc2
+    - raw/iirs
+    - raw/lroc
+  # Derived preview geometry.
+  preview_max_width: 640
+  preview_dir_rel: derived/visualizations/previews
+  preview_png_mode: "L"
+  # Metadata records (relative to data root).
+  pairs_json_rel: metadata/pairs.json
+  pairs_csv_rel: metadata/pairs.csv
+  validation_record_rel: metadata/pair_validation.json
+  # Parser behaviour.
+  parser_require_pds4_label: true
+  unknown_fill: UNKNOWN
+  hash_algorithm: sha256
+  # Logging (operation scope for traceability).
+  logging:
+    pair_scope: pair_id
+
+# ------------------------------------------------------------
+# M2 — trustworthy preprocessing & lunar scene conditioning.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning yet — they are reproducible defaults registered under the
+# Configuration ID below. Every experimental value in later
+# milestones must be tied to a Pair ID + Configuration ID in
+# results/reports before it can influence a scientific claim.
+# ------------------------------------------------------------
+m2:
+  configuration_id: "PC-M2-001"
+  configuration_version: 1
+  name: "Trustworthy Preprocessing and Lunar Scene Conditioning"
+  source_reference: "SIH26166 M2 spec — engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/processing"
+  defaults:
+    overlap:
+      min_overlap_px: 64
+      strategy: "footprint_intersection"
+      require_geometry: true
+    crops:
+      size_px: 512
+      stride_px: 256
+      min_tile_width_px: 16
+      min_tile_height_px: 16
+      min_valid_fraction: 0.5
+    normalization:
+      display: "percentile_1_99"
+      display_low_percentile: 1.0
+      display_high_percentile: 99.0
+      radiometric: "not_applicable"
+      radiometric_reason: "Label carries no radiometric calibration metadata for this product."
+    masking:
+      nan_inf: true
+      saturated: true
+      saturation_dn: 65535
+      negative: true
+      zero_valid: true
+    orientation:
+      source: "record_footprint_or_request"
+      fallback: "block"
+    resampling:
+      applied: false
+      rationale: "Sensors differ in native GSD (OHRC ~0.25 m/px vs TMC-2 ~5 m/px). M2 labels carry no documented camera model, so no geometric resampling is applied. Tiles are sensor-native and recorded as such."
+    condition:
+      texture_low_dn: 8.0
+      texture_high_dn: 60.0
+      empty_valid_fraction: 0.02
+    matcher_readiness:
+      required:
+        - raw_integrity_ok
+        - preprocess_ok
+        - overlap_valid
+        - tiles_generated
+        - tiles_usable
+        - condition_evaluated
+    execution:
+      max_runtime_seconds: 300
+
+# ------------------------------------------------------------
+# M3 — adaptive matcher intelligence & candidate correspondences.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning yet — they are reproducible defaults registered under the
+# Matcher Configuration ID below. Routing scores are transparent
+# evidence-based routing decision weights (what to TRY), never a
+# scientific quality verdict about the scene or the matcher.
+# Reproducibility = Pair ID + Processing Configuration ID +
+# Matcher Configuration ID.
+# ------------------------------------------------------------
+m3:
+  configuration_id: "MC-M3-001"
+  configuration_version: 1
+  name: "Adaptive Matcher Strategy Selection & Candidate Correspondences"
+  source_reference: "SIH26166 M3 spec — engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/matches"
+  defaults:
+    execution:
+      max_runtime_seconds: 45
+      max_features: 4000
+      max_tile_area_px: 400000
+      border_margin_px: 4
+    minimum_candidates: 8
+    fallback:
+      enabled: true
+      max_attempts: 2
+    sift:
+      detector:
+        nfeatures: 2000
+        contrast_threshold: 0.04
+        edge_threshold: 10
+        sigma: 1.6
+      matching:
+        cross_check: true
+        ratio_threshold: 0.8
+        max_distance: 350
+    orb:
+      detector:
+        nfeatures: 2000
+        scale_factor: 1.2
+        nlevels: 8
+        edge_threshold: 31
+        fast_threshold: 20
+      matching:
+        cross_check: true
+        ratio_threshold: 0.85
+        max_distance: 60
+    routing:
+      scoring:
+        classical_local:
+          base: 0.5
+          texture_normal: 0.25
+          texture_high: 0.1
+          valid_fraction : 0.2
+          scale_gap_small: 0.1
+          scale_gap_medium: 0.0
+          scale_gap_large: -0.3
+        robust_local:
+          base: 0.5
+          texture_low: 0.2
+          texture_high: 0.15
+          contrast_high: 0.15
+          valid_fraction: 0.15
+          scale_gap_large: 0.15
+          scale_gap_medium: 0.05
+        deep_optional:
+          base: 0.6
+          texture_normal: 0.1
+          scale_gap_large: 0.1
+      constraints:
+        classical_local:
+          min_valid_fraction: 0.3
+        robust_local:
+          min_valid_fraction: 0.15
+        deep_optional:
+          requires_availability: true
+
+# ------------------------------------------------------------
+# M3 BASELINE — classical baseline matcher (SIFT · AKAZE · ORB) producing
+# CANDIDATE correspondences only (never inliers/trusted/registered).
+#
+# ENGINEERING DEFAULTS ONLY. No scientifically tuned thresholds live here.
+# AKAZE is registered as a baseline matcher; in an OpenCV build that does not
+# compile AKAZE it is truthfully reported NOT_AVAILABLE with the reason, never
+# simulated. Reproducibility = Pair ID + Processing Configuration ID +
+# Baseline Matcher Configuration ID.
+# ------------------------------------------------------------
+m3_baseline:
+  configuration_id: "MB-M3-001"
+  configuration_version: 1
+  name: "Classical Baseline Matcher — Candidate Correspondences (SIFT · AKAZE · ORB)"
+  source_reference: "SIH26166 M3 baseline spec — engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "metadata/m3_matching"
+  defaults:
+    execution:
+      max_runtime_seconds: 60
+      max_image_dimension: 2048
+      max_features: 4000
+      border_margin_px: 0
+    visualization:
+      enabled: true
+      max_lines: 120
+      max_side_px: 960
+    sift:
+      detector:
+        nfeatures: 2000
+        n_octave_layers: 3
+        contrast_threshold: 0.04
+        edge_threshold: 10
+        sigma: 1.6
+      matching:
+        cross_check: true
+        ratio_threshold: 0.8
+        max_distance: 350
+    akaze:
+      detector:
+        descriptor: "MLDB"
+        descriptor_size: 0
+        descriptor_channels: 3
+        threshold: 0.001
+        n_octaves: 4
+        n_octave_layers: 4
+        diffusivity: "PM_G2"
+      matching:
+        cross_check: true
+        ratio_threshold: 0.8
+        max_distance: 100
+    orb:
+      detector:
+        nfeatures: 2000
+        scale_factor: 1.2
+        nlevels: 8
+        edge_threshold: 31
+        fast_threshold: 20
+      matching:
+        cross_check: true
+        ratio_threshold: 0.85
+        max_distance: 60
+
+# ------------------------------------------------------------
+# M4 — trust gate & independent geometric verification.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning yet — they are reproducible defaults registered under the
+# Trust Configuration ID below. Policy parameters are engineering
+# defaults; real-data thresholds require Pair ID + Configuration ID.
+# Reproducibility = Pair ID + Processing Configuration ID +
+# Matcher Configuration ID + Trust Configuration ID.
+# ------------------------------------------------------------
+m4:
+  trust_configuration_id: "TG-M4-001"
+  trust_configuration_version: 1
+  name: "Independent Geometric Verification & Trust Gate"
+  source_reference: "SIH26166 M4 spec — engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/trust"
+  defaults:
+    candidate_integrity:
+      min_usable_candidates: 8
+    geometric_model:
+      type: "homography"
+      ransac:
+        max_iterations: 2000
+        inlier_threshold_px: 3.0
+        confidence: 0.995
+        seed: 42
+    acceptance:
+      min_inliers: 8
+      min_inlier_ratio: 0.3
+      max_residual_mean: 10.0
+      max_residual_median: 6.0
+      max_residual_p95: 15.0
+    spatial:
+      grid_cells: 4
+      min_occupied_cells: 4
+      max_concentration_ratio: 0.6
+    degeneracy:
+      min_unique_points: 4
+      max_condition_number: 1000000
+    cross_check:
+      enabled: true
+      max_symmetric_transfer_px: 8.0
+    execution:
+      max_runtime_seconds: 60
+
+m5:
+  spatial_reliability_configuration_id: "SR-M5-001"
+  spatial_reliability_configuration_version: 1
+  name: "Spatial Reliability & Reliability-Aware Selection"
+  source_reference: "SIH26166 M5 spec - engineering/policy defaults; no scientifically calibrated lunar thresholds."
+  derived_rel: "derived/spatial"
+  defaults:
+    coordinate_space: "pair_overlap_normalized"
+    grid:
+      rows: 8
+      cols: 8
+      edge_tolerance_px: 0.5
+    reliability:
+      min_verified_inliers_per_cell: 4
+      min_trusted_tiles_per_cell: 1
+    neighborhood:
+      support_radius_cells: 1
+    fragmentation:
+      enabled: true
+    boundary:
+      edge_policy: "REPORT_ONLY"
+    connected_components:
+      connectivity: 8
+    selection:
+      mode: "SUPPORTED_REGION"
+      min_component_cells: 4
+      min_component_correspondences: 16
+      min_selected_region_cells: 4
+      max_selected_correspondences: 4000
+      deterministic_ordering: "largest_evidence_first"
+    execution:
+      max_runtime_seconds: 60
+
+# ------------------------------------------------------------
+# M5 CONDITION ESTIMATOR — pair-level condition & difficulty
+# characterization, evaluated BEFORE any matcher selection.
+#
+# This layer is intentionally separate from the M5 SPATIAL
+# RELIABILITY configuration (SR-M5-001) above and from the M2
+# per-tile scene-condition analysis. It:
+#   * describes each side's intrinsic condition (texture energy,
+#     edge density, Laplacian variance, entropy, robust intensity
+#     statistics, valid/invalid mask fractions);
+#   * compares the pair (appearance histogram distance, scale/GSD
+#     relationships using ONLY recorded geometry or PDS4 labels,
+#     native vs effective processing scale);
+#   * records optional latest-baseline matcher observations in a
+#     SEPARATE, explicitly-labelled section;
+#   * NEVER selects, recommends, scores or routes a matcher and
+#     NEVER reports a confidence or a scientific quality verdict.
+# Classification bins below are explicit engineering thresholds
+# (LOW/MEDIUM/HIGH ordinals) with scientifically_tuned: false —
+# they are reproducible labels, not truth verdicts.
+#
+# ENGINEERING DEFAULTS ONLY. Reproducibility = Pair ID +
+# Processing Configuration ID (M2) + Condition Configuration ID.
+# ------------------------------------------------------------
+m5_condition:
+  configuration_id: "CE-M5-001"
+  configuration_version: 1
+  name: "Condition Estimator — Pair-Level Condition & Difficulty Characterization (Pre-Matcher-Selition Layer)"
+  source_reference: "SIH26166 M5 spec — engineering defaults; no scientifically tuned thresholds. Evaluated before any matcher selection; this layer never selects, recommends or routes a matcher."
+  derived_rel: "metadata/m5_condition"
+  scientifically_tuned: false
+  defaults:
+    execution:
+      max_runtime_seconds: 120
+    sampling:
+      window_size_px: 256
+      stride_px: 128
+      seed: 20260922
+      max_windows: 1024
+      require_full_windows: false
+    texture:
+      sobel_kernel_size_px: 3
+      canny:
+        enabled: true
+        min_threshold: 50
+        max_threshold: 150
+        aperture_size_px: 3
+        l2gradient: false
+      laplacian_kernel_size_px: 3
+    appearance:
+      histogram_bins: 256
+      robust_percentiles: [5, 50, 95]
+      normalise: "l1"
+      constant_std_dn_tolerance: 1.0
+      constant_range_dn_tolerance: 4.0
+    invalid_mask:
+      enabled: true
+    saturation:
+      enabled: true
+    histogram_distance:
+      enabled: true
+      metric: "chi_square"
+    scale:
+      native_dimensions: true
+      effective_processing_dimensions: true
+      gsd:
+        enabled: true
+        source_order: ["RECORDED_GEOMETRY", "PDS4_LABEL", "NOMINAL_SENSOR"]
+        fallback: "UNKNOWN"
+    matcher_observations:
+      enabled: true
+      latest_baseline: true
+      baseline_configuration: "MB-M3-001"
+    data_gate:
+      require_real: false
+    classification:
+      scientifically_tuned: false
+      note: "Engineering-level ordinal bins (LOW/MEDIUM/HIGH) with explicit thresholds recorded in every artifact. Reproducible labels for engineering use only — never a scientific quality verdict and never an input to matcher selection in this layer."
+      textural_complexity:
+        enabled: true
+        metric: "laplacian_variance"
+        low_lt: 25.0
+        high_ge: 150.0
+      dynamic_range:
+        enabled: true
+        metric: "p95_minus_p5_dn"
+        low_lt: 40.0
+        high_ge: 300.0
+      invalid_fraction:
+        enabled: true
+        low_lt: 0.05
+        high_ge: 0.30
+
+m6:
+  registration_configuration_id: "RG-M6-001"
+  registration_configuration_version: 1
+  name: "Registration Engine, Verified Alignment & Jury-Ready Registration Workspace"
+  source_reference: "SIH26166 M6 spec - engineering/policy defaults; no scientifically calibrated lunar thresholds."
+  derived_rel: "derived/registration"
+  defaults:
+    transform:
+      preferred_type: "homography"
+      affine_fallback: true
+      min_inliers_for_homography: 4
+      min_inlier_ratio_for_homography: 0.5
+      ransac_max_iterations: 2000
+      ransac_inlier_threshold_px: 3.0
+      ransac_seed: 42
+      refine: false
+    validation:
+      max_symmetric_transfer_px: 12.0
+      max_residual_mean_px: 10.0
+      max_residual_median_px: 6.0
+      max_residual_p95_px: 15.0
+      min_inlier_ratio: 0.3
+      min_inliers: 6
+      max_condition_number: 1000000.0
+      check_determinant: true
+      min_abs_determinant: 0.000001
+    warp:
+      method: "forward_mapping"
+      output_bounds: "target_bounds"
+      fill_value: 0
+      dtype: "uint16"
+      output_interpolation: "linear"
+      output_image_format: "png"
+      visualization_normalization: "minmax"
+      max_output_rows: 20000
+      max_output_cols: 20000
+    execution:
+      max_runtime_seconds: 120
+
+# M6 ADAPTIVE MATCHER ROUTER — deterministic, evidence-based matcher routing.
+# Consumes M5 condition profiles (never a matcher itself, never a scientific
+# verdict). ADAPTIVE inspects declared condition facts; FIXED_BASELINE is the
+# ablation arm and never inspects conditions. All thresholds are engineering
+# policy defaults (scientifically_tuned: false) recorded in every artifact.
+m6_routing:
+  configuration_id: "AR-M6-001"
+  configuration_version: 1
+  name: "Adaptive Matcher Router — Deterministic, Evidence-based Matcher Selection"
+  source_reference: "SIH26166 M6 spec - deterministic rule-driven routing over M5 condition facts; engineering/policy defaults (scientifically_tuned: false); never a scientific accuracy claim."
+  derived_rel: "metadata/m6_routing"
+  scientifically_tuned: false
+  defaults:
+    modes:
+      - "ADAPTIVE"
+      - "FIXED_BASELINE"
+    default_mode: "ADAPTIVE"
+    forbidden_vocabulary:
+      - "selected_matcher"
+      - "recommended_matcher"
+      - "best_matcher"
+      - "routing_decision"
+      - "confidence"
+    execution:
+      max_runtime_seconds: 60
+      max_fallback_attempts: 1
+    fallback:
+      resolved_by: "capability"
+      primary_unavailable_action: "USE_CONFIGURED_FALLBACK"
+      empty_candidate_output_action: "USE_CONFIGURED_FALLBACK"
+      failed_run_action: "USE_CONFIGURED_FALLBACK"
+    policy:
+      appearance:
+        difference_low_lt: 0.25
+        difference_high_ge: 0.55
+      scale:
+        gsd_ratio_medium_ge: 1.35
+        gsd_ratio_large_ge: 2.0
+    matchers:
+      classical:
+        sift: true
+        orb: true
+        akaze: true
+      deep:
+        superpoint_superglue: true
+        loftr: true
+    rules:
+      - id: "R-PRE-A"
+        priority: 100
+        modes: ["ADAPTIVE", "FIXED_BASELINE"]
+        match: "all"
+        when:
+          - field: "processing_ready"
+            operator: "equals"
+            value: false
+        action: "BLOCKED"
+        error_code: "PROCESSING_NOT_RUN"
+        explanation: "M2 validated products are not READY_FOR_MATCHING; routing cannot consume non-existent validated products."
+      - id: "R-PRE-B"
+        priority: 90
+        modes: ["ADAPTIVE"]
+        match: "all"
+        when:
+          - field: "condition_profile_available"
+            operator: "equals"
+            value: false
+        action: "BLOCKED"
+        error_code: "CONDITION_NOT_AVAILABLE"
+        explanation: "ADAPTIVE routing requires a SUCCESS M5 condition profile; the decision is blocked until one exists."
+      - id: "R-FX-001"
+        priority: 70
+        modes: ["FIXED_BASELINE"]
+        match: "all"
+        when: []
+        action: "ROUTED"
+        primary_matcher: "sift"
+        fallback_matcher: "orb"
+        explanation: "Fixed-baseline ablation arm: the matcher route is predetermined and condition facts are intentionally not inspected."
+      - id: "R-DEEP-001"
+        priority: 50
+        modes: ["ADAPTIVE"]
+        match: "any"
+        when:
+          - field: "pair.texture_complexity_high"
+            operator: "equals"
+            value: true
+          - field: "pair.appearance_difference_high"
+            operator: "equals"
+            value: true
+          - field: "pair.gsd_ratio_large"
+            operator: "equals"
+            value: true
+        action: "ROUTED"
+        primary_matcher: "superpoint_superglue"
+        fallback_matcher: "sift"
+        explanation: "High textural complexity, large appearance difference or a large recorded scale gap -> strong deep matcher with a classical fallback."
+      - id: "R-CLASS-001"
+        priority: 40
+        modes: ["ADAPTIVE"]
+        match: "all"
+        when:
+          - field: "pair.texture_complexity_low"
+            operator: "equals"
+            value: true
+          - field: "pair.appearance_difference_low"
+            operator: "equals"
+            value: true
+          - field: "pair.gsd_ratio_large"
+            operator: "equals"
+            value: false
+        action: "ROUTED"
+        primary_matcher: "sift"
+        fallback_matcher: "orb"
+        explanation: "Low textural complexity, low appearance difference and no large recorded scale gap -> classical baseline route."
+      - id: "R-DFT-001"
+        priority: 10
+        modes: ["ADAPTIVE"]
+        match: "all"
+        when: []
+        action: "ROUTED"
+        primary_matcher: "sift"
+        fallback_matcher: "orb"
+        explanation: "Deterministic default route when no more specific rule matches."
+    route_reasons:
+      primary_unavailable: "PRIMARY_MATCHER_UNAVAILABLE"
+      empty_candidate_output: "EMPTY_CANDIDATE_OUTPUT"
+      failed_run: "FAILED_RUN"
+      no_available_matcher: "NO_AVAILABLE_MATCHER"
+
+m7_trust_gate:
+  configuration_id: "TG-M7-001"
+  configuration_version: 1
+  name: "Trust Gate — Geometric Verification of Candidate Correspondences"
+  source_reference: "SIH26166 M7 spec - conservative, reproducible, auditable gate over M3/M4/M6 matcher run candidate correspondences; engineering defaults (scientifically_tuned: false); never a physical-accuracy or registration claim."
+  derived_rel: "metadata/m7_trust"
+  scientifically_tuned: false
+  defaults:
+    decision:
+      zero_candidates: "ABSTAIN"
+      min_candidates: 8
+      min_inliers: 8
+      min_inlier_ratio: 0.30
+      max_residual_rmse_px: 8.0
+      max_residual_median_px: 5.0
+      max_residual_p95_px: 12.0
+      max_runtime_seconds: 60
+      scientifically_tuned: false
+    geometry:
+      models:
+        - "affine"
+        - "homography"
+      preferred_model: "affine"
+      attempt_hierarchy: true
+      ransac:
+        max_iterations: 2000
+        inlier_threshold_px: 4.0
+        confidence_parameter: 0.99
+        seed: 20260923
+    degeneracy:
+      min_unique_points: 6
+      max_condition_number: 1e6
+    spatial_sanity:
+      min_extent_px: 5.0
+      strip_ratio_warn: 0.02
+    duplicates:
+      policy: "keep_first_record_counts"
+    resource:
+      max_candidates: 500000
+    reference_status: "REFERENCE_UNAVAILABLE"
+    forbidden_vocabulary:
+      - "confidence"
+      - "final_confidence"
+      - "best"
+      - "winner"
+      - "superior"
+
+# ------------------------------------------------------------
+# M8 — spatial reliability & balanced correspondence selection.
+#
+# ENGINEERING DEFAULTS ONLY (scientifically_tuned: false). This layer
+# consumes an ACCEPTED M7 trust gate artifact, recovers the trusted inlier
+# correspondences by deterministic re-verification, computes per-side
+# spatial bookkeeping evidence (coverage / occupancy / entropy / extent)
+# in the declared effective matcher plane, and produces a deterministic
+# GRID_BALANCED selection. It never re-decides the M7 verdict and never
+# asserts registration/accuracy semantics.
+# ------------------------------------------------------------
+m8_spatial:
+  configuration_id: "SR-M8-001"
+  configuration_version: 1
+  name: "Spatial Reliability & Balanced Correspondence Selection"
+  source_reference: "SIH26166 M8 spec - deterministic spatial bookkeeping over ACCEPTED M7 trusted correspondences; engineering defaults (scientifically_tuned: false); never an accuracy, probability or registration claim and never an override of the M7 verdict."
+  derived_rel: "metadata/m8_spatial"
+  scientifically_tuned: false
+  defaults:
+    grid:
+      rows: 8
+      cols: 8
+      edge_policy: "REPORT_ONLY"
+    selection:
+      policy: "GRID_BALANCED"
+      max_selected: 4000
+      min_trusted: 4
+      min_selected: 1
+      min_per_occupied_cell: 1
+      min_occupied_cells: 4
+      tie_break: "residual_then_original_index"
+      limit_applied_warning: true
+    coverage:
+      low_coverage_ratio: 0.25
+      concentration_ratio: 0.60
+    execution:
+      max_runtime_seconds: 60
+    reference_status: "REFERENCE_UNAVAILABLE"
+    forbidden_vocabulary:
+      - "confidence"
+      - "final_confidence"
+      - "best"
+      - "winner"
+      - "superior"
+
+# ------------------------------------------------------------
+# M9 — Registration / Image Alignment.
+#
+# ENGINEERING DEFAULTS ONLY (scientifically_tuned: false). This layer
+# consumes ONE usable M8 spatial-selection artifact (SELECTED /
+# SELECTED_WITH_WARNINGS), estimates the smallest technically valid declared
+# geometric transform (affine preferred, normalized-DLT homography only as an
+# explicit escalation), validates the transform and the input points on their
+# own merits (never trusting M7/M8 blindly), records residual diagnostics in
+# px of the effective matcher plane and produces a derived aligned/warped
+# output. It never rewrites the M7 verdict or the M8 status, never claims
+# physical/geolocation accuracy (reference_status: REFERENCE_UNAVAILABLE) and
+# never emits accuracy/confidence vocabulary.
+# ------------------------------------------------------------
+m9_registration:
+  configuration_id: "RG-M9-001"
+  configuration_version: 1
+  name: "Registration & Image Alignment — smallest-valid declared transform over M8-selected correspondences"
+  source_reference: "SIH26166 M9 spec — engineering defaults; no scientifically calibrated lunar thresholds; never a physical accuracy or geolocation claim."
+  derived_rel: "metadata/m9_registration"
+  scientifically_tuned: false
+  defaults:
+    model:
+      preference: "smallest_valid"
+      min_points_affine: 4
+      min_points_homography: 5
+      normalized_dlt: true
+    validation:
+      max_rmse_px: 3.0
+      max_p95_px: 5.0
+      max_residual_max_px: 10.0
+      max_transform_condition: 1000000.0
+      min_abs_determinant: 0.0001
+      max_abs_coefficient: 10000.0
+      min_homography_denominator: 0.000001
+      max_scale_change: 20.0
+      min_scale_factor: 0.001
+    warp:
+      interpolation: "linear"
+      border_mode: "constant"
+      fill_value: 0
+      dtype: "uint16"
+      output_dimensions: "target_b_frame"
+      max_output_rows: 32768
+      max_output_cols: 32768
+    execution:
+      max_runtime_seconds: 120
+    reference_status: "REFERENCE_UNAVAILABLE"
+    forbidden_vocabulary:
+      - "confidence"
+      - "final_confidence"
+      - "best"
+      - "winner"
+      - "superior"
+      - "perfect"
+      - "accurate"
+
+m7:
+  metrics_configuration_id: "MT-M7-001"
+  metrics_configuration_version: 1
+  name: "Quantitative Metrics, Reproducible Experiment Reports & Scientific Diagnostics"
+  source_reference: "SIH26166 M7 spec - engineering/policy defaults; no scientifically calibrated lunar thresholds."
+  derived_rel: "derived/metrics"
+  scientifically_tuned: false
+  defaults:
+    rejected:
+      inlier_ratio_minimum: 0.3
+      residual_mean_max_px: 10.0
+      selected_fraction_minimum: 0.1
+      scientifically_tuned: false
+    recompute:
+      enabled: true
+      inlier_threshold_px: 3.0
+      consistency_tolerance: 0.001
+      scientifically_tuned: false
+    report:
+      deterministic_report: true
+    execution:
+      max_runtime_seconds: 60
+
+# ------------------------------------------------------------
+# M8 — deep matcher benchmarking & adaptive expansion.
+#
+# ENGINEERING DEFAULTS ONLY. None of these values carry scientific
+# meaning — they are reproducible defaults registered under the
+# Deep Matcher Configuration ID below. Deep matcher confidence is
+# an observation, never a truth verdict (M4 Trust Gate remains
+# authoritative). No model weights are downloaded automatically;
+# deep matchers truthfully report MODEL_WEIGHTS_NOT_CONFIGURED
+# unless the configured weights exist.
+# ------------------------------------------------------------
+m8:
+  configuration_id: "DM-M8-001"
+  configuration_version: 1
+  name: "Deep Matcher Benchmarking, Adaptive Expansion & Trustworthy Matcher Selection"
+  source_reference: "SIH26166 M8 spec - engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "derived/matches"
+  scientifically_tuned: false
+  defaults:
+    enabled: true
+    preferred_matcher: "auto"
+    classical:
+      enabled: true
+      strategies:
+        - sift
+        - orb
+    deep:
+      enabled: true
+      strategies:
+        - superpoint_superglue
+        - loftr
+    runtime:
+      device: "auto"
+      max_runtime_seconds: 120
+      max_image_dimension: 2048
+      max_tile_area: 400000
+      batch_size: 1
+    candidates:
+      max_correspondences: 4000
+      require_finite: true
+      require_mask_valid: true
+    routing:
+      allow_classical: true
+      allow_deep: true
+      fallback_to_classical: true
+    benchmark:
+      enabled: true
+      reference_dataset: "NOT_AVAILABLE"
+
+# ------------------------------------------------------------
+# M4-DEEP — Strong deep matcher (SuperPoint + SuperGlue) integrated
+# through the SAME M3 candidate-correspondence contract.
+#
+# ENGINEERING DEFAULTS ONLY. This is the M4 strong-deep-matcher
+# configuration (DM-M4-001), distinct from the M8 benchmarking config
+# and from the M4 Trust-Gate config (TG-M4-001). Deep matcher scores
+# (matching_score / log_assignment_score / model_probability) are
+# model-native observation scores, never scientific accuracy and never
+# a trust verdict (the M4 Trust Gate stays authoritative).
+#
+# Checkpoints are provisioned manually from the official SuperGlue
+# release; the source URLs + SHA-256 pins below are the recorded
+# provenance. Files land under <data_root>/models/m8 and are verified
+# by SHA-256 at load time; mismatch is reported MODEL_WEIGHTS_INVALID.
+# ------------------------------------------------------------
+m4_deep:
+  configuration_id: "DM-M4-001"
+  configuration_version: 1
+  name: "Strong Deep Matcher — SuperPoint + SuperGlue Candidate Correspondences"
+  source_reference: "SIH26166 M4 spec; SuperPoint (Detone et al., NeurIPS 2018) + SuperGlue (Sarlin et al., CVPR 2020) reference graphs with official pretrained checkpoints; engineering defaults; no scientifically tuned thresholds."
+  derived_rel: "metadata/m4_deep_matching"
+  checkpoints:
+    superpoint:
+      filename: "superpoint_v1.pth"
+      source_url: "https://github.com/magicleap/SuperGluePretrainedNetwork/models/weights/superpoint_v1.pth"
+      sha256: "52b6708629640ca883673b5d5c097c4ddad37d8048b33f09c8ca0d69db12c40e"
+    superglue:
+      filename: "superglue_outdoor.pth"
+      source_url: "https://github.com/magicleap/SuperGluePretrainedNetwork/models/weights/superglue_outdoor.pth"
+      sha256: "2f5f5e9bb3febf07b69df633c4c3ff7a17f8af26a023aae2b9303d22339195bd"
+  defaults:
+    execution:
+      max_runtime_seconds: 180
+      max_image_dimension: 1024
+      max_keypoints: 2048
+      nms_radius: 4
+      device: "cpu"
+      torch_threads: 8
+    superglue:
+      sinkhorn_iterations: 100
+      match_threshold: 0.2
+      gnn_layers_self_cross_pairs: 9
+    visualization:
+      enabled: true
+      max_lines: 120
+      max_side_px: 960
+
+# ------------------------------------------------------------
+# M9 — Real Gemini AI Assistant: evidence-grounded scientific
+# copilot & explainable analysis.
+#
+# The AI layer is explanatory/assistive ONLY. Science truth comes
+# from the deterministic M2..M8 pipeline; Gemini never authorizes a
+# registration and never produces scientific numbers. All evidence
+# sent to the model is sanitized pipeline data (never instructions).
+# The GEMINI_API_KEY lives only in the backend environment/.env.
+# ------------------------------------------------------------
+m9:
+  ai_configuration_id: "AI-M9-001"
+  ai_configuration_version: 1
+  name: "Real Gemini AI Assistant — Evidence-Grounded Scientific Copilot & Explainable Analysis"
+  source_reference: "SIH26166 M9 spec — engineering defaults; no scientifically tuned thresholds."
+  provider: "gemini"
+  prompt_version: "M9-SYSTEM-001"
+  evidence_schema_version: "M9-EVIDENCE-001"
+  tasks:
+    - id: explain
+      label: "Explain pair analysis"
+    - id: explain-failure
+      label: "Explain failure or blocker"
+    - id: explain-routing
+      label: "Explain adaptive matcher routing"
+    - id: summarize-experiment
+      label: "Summarize experiment report"
+    - id: chat
+      label: "Ask about a pair"
+  delimiters:
+    begin: "BEGIN CHANDRASUTRA EVIDENCE"
+    end: "END CHANDRASUTRA EVIDENCE"
+  forbidden_result_terms:
+    - overall_accuracy
+    - scientific_confidence
+    - registration_confidence
+    - alignment_score
+    - lunar_accuracy
+    - geolocation_accuracy
+    - CE90
+    - LE90
+  grounding_rules:
+    - "R1: Claims must come only from the supplied evidence packet."
+    - "R2: When reference (physical-truth) data is NOT_AVAILABLE, reference accuracy is never reported and never guessed."
+    - "R3: A BLOCKED stage is described as blocked; it is never described as completed or estimated."
+    - "R4: A metric absent from the evidence packet is 'not available'; it is never invented or estimated."
+    - "R5: Matcher confidence or matcher scores are observations, never scientific confidence."
+    - "R6: Residuals are quantitative diagnostics of the fitted transform, not physical lunar accuracy."
+    - "R7: The M4 Trust Gate verdict is never overridden or reclassified by the AI layer."
+    - "R8: A cause that the evidence cannot establish must be reported as 'Cause is not established by the recorded evidence.'"
+  constraints:
+    max_input_chars: 50000
+    max_output_tokens: 2048
+    timeout_seconds: 45
+    rate_limit_per_minute: 30
+    max_sessions: 200
+    session_ttl_seconds: 3600
+    evidence_digest_algorithm: "sha256"
+    store_prompts: false
+    store_responses: false
+
+# ------------------------------------------------------------
+# M10 — Full Authentication, Authorization & User Security.
+#
+# Production-grade authentication with real persistent users,
+# secure password hashing, short-lived access tokens, rotating
+# refresh sessions, role-based authorization, and security audit.
+#
+# Secrets (JWT signing key) come from environment variables only.
+# This block contains non-sensitive engineering policy defaults.
+# ------------------------------------------------------------
+m10:
+  authentication_configuration_id: "AU-M10-001"
+  authentication_configuration_version: 1
+  name: "Full Authentication, Authorization & User Security"
+  source_reference: "SIH26166 M10 spec — engineering defaults; no enterprise IAM claims."
+  access_token_ttl_seconds: 900
+  refresh_token_ttl_seconds: 604800
+  session_idle_ttl_seconds: 86400
+  password_policy:
+    min_length: 12
+    require_letter: true
+    require_digit: true
+    disallow_username: true
+  login_rate_limit:
+    max_attempts: 5
+    window_seconds: 300
+    lockout_seconds: 900
+  refresh_rotation: true
+  registration_enabled: true
+  policy:
+    no_plaintext_passwords: true
+    passwords_never_in_logs: true
+    passwords_never_in_responses: true
+    passwords_never_in_audit: true
+    secret_from_environment_only: true
+    authorization_server_side_only: true
+    no_fake_login: true
+    protected_routes_enforced: true
+  roles:
+    viewer: "read results, datasets, and use explanatory AI"
+    analyst: "execute permitted processing and analysis workflows"
+    admin: "manage users, roles, security audit and administrative config"
+
+# ------------------------------------------------------------
+# Engineering defaults — placeholders to be replaced by real
+# experiment-tuned parameters in later milestones. They carry no
+# scientific meaning yet.
+# ------------------------------------------------------------
+engineering_defaults_placeholder:
+  preprocessing:
+    dtype: ">u2"          # 16-bit unsigned big-endian (spacecraft PDS product)
+    bit_depth: 16
+    normalize: "instance"
+  crops:
+    size_px: [512, 512]   # development tile size — memory-lite by design
+    strategy: "overlap_confirmed_only"
+  matcher:
+    library_subsets: ["sift", "akaze"]   # baselines; adapters arrive later
+    ransac_reproj_threshold_px: 3.0      # engineering default, NOT a scientific claim
+  routing:
+    enabled: false                        # condition-aware routing = later milestone
+  trust_gate:
+    enabled: false                        # adaptive reliability gate = later milestone
+  registration:
+    model: "homography_placeholder"
+  logging:
+    operation_scope: "request + Pair ID + Configuration ID (future)"
+  runtime:
+    lazy_imports: true
+    max_parallel: 2
+
+# ============================================================
+# ============================================================
+# M10 -- Metrics & Benchmark
+#
+# Descriptive, evidence-grounded benchmark controller over settled M3..M9
+# artefacts. Every number is a measurement of the artefacts that already
+# exist on disk; no run re-executes or mutates upstream derived products,
+# and no accuracy/geolocation/winner claim is ever produced while the
+# reference dataset status is REFERENCE_UNAVAILABLE (this build's gate).
+# ------------------------------------------------------------
+m10_metrics:
+  m10_metrics_configuration_id: "MET-M10-001"
+  m10_metrics_configuration_version: 1
+  name: "M10 Metrics, Benchmark, Ablation & Failure Analysis controller"
+  source_reference: "SIH26166 M10 spec - engineering defaults; no scientifically tuned threshold, no accuracy/geolocation claim."
+  derived_rel: "metadata/m10_metrics"
+  scientifically_tuned: false
+  metric_definition_version: "MET-M10D-001"
+  failure_taxonomy_version: "FT-M10-001"
+  reference_status:
+    value: "REFERENCE_UNAVAILABLE"
+    note: "No real OHRC/TMC-2 PRADAN products provisioned; benchmark is BLOCKED_PENDING_OPERATOR_DATA until they exist."
+  variants:
+    - id: "V1"
+      name: "FIXED_CLASSICAL_BASELINE"
+      routing: "FIXED_CLASSICAL"
+      trust_gate: "ENABLED"
+      spatial_selection: "ENABLED"
+      pipeline_variant: "FIXED_CLASSICAL"
+      description: "Fixed classical baseline matcher (SIFT/M3 baseline) - routing fixed, trust enabled, spatial selection enabled."
+    - id: "V2"
+      name: "FIXED_ALTERNATE_CLASSICAL"
+      routing: "FIXED_ALTERNATE_CLASSICAL"
+      trust_gate: "ENABLED"
+      spatial_selection: "ENABLED"
+      pipeline_variant: "FIXED_ALTERNATE_CLASSICAL"
+      description: "Alternate classical matcher (e.g. AKAZE when available) - availability-gated, honestly NOT_AVAILABLE otherwise."
+    - id: "V3"
+      name: "FIXED_DEEP"
+      routing: "FIXED_DEEP"
+      trust_gate: "ENABLED"
+      spatial_selection: "ENABLED"
+      pipeline_variant: "FIXED_DEEP"
+      description: "Fixed deep matcher (SuperPoint/SuperGlue M8 expansion) - availability-gated, honestly NOT_AVAILABLE when weights absent."
+    - id: "V4"
+      name: "ROUTED_FULL_ADAPTIVE_RELIABILITY"
+      routing: "ROUTED"
+      trust_gate: "ENABLED"
+      spatial_selection: "ENABLED"
+      pipeline_variant: "FULL_ADAPTIVE_RELIABILITY"
+      description: "fully adaptive reliability pipeline - M6 routing, M7 trust, M8 spatial, M9 registration exactly as routed."
+    - id: "V5"
+      name: "TRUST_DISABLED_ABLATION"
+      routing: "ROUTED"
+      trust_gate: "DISABLED_FOR_ABLATION"
+      spatial_selection: "ENABLED"
+      pipeline_variant: "FULL_ADAPTIVE_RELIABILITY"
+      description: "Ablation: trust gate DISABLED_FOR_ABLATION. Registration not re-executed offline; reported as NOT_RUN/BLOCKED honestly."
+    - id: "V6"
+      name: "SPATIAL_DISABLED_ABLATION"
+      routing: "ROUTED"
+      trust_gate: "ENABLED"
+      spatial_selection: "DISABLED_FOR_ABLATION"
+      pipeline_variant: "FULL_ADAPTIVE_RELIABILITY"
+      description: "Ablation: spatial selection DISABLED_FOR_ABLATION. Registration relies on trust-selected set only; offline NOT_RUN."
+  funnel:
+    stage_order: ["input_gate", "processing", "matching", "trust_gate", "spatial_selection", "registration"]
+    stage_labels:
+      input_gate: "M1 pair registration + data source gate"
+      processing: "M2 product processing (PREPARE)"
+      matching: "M3/M4 candidate correspondence generation"
+      trust_gate: "M7 trust gate (verified/trusted evidence)"
+      spatial_selection: "M8 spatial selection"
+      registration: "M9 registration / transform estimation"
+  aggregation:
+    metrics: ["candidate_count", "verified_count", "inlier_count", "selected_count", "registration_rmse_px", "registration_p95_px", "runtime_ms"]
+    operators: ["count", "sum", "mean", "median", "p90", "p95", "min", "max"]
+    report_vocabulary:
+      norths: ["candidate_count", "registered_count", "verified_count"]
+      smaller_is_better_note: "Smaller residuals are reported as smaller; no lower-is-better verdict is applied."
+      never_winner: true
+      forbidden_vocabulary: ["winner", "best", "superior", "optimal", "accuracy", "success_rate", "perfect", "outperformed", "geolocation_accuracy", "CE90", "LE90", "confidence"]
+  failure_taxonomy:
+    version: "FT-M10-001"
+    root: "REGISTRATION_FAILURE"
+    branches:
+      failed: ["TRANSFORM_FIT_ERROR", "VALUES_NOT_FINITE", "SPATIAL_NOT_AVAILABLE", "TRUST_NOT_AVAILABLE", "MATCH_RUN_NOT_AVAILABLE"]
+      abstain: ["SPARSE_EVIDENCE", "MARGINAL_EVIDENCE", "BUDGET_EXCEEDED"]
+    failed_vs_abstain_policy: "A failed run never abstains and an abstaining run never fails; a blocked run is never recorded as an outcome."
+  runtime_limits:
+    max_runtime_seconds: 120
+    max_variants_per_run: 6
+  visualization:
+    enabled: true
+    max_series: 6
+    max_bars: 20
