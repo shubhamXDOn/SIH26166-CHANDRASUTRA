@@ -1,0 +1,58 @@
+# Docker build context for the repository-ROOT build:
+#   docker build -f backend/Dockerfile .
+#
+# The backend image is built from the repository root, so this file MUST NOT
+# exclude anything the Dockerfile copies:
+#   requirements.txt
+#   backend/            (incl. backend/Dockerfile, backend/app.yaml, backend/app/)
+# Only local/dev artefacts are pruned below, to keep the uploaded build
+# context small enough to build reliably on Render.
+
+# --- VCS / CI -------------------------------------------------------------
+.git/
+.gitignore
+.github/
+.gitattributes
+
+# --- Python ---------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Node / frontend build output -----------------------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+
+# --- Local runtime data, logs, caches ------------------------------------
+# The image gets its data volume from DATA_ROOT (Render: /data) and never
+# COPYs repository data, so this is context-only pruning.
+data/
+logs/
+*.log
+*.err.log
+backend_server.log
+backend_server.err.log
+frontend_server.log
+frontend_server.err.log
+
+# --- Local artefacts / reports -------------------------------------------
+perf/
+reports/
+.pytest_cache/
+
+# --- Secrets (never send these to the daemon) -----------------------------
+.env
+.env.*
+*.pem
+*.key
