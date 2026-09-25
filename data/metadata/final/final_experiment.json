@@ -1,0 +1,18 @@
+{
+  "experiment_id": "EXP-FINAL-SYNTHETIC_STRUCTURAL-53b50b49",
+  "experiment_type": "FINAL",
+  "reference_status": "REFERENCE_UNAVAILABLE",
+  "evidence_schema_versions": [
+    "M9-EVIDENCE-001",
+    "M11-EVIDENCE-001"
+  ],
+  "data_gate": "PATH_A_REAL_DATA=BLOCKED; PATH_UNKNOWN used",
+  "created_at": "2026-09-23T14:35:05Z",
+  "content_hash_short": "53b50b49",
+  "status": "REPOSITORY_FREEZE",
+  "notes": [
+    "Synthetic structural pairs only (CASE B).",
+    "No real PRADAN lunar data provisioned.",
+    "No calibrated accuracy claimed anywhere."
+  ]
+}

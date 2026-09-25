@@ -20,6 +20,7 @@ original bytes. Products that cannot be read fail loudly and structurally
 from __future__ import annotations
 
 import hashlib
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,6 +55,20 @@ SENSOR_NOMINAL_GSD_M: dict[str, str] = {
 }
 
 UNKNOWN = "UNKNOWN"
+
+# --- data-source classification (real-data activation, M1 PATH A) ----------
+# REAL_PRADAN : a genuine ISRO/ISSDC PRADAN Chandrayaan-2 product (verified
+#               by its PDS4 identity, placed by the operator under data/raw).
+# TEST_FIXTURE: a labelled synthetic fixture used only for engineering tests.
+# UNKNOWN     : cannot be classified -> never becomes benchmark-ready.
+SOURCE_REAL_PRADAN = "REAL_PRADAN"
+SOURCE_TEST_FIXTURE = "TEST_FIXTURE"
+SOURCE_UNKNOWN = "UNKNOWN"
+
+# mark strings that unambiguously identify a synthetic engineering fixture
+FIXTURE_MARKERS = ("urn:fixture", "test fixture", "synthetic")
+# official CH-2 logical-identifier prefix (ISRO PDS4 archive)
+REAL_LID_PREFIX = "urn:isro:ch2"
 
 
 class ProductReadError(Exception):
@@ -155,6 +170,137 @@ def _find_first_text(elem: ET.Element, local: str) -> str | None:
     return None
 
 
+def _all_texts(elem: ET.Element, local: str) -> list[str]:
+    return [
+        child.text.strip()
+        for child in elem.iter()
+        if _localname(child.tag) == local and child.text and child.text.strip()
+    ]
+
+
+def _collect_angles(elem: ET.Element, tags: tuple[str, ...]) -> str:
+    """Collect numeric geometry/illumination/viewing angles -> 'name=value; ...'.
+
+    Only tags that actually resolve to numbers are reported; anything else
+    stays UNKNOWN. Never guessed.
+    """
+    parts: list[str] = []
+    for tag in tags:
+        for value in _all_texts(elem, tag):
+            try:
+                float(value)
+            except (TypeError, ValueError):
+                continue
+            parts.append(f"{tag}={value}")
+    return "; ".join(parts) if parts else UNKNOWN
+
+
+def _extract_footprint_polygon(elem: ET.Element) -> list[list[float]] | None:
+    """Parse PDS4 Footprint_Geometry <Vertex> entries as [lat, lon] lists.
+
+    Vertex text is typically lat/lon[/alt] tuples; the first two numbers are
+    latitude and longitude. Returns None when no usable vertices exist.
+    """
+    vertices: list[list[float]] = []
+    for child in elem.iter():
+        if _localname(child.tag) != "Vertex":
+            continue
+        nums = re.findall(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", child.text or "")
+        try:
+            lat = float(nums[0])
+            lon = float(nums[1])
+            if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 360.0:
+                vertices.append([lat, lon])
+        except (IndexError, ValueError):
+            continue
+    return vertices or None
+
+
+def _extract_footprint(elem: ET.Element) -> dict | None:
+    """Extract a structural footprint (bounding box + optional polygon).
+
+    Reads the standard PDS4 Spatial_Extent/Geographic_Extent boundary fields
+    and any Footprint_Geometry vertices. Returns None when the label carries
+    no usable geographic footprint evidence.
+    """
+    bbox = {
+        "min_latitude": None,
+        "max_latitude": None,
+        "min_longitude": None,
+        "max_longitude": None,
+    }
+    boundary_tags = (
+        "west_bounding_coordinate",
+        "east_bounding_coordinate",
+        "north_bounding_coordinate",
+        "south_bounding_coordinate",
+    )
+    for child in elem.iter():
+        tag = _localname(child.tag)
+        if tag not in boundary_tags or not (child.text and child.text.strip()):
+            continue
+        try:
+            value = float(child.text.strip())
+        except ValueError:
+            continue
+        if tag == "west_bounding_coordinate":
+            bbox["min_longitude"] = value
+        elif tag == "east_bounding_coordinate":
+            bbox["max_longitude"] = value
+        elif tag == "north_bounding_coordinate":
+            bbox["max_latitude"] = value
+        elif tag == "south_bounding_coordinate":
+            bbox["min_latitude"] = value
+    has_full_bbox = all(v is not None for v in bbox.values())
+    polygon = _extract_footprint_polygon(elem)
+    if not has_full_bbox and polygon is None:
+        return None
+    return {"bbox": bbox if has_full_bbox else None, "polygon": polygon}
+
+
+def _footprint_summary(fp: dict | None) -> str:
+    """Human-readable footprint string; UNKNOWN when no evidence is present."""
+    if not fp:
+        return UNKNOWN
+    parts: list[str] = []
+    bbox = fp.get("bbox")
+    if bbox:
+        parts.append(
+            "bbox[min_lat={:.4f},max_lat={:.4f},min_lon={:.4f},max_lon={:.4f}]".format(
+                bbox["min_latitude"],
+                bbox["max_latitude"],
+                bbox["min_longitude"],
+                bbox["max_longitude"],
+            )
+        )
+    polygon = fp.get("polygon")
+    if polygon:
+        parts.append(f"polygon[{len(polygon)} vertices]")
+    return " ".join(parts) if parts else UNKNOWN
+
+
+def classify_product_source(info: ProductInfo) -> str:
+    """Classify a loaded product's data source (REAL_PRADAN/TEST_FIXTURE/UNKNOWN).
+
+    Uses the PDS4 identity + explicit fixture markers only. A product is REAL
+    PRADAN when its logical identifier carries the official CH-2 namespace or
+    its filename follows the official convention AND it carries a PDS4 label
+    with no fixture markers. Never guesses; ambiguous products are UNKNOWN.
+    """
+    metadata = info.metadata if info.metadata else {}
+    lid = str(metadata.get("logical_identifier") or info.product_id or "").strip()
+    title = str(metadata.get("title") or "").strip().lower()
+    description = str(metadata.get("description") or "").strip().lower()
+    union = f"{lid.lower()} {title} {description}"
+    if any(marker in union for marker in FIXTURE_MARKERS):
+        return SOURCE_TEST_FIXTURE
+    if lid.lower().startswith(REAL_LID_PREFIX):
+        return SOURCE_REAL_PRADAN
+    if info.conforms_naming and info.label_filename and info.instrument in ("ohrc", "tmc2", "iirs"):
+        return SOURCE_REAL_PRADAN
+    return SOURCE_UNKNOWN
+
+
 def parse_pds4_label(label_path: Path) -> dict:
     """Extract a minimal, honest metadata subset from a PDS4 label.
 
@@ -245,18 +391,21 @@ def parse_pds4_label(label_path: Path) -> dict:
                 pass
             if gsd:
                 break
-    footprint = UNKNOWN
-    for tag in ("spatial_coverage", "target_name", "min_latitude", "max_latitude"):
-        v = _find_first_text(root, tag)
-        if v:
-            footprint = v
-            break
-    illumination = UNKNOWN
-    for tag in ("solar_zenith_angle", "solar_elevation_angle", "incidence_angle"):
-        v = _find_first_text(root, tag)
-        if v:
-            illumination = v
-            break
+    footprint_struct = _extract_footprint(root)
+    footprint_summary = _footprint_summary(footprint_struct)
+    illumination = _collect_angles(
+        root,
+        ("solar_zenith_angle", "solar_elevation_angle", "incidence_angle", "phase_angle"),
+    )
+    viewing_geometry = _collect_angles(
+        root,
+        ("sensor_azimuth", "sensor_zenith_angle", "emission_angle", "phase_angle"),
+    )
+    orbit = (
+        _find_first_text(root, "orbit_number")
+        or _find_first_text(root, "start_orbit_number")
+        or UNKNOWN
+    )
 
     return {
         "label_filename": label_path.name,
@@ -277,8 +426,11 @@ def parse_pds4_label(label_path: Path) -> dict:
         "purpose": purpose,
         "processing_level": processing_level,
         "gsd": gsd,          # None when absent
-        "footprint": footprint if footprint not in (None, "UNKNOWN") else None,
-        "illumination": illumination if illumination not in (None, "UNKNOWN") else None,
+        "footprint": footprint_struct,   # structured bbox/polygon or None
+        "footprint_summary": footprint_summary,
+        "illumination": illumination if illumination != UNKNOWN else None,
+        "viewing_geometry": viewing_geometry if viewing_geometry != UNKNOWN else None,
+        "orbit": orbit if orbit != UNKNOWN else None,
         "local_identifier": instrument if instrument else UNKNOWN,
         "sampling_nominal": UNKNOWN,
     }
@@ -401,6 +553,7 @@ class ProductInfo:
     status: str                        # OK | FAILURE
     error: dict | None
     conforms_naming: bool = False
+    source_class: str = SOURCE_UNKNOWN
     extra: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -430,6 +583,7 @@ class ProductInfo:
             "status": self.status,
             "error": self.error,
             "conforms_naming": self.conforms_naming,
+            "source_class": self.source_class,
             "extra": self.extra,
         }
 
@@ -538,7 +692,7 @@ def load_product(image_path: Path, label_path: Path | None = None) -> ProductInf
         "Browse" if ext in (".jpg", ".jpeg", ".png") else "Image"
     )
 
-    return ProductInfo(
+    info = ProductInfo(
         filename=image_path.name,
         path=str(image_path),
         size_bytes=size_bytes,
@@ -558,9 +712,9 @@ def load_product(image_path: Path, label_path: Path | None = None) -> ProductInf
         gsd=gsd,
         gsd_source=gsd_source,
         acquisition_datetime=meta.get("start_date_time") or UNKNOWN,
-        footprint=meta.get("footprint") or UNKNOWN,
+        footprint=meta.get("footprint_summary") or UNKNOWN,
         illumination_info=meta.get("illumination") or UNKNOWN,
-        viewing_geometry_info=UNKNOWN,
+        viewing_geometry_info=meta.get("viewing_geometry") or UNKNOWN,
         metadata={k: v for k, v in meta.items() if v not in (None, "")},
         status="OK",
         error=None,
@@ -571,8 +725,12 @@ def load_product(image_path: Path, label_path: Path | None = None) -> ProductInf
             "purpose": meta.get("purpose"),
             "instrument_host": meta.get("instrument_host"),
             "start_utc_fragment": decoded["acquisition_utc"],
+            "orbit": meta.get("orbit"),
+            "footprint_struct": meta.get("footprint"),
         },
     )
+    info.source_class = classify_product_source(info)
+    return info
 
 
 def _open_container(path: Path) -> tuple[np.ndarray, int, int, int, np.dtype]:

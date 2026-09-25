@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import Pipeline, { PIPELINE } from "../components/Pipeline.jsx";
 import { Badge, EmptyState, Icon, Modal, PageSkeleton, StatusDot } from "../components/ui.jsx";
+import { LunarDisc, MissionStamp, OrbitalRings, ScanLine } from "../components/space.jsx";
 import { apiGet } from "../api.js";
 
 function useMeta(online) {
@@ -179,7 +180,7 @@ export default function Overview({ backend, onNavigate }) {
     return (
       <div className="space-y-6">
         <div className="space-y-4">
-          <Badge tone="gold">CHANDRASUTRA · SIH26166 · Milestone M5</Badge>
+          <p className="eyebrow">CHANDRASUTRA · SIH26166</p>
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-100">
             Trustworthy Lunar Image Intelligence
           </h2>
@@ -299,35 +300,41 @@ export default function Overview({ backend, onNavigate }) {
 
   return (
     <div className="space-y-6">
-      {/* M13 final release presentation */}
-      <section className="card border-lunar-500/20 bg-gradient-to-br from-space-800/70 to-space-950/60 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div className="max-w-2xl space-y-2.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="gold">CHANDRASUTRA v{rev} · M13 Final Release</Badge>
-              <Badge tone="neutral">{settings.app_name ?? "SIH26166"}</Badge>
-              {revReal.status === "BLOCKED" && (
-                <Badge tone="warn">Synthetic demonstration — not a real lunar observation</Badge>
-              )}
-            </div>
-            <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100">
-              Trustworthy <span className="text-lunar-400 text-glow">lunar image</span> intelligence
-              <span className="text-lunar-400"> — freeze complete</span>
-            </h2>
-            <p className="text-sm leading-relaxed text-muted">
-              {revEv.verify_status === "VERIFIED"
-                ? `Evidence experiment ${revEv.experiment_id} (pair ${revEv.pair_id}) is frozen and re-verified under digest ${(revEv.final_evidence_sha256 ?? "").slice(0, 16)}… ${revProv.missing_stages?.length ? `Provenance is PARTIAL / HOLD (M8, M9 open).` : "Provenance complete."}`
-                : "The published evidence package is being verified."}{" "}
-              Real mission validation is gated by authorized PRADAN access; physical accuracy is NOT_CLAIMED
-              without a reference dataset. Nothing below is simulated.
-            </p>
-            {releaseError && (
-              <p className="flex items-center gap-2 text-xs text-danger">
-                <Icon.Alert /> {String(releaseError.message)}
-              </p>
+      {/* M13 final release presentation — cinematic mission banner */}
+      <section className="panel relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute inset-0 grid-texture opacity-50" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden>
+          <OrbitalRings className="absolute -right-24 -top-40 h-[30rem] w-[30rem] max-w-none" />
+        </div>
+        <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 lg:block" aria-hidden>
+          <LunarDisc size={280} />
+        </div>
+        <div className="relative max-w-2xl space-y-3 pr-0 lg:pr-[15rem]">
+          <div className="flex flex-wrap items-center gap-2">
+            <MissionStamp />
+            <Badge tone="gold">CHANDRASUTRA v{rev} · M13 Final Release</Badge>
+            <Badge tone="neutral">{settings.app_name ?? "SIH26166"}</Badge>
+            {revReal.status === "BLOCKED" && (
+              <Badge tone="warn">Synthetic demonstration — not a real lunar observation</Badge>
             )}
           </div>
-          <div className="flex shrink-0 flex-wrap gap-3">
+          <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-3xl">
+            Trustworthy <span className="text-teal-300 text-glow">lunar image</span> intelligence
+            <span className="text-teal-300"> — freeze complete</span>
+          </h2>
+          <p className="text-sm leading-relaxed text-muted">
+            {revEv.verify_status === "VERIFIED"
+              ? `Evidence experiment ${revEv.experiment_id} (pair ${revEv.pair_id}) is frozen and re-verified under digest ${(revEv.final_evidence_sha256 ?? "").slice(0, 16)}… ${revProv.missing_stages?.length ? `Provenance is PARTIAL / HOLD (M8, M9 open).` : "Provenance complete."}`
+              : "The published evidence package is being verified."}{" "}
+            Real mission validation is gated by authorized PRADAN access; physical accuracy is NOT_CLAIMED
+            without a reference dataset. Nothing below is simulated.
+          </p>
+          {releaseError && (
+            <p className="flex items-center gap-2 text-xs text-danger">
+              <Icon.Alert /> {String(releaseError.message)}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3 pt-1">
             <button onClick={() => onNavigate("analysis")} className="btn-primary">
               <Icon.Activity className="h-4 w-4" /> Launch demonstration
             </button>
@@ -336,60 +343,65 @@ export default function Overview({ backend, onNavigate }) {
             </button>
           </div>
         </div>
+        <ScanLine className="absolute inset-x-0 top-0 h-full" />
       </section>
 
-      {/* Hero */}
-      <section className="flex flex-wrap items-start justify-between gap-6">
-        <div className="max-w-2xl space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="gold">Milestone M7 — Reproducible Metrics</Badge>
-            <Badge tone={metCompletePairs > 0 ? "ok" : metNotCompletePairs > 0 ? "warn" : regCompletePairs > 0 ? "blue" : regRegistered ? "blue" : spatialCompletePairs > 0 ? "blue" : trustedPairs > 0 ? "blue" : matchedTiles > 0 ? "blue" : readyInM2 > 0 ? "blue" : "neutral"}>
-              {metCompletePairs > 0
-                ? `Metrics complete — ${metCompletePairs} pair(s)`
-                : metNotCompletePairs > 0
-                  ? `${metNotCompletePairs} pair(s) without metrics — run Metrics`
-                  : regCompletePairs > 0
-                    ? "Registration complete — METRICS ready to run"
-                    : regRegistered
-                      ? `${regBlockedPairs} pair(s) blocked/insufficient — open Analysis`
-                      : spatialCompletePairs > 0
-                        ? "Spatial selection done — REGISTER ready to run"
-                        : trustedPairs > 0
-                          ? "Trusted evidence — SPATIAL ready to run"
-                          : matchedTiles > 0
-                            ? `${totalCandidates} candidates — TRUST not yet run`
-                            : readyInM2 > 0
-                              ? "Matcher-ready — matching can run"
-                              : "Awaiting documented geometry"}
-            </Badge>
+      {/* Hero — mission overview */}
+      <section className="panel relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute inset-0 grid-texture opacity-40" aria-hidden />
+        <div className="relative flex flex-wrap items-start justify-between gap-6">
+          <div className="max-w-2xl space-y-3">
+            <p className="eyebrow">Mission overview</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="gold">Milestone M7 — Reproducible Metrics</Badge>
+              <Badge tone={metCompletePairs > 0 ? "ok" : metNotCompletePairs > 0 ? "warn" : regCompletePairs > 0 ? "blue" : regRegistered ? "blue" : spatialCompletePairs > 0 ? "blue" : trustedPairs > 0 ? "blue" : matchedTiles > 0 ? "blue" : readyInM2 > 0 ? "blue" : "neutral"}>
+                {metCompletePairs > 0
+                  ? `Metrics complete — ${metCompletePairs} pair(s)`
+                  : metNotCompletePairs > 0
+                    ? `${metNotCompletePairs} pair(s) without metrics — run Metrics`
+                    : regCompletePairs > 0
+                      ? "Registration complete — METRICS ready to run"
+                      : regRegistered
+                        ? `${regBlockedPairs} pair(s) blocked/insufficient — open Analysis`
+                        : spatialCompletePairs > 0
+                          ? "Spatial selection done — REGISTER ready to run"
+                          : trustedPairs > 0
+                            ? "Trusted evidence — SPATIAL ready to run"
+                            : matchedTiles > 0
+                              ? `${totalCandidates} candidates — TRUST not yet run`
+                              : readyInM2 > 0
+                                ? "Matcher-ready — matching can run"
+                                : "Awaiting documented geometry"}
+              </Badge>
+            </div>
+            <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-[1.7rem]">
+              Trustworthy <span className="text-teal-300 text-glow">lunar image</span> intelligence
+            </h2>
+            <p className="text-sm leading-relaxed text-muted">
+              Real Chandrayaan-2 OHRC × TMC-2 pairs are hashed and validated in M1; M2 executes an
+              honest PREPARE — masks, overlap evidence, crops and per-tile conditions; M3 runs an
+              explainable adaptive matcher that records candidate correspondences as observations;
+              M4 independently verifies them geometrically through the Trust Gate; M5 then represents
+              the overlap scene as a reliability grid and selects evidence; M6 fits and validates a
+              transform on that M5-selected evidence and warps the source into the target sensor frame;
+              M7 produces quantitative metrics and reproducible experiment reports from the whole
+              evidence chain. Metrics are measurements, never a claim of scientific alignment.
+              Nothing is simulated.
+            </p>
           </div>
-          <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-[1.7rem]">
-            Trustworthy <span className="text-lunar-400 text-glow">lunar image</span> intelligence
-          </h2>
-          <p className="text-sm leading-relaxed text-muted">
-            Real Chandrayaan-2 OHRC × TMC-2 pairs are hashed and validated in M1; M2 executes an
-            honest PREPARE — masks, overlap evidence, crops and per-tile conditions; M3 runs an
-            explainable adaptive matcher that records candidate correspondences as observations;
-            M4 independently verifies them geometrically through the Trust Gate; M5 then represents
-            the overlap scene as a reliability grid and selects evidence; M6 fits and validates a
-            transform on that M5-selected evidence and warps the source into the target sensor frame;
-            M7 produces quantitative metrics and reproducible experiment reports from the whole
-            evidence chain. Metrics are measurements, never a claim of scientific alignment.
-            Nothing is simulated.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-3">
-          <button onClick={() => onNavigate("data")} className="btn-primary">
-            <Icon.Database className="h-4 w-4" /> {pairsRegistered > 0 ? "Open data workspace" : "Load & register pair"}
-          </button>
-          <button
-            onClick={() => setLockModal(true)}
-            className="btn-ghost"
-            disabled={!meta}
-            title="Opens Analysis — honest M2 PREPARE runs, the M3 adaptive matcher, the M4 Trust Gate, M5 spatial selection and the M6 verified registration"
-          >
-            <Icon.Activity className="h-4 w-4" /> Open Analysis
-          </button>
+          <div className="relative flex shrink-0 flex-wrap gap-3">
+            <button onClick={() => onNavigate("data")} className="btn-primary">
+              <Icon.Database className="h-4 w-4" /> {pairsRegistered > 0 ? "Open data workspace" : "Load & register pair"}
+            </button>
+            <button
+              onClick={() => setLockModal(true)}
+              className="btn-ghost"
+              disabled={!meta}
+              title="Opens Analysis — honest M2 PREPARE runs, the M3 adaptive matcher, the M4 Trust Gate, M5 spatial selection and the M6 verified registration"
+            >
+              <Icon.Activity className="h-4 w-4" /> Open Analysis
+            </button>
+          </div>
         </div>
       </section>
 

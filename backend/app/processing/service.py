@@ -118,7 +118,8 @@ class ProcessingService:
     # prepare lifecycle
     # ------------------------------------------------------------------
     def prepare(self, pair_id: str, *, configuration_id: str | None = None,
-                geometry: dict[str, Any] | None = None) -> dict[str, Any]:
+                geometry: dict[str, Any] | None = None,
+                stop_after: str | None = None) -> dict[str, Any]:
         record = PairRegistry(self.settings).get(pair_id)
         if record is None:
             raise NotFoundError(f"No pair with ID {pair_id} is registered.")
@@ -150,7 +151,7 @@ class ProcessingService:
                 "note": "",
             }
             try:
-                result = self._prepare_main(status, run, cfg, record, pair_id, geometry, budget)
+                result = self._prepare_main(status, run, cfg, record, pair_id, geometry, budget, stop_after)
                 record_run_event("m2_prepare", pair_id, cfg.configuration_id,
                                  status.get("state", "DONE"), elapsed_ms(started))
                 return result
@@ -160,7 +161,8 @@ class ProcessingService:
                 raise
 
     # ------------------------------------------------------------------
-    def _prepare_main(self, status, run, cfg, record, pair_id, geometry, budget) -> dict:
+    def _prepare_main(self, status, run, cfg, record, pair_id, geometry, budget,
+                      stop_after: str | None = None) -> dict:
         data_root = self.root
         stages = {s["id"]: s for s in status["stages"]}
         manifest = ManifestBuilder(
@@ -256,22 +258,55 @@ class ProcessingService:
         status["progress"] = 20
         self.write_status(status)
         self._check_timeout(budget, status, stages, manifest, run, "reading")
+        if stop_after == "reading":
+            return self._finish_stop(status, stages, manifest, run, "reading")
 
         # ---------------- stage 2: PREPROCESSING (mask + display) ---------
         stages["preprocessing"]["started_at"] = _now()
         stages["preprocessing"]["state"] = "running"
         manifest.begin_step("preprocessing", "Building invalid-data masks and display products")
         preprocessed: dict[str, dict[str, Any]] = {}
+        preprocessing_ops: list[dict[str, Any]] = []
         try:
             for p in product_infos:
                 info = p["info"]
                 array = _read_array(p["path"], info)
+                in_shape = list(array.shape)
+                in_dtype = str(array.dtype)
                 mask, mask_stats = build_invalid_mask(array, masking_params(cfg))
                 display, norm_stats = display_normalize(
                     array, mask,
                     low_pct=cfg.p("normalization", "display_low_percentile", default=1.0),
                     high_pct=cfg.p("normalization", "display_high_percentile", default=99.0),
                 )
+                preprocessing_ops.append({
+                    "product": p["side"].upper(),
+                    "operation": "read",
+                    "parameters": {"filename": info.filename, "label": info.label_filename},
+                    "input": {"shape": in_shape, "dtype": in_dtype},
+                    "output": {"shape": list(array.shape), "dtype": str(array.dtype)},
+                    "warnings": [info.error.get("message", "")] if info.error else [],
+                })
+                preprocessing_ops.append({
+                    "product": p["side"].upper(),
+                    "operation": "invalid_mask",
+                    "parameters": masking_params(cfg),
+                    "input": {"shape": in_shape, "dtype": in_dtype},
+                    "output": {"shape": list(mask.shape), "dtype": str(mask.dtype)},
+                    "warnings": [],
+                })
+                preprocessing_ops.append({
+                    "product": p["side"].upper(),
+                    "operation": "display_normalize",
+                    "parameters": {
+                        "low_percentile": cfg.p("normalization", "display_low_percentile", default=1.0),
+                        "high_percentile": cfg.p("normalization", "display_high_percentile", default=99.0),
+                        "radiometric_status": cfg.radiometric_status,
+                    },
+                    "input": {"shape": in_shape, "dtype": in_dtype, "mask": list(mask.shape)},
+                    "output": {"shape": list(display.shape), "dtype": str(display.dtype)},
+                    "warnings": [],
+                })
                 sensor_dir = run / p["sensor"]
                 sensor_dir.mkdir(parents=True, exist_ok=True)
                 display_path = sensor_dir / "preprocessed_display_u16.npy"
@@ -308,8 +343,28 @@ class ProcessingService:
             for side, pp in preprocessed.items()
         }
         status["progress"] = 45
+        ops_path = run / "preprocessing_ops.json"
+        self._write_json(ops_path, {
+            "configuration_id": cfg.configuration_id,
+            "operations": preprocessing_ops,
+            "summary": {
+                "operation_count": len(preprocessing_ops),
+                "products": sorted({o["product"] for o in preprocessing_ops}),
+                "deterministic": True,
+                "note": "Each operation lists its parameters plus input/output shape+dtype for auditability.",
+            },
+        })
+        status["preprocessing_ops"] = {"rel": rel_string(data_root, ops_path), "operation_count": len(preprocessing_ops)}
+        manifest.record(preprocessing={
+            "op_log_rel": rel_string(data_root, ops_path),
+            "operation_count": len(preprocessing_ops),
+            "deterministic": True,
+            "note": "Each operation logs parameters plus input/output shape+dtype for auditability.",
+        })
         self.write_status(status)
         self._check_timeout(budget, status, stages, manifest, run, "preprocessing")
+        if stop_after == "preprocessing":
+            return self._finish_stop(status, stages, manifest, run, "preprocessing")
 
         # ---------------- stage 3: PREPARING_OVERLAP ----------------------
         stages["preparing_overlap"]["started_at"] = _now()
@@ -557,6 +612,39 @@ class ProcessingService:
         exc = AppError(message, details={"stage": stage_id})
         exc.code = code
         raise exc
+
+    # ------------------------------------------------------------------
+    def _finish_stop(self, status, stages, manifest, run, stage_id: str) -> dict:
+        """Terminate a PREPARE run truthfully after a requested stage boundary.
+
+        Used for preprocess-only runs (``stop_after="preprocessing"``). The
+        run returns in terminal state PREPROCESSING and explicitly records
+        that the later stages (overlap/crop) were NOT attempted — nothing is
+        skipped silently or presented as complete.
+        """
+        progress = 45 if stage_id == "preprocessing" else 20
+        status["state"] = ProcessingState.PREPROCESSING.value if stage_id == "preprocessing" \
+            else ProcessingState.READING.value
+        status["state_label"] = STATE_LABELS[status["state"]]
+        status["progress"] = progress
+        status["finished_at"] = _now()
+        status["matcher_readiness"] = None
+        status["stopped_after"] = stage_id
+        status["mode"] = "preprocess_only"
+        stages["run"]["state"] = "complete"
+        stages["run"]["finished_at"] = status["finished_at"]
+        stages["run"]["detail"] = (
+            f"PREPARE run stopped truthfully after the {stage_id} stage "
+            "(stop_after request). Overlap/crop stages were not attempted."
+        )
+        status["note"] = (
+            "Preprocess-only run: reading + preprocessing produced masks, display products "
+            "and an auditable operation log. No overlap, crop, condition or matching claims were made."
+        )
+        manifest.finish_step(outputs=[], status="STOPPED")
+        manifest.write(self.manifest_path(status.get("pair_id", ""), status.get("configuration_id") or default_configuration_id()))
+        self.write_status(status)
+        return status
 
     # ------------------------------------------------------------------
     # read endpoints

@@ -47,7 +47,8 @@ export default function Account({ notify }) {
 
   return (
     <div className="space-y-6">
-      <section className="max-w-3xl space-y-2">
+      <section className="panel max-w-3xl space-y-2 p-5">
+        <p className="eyebrow">Crew Account · Session</p>
         <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">Account</h2>
         <p className="text-sm leading-relaxed text-muted">
           Your identity, session role and sign-in details. Passwords are verified against the

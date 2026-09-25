@@ -35,7 +35,7 @@ def _identity(current) -> dict[str, str] | None:
     return {"user_id": current.id, "username": current.username, "role": current.role}
 
 
-def _run(task: str, payload: AIRequest, current: CurrentUser) -> dict:
+def _run(task: str, payload: AIRequest, current: CurrentUser, *, full_evidence: bool = False) -> dict:
     return _assistant().execute(
         task=task,
         pair_id=payload.pair_id,
@@ -44,6 +44,7 @@ def _run(task: str, payload: AIRequest, current: CurrentUser) -> dict:
         session_id=payload.session_id,
         experiment_id=payload.experiment_id,
         executed_by=_identity(current),
+        full_evidence=full_evidence,
     )
 
 
@@ -105,3 +106,83 @@ def ai_chat(
     """Answer a user question about a pair, grounded in recorded evidence."""
     del service
     return _run(AITask.CHAT.value, payload or AIRequest(), current)
+
+
+# ---------------------------------------------------------------------------
+# M11 full-pipeline tasks (M11-EVIDENCE-001 packet over M1..M10)
+# ---------------------------------------------------------------------------
+@router.post("/explain-pipeline")
+def ai_explain_pipeline(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded M1..M10 pipeline analysis for a pair."""
+    del service
+    return _run("explain-pipeline", payload or AIRequest(), current, full_evidence=True)
+
+
+@router.post("/summarize-pipeline")
+def ai_summarize_pipeline(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Summarize the recorded M1..M10 pipeline evidence for a pair."""
+    del service
+    return _run("summarize-pipeline", payload or AIRequest(), current, full_evidence=True)
+
+
+@router.post("/explain-trust")
+def ai_explain_trust(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded M7 trust-gate decision for a pair."""
+    del service
+    return _run("explain-trust", payload or AIRequest(), current, full_evidence=True)
+
+
+@router.post("/explain-spatial")
+def ai_explain_spatial(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded M8 spatial-selection decision for a pair."""
+    del service
+    return _run("explain-spatial", payload or AIRequest(), current, full_evidence=True)
+
+
+@router.post("/explain-registration")
+def ai_explain_registration(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded M9 registration result for a pair."""
+    del service
+    return _run("explain-registration", payload or AIRequest(), current, full_evidence=True)
+
+
+@router.post("/explain-benchmark")
+def ai_explain_benchmark(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain the recorded M10 benchmark observations for a pair."""
+    del service
+    return _run("explain-benchmark", payload or AIRequest(), current, full_evidence=True)
+
+
+@router.post("/explain-abstention")
+def ai_explain_abstention(
+    service: AuthServiceDeps,
+    current: CurrentUser,
+    payload: AIRequest | None = Body(None),
+) -> dict:
+    """Explain recorded failure(s)/abstention(s) across M1..M10 for a pair."""
+    del service
+    return _run("explain-abstention", payload or AIRequest(), current, full_evidence=True)

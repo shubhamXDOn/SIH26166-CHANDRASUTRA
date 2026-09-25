@@ -35,6 +35,8 @@ export default function Data({ notify, onNavigate }) {
   const [trust, setTrust] = useState(null);
   const [spatial, setSpatial] = useState(null);
   const [registration, setRegistration] = useState(null);
+  const [m2Status, setM2Status] = useState(null);
+  const [m2Detail, setM2Detail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -44,10 +46,11 @@ export default function Data({ notify, onNavigate }) {
     () => async () => {
       setRefreshing(true);
       try {
-        const [s, sen, pl] = await Promise.all([apiGet("/data/status"), apiGet("/data/sensors"), apiGet("/pairs")]);
+        const [s, sen, pl, m2s] = await Promise.all([apiGet("/data/status"), apiGet("/data/sensors"), apiGet("/pairs"), apiGet("/data/m2-status")]);
         setStatus(s);
         setSensors(sen);
         setPairs(pl.pairs ?? []);
+        setM2Status(m2s);
         setError(null);
       } catch (e) {
         setError(e);
@@ -64,11 +67,12 @@ export default function Data({ notify, onNavigate }) {
     let alive = true;
     (async () => {
       try {
-        const [s, sen, pl] = await Promise.all([apiGet("/data/status"), apiGet("/data/sensors"), apiGet("/pairs")]);
+        const [s, sen, pl, m2s] = await Promise.all([apiGet("/data/status"), apiGet("/data/sensors"), apiGet("/pairs"), apiGet("/data/m2-status")]);
         if (!alive) return;
         setStatus(s);
         setSensors(sen);
         setPairs(pl.pairs ?? []);
+        setM2Status(m2s);
       } catch (e) {
         if (alive) setError(e);
       } finally {
@@ -122,6 +126,7 @@ export default function Data({ notify, onNavigate }) {
       setTrust(tr);
       setSpatial(sp);
       setRegistration(rg);
+      setM2Detail(null);
     } catch (e) {
       notify({ title: "Could not open pair", message: e.message, tone: "danger" });
     }
@@ -137,6 +142,43 @@ export default function Data({ notify, onNavigate }) {
       if (detail) setDetail(await apiGet(`/pairs/${selected}`));
     } catch (e) {
       notify({ title: "Validation failed", message: e.message, tone: "danger" });
+    }
+  }
+
+  async function runM2Validate() {
+    if (!selected) return;
+    try {
+      const v = await apiPost("/data/validate", { pair_id: selected });
+      setM2Detail(v);
+      notify({ title: `M2 validation · ${selected}`, message: `Status: ${v.validation_status} · overlap via ${v.overlap_method}${v.overlap_method === "none" ? "" : ""}.`, tone: v.validation_status === "VALID" ? "ok" : v.validation_status === "INVALID" ? "danger" : "warn" });
+      await load();
+    } catch (e) {
+      notify({ title: "M2 validation failed", message: e.message, tone: "danger" });
+    }
+  }
+
+  async function recomputeOverlap() {
+    if (!selected) return;
+    try {
+      const v = await apiPost(`/pairs/${selected}/overlap`);
+      setM2Detail(null);
+      notify({ title: `Overlap recomputed · ${selected}`, message: `${v.result.status} via ${v.result.method}.`, tone: v.result.status === "CONFIRMED_OVERLAP" ? "ok" : v.result.status === "OVERLAP_UNCONFIRMED" ? "warn" : "danger" });
+      if (detail) setDetail(await apiGet(`/pairs/${selected}`));
+      await load();
+    } catch (e) {
+      notify({ title: "Overlap recompute failed", message: e.message, tone: "danger" });
+    }
+  }
+
+  async function runPreprocess() {
+    if (!selected) return;
+    try {
+      const v = await apiPost(`/pairs/${selected}/preprocess`);
+      setProcessing(v.status);
+      notify({ title: `Preprocessing · ${selected}`, message: `${v.state}.`, tone: v.state === "PREPROCESSING" ? "ok" : v.state === "FAILED" ? "danger" : "warn" });
+      await load();
+    } catch (e) {
+      notify({ title: "Preprocessing failed", message: e.message, tone: "danger" });
     }
   }
 
@@ -161,7 +203,7 @@ export default function Data({ notify, onNavigate }) {
       {/* HEADER */}
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-lunar-400">CHANDRASUTRA</p>
+          <p className="eyebrow">Orbital Data Library · CHANDRASUTRA</p>
           <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">
             Lunar Data Workspace
           </h2>
@@ -181,11 +223,11 @@ export default function Data({ notify, onNavigate }) {
       </section>
 
       {/* A. DATA SOURCE */}
-      <section className="card p-5">
+      <section className="panel p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 text-sm font-bold text-slate-100">
-              <Icon.Database className="h-4 w-4 text-lunar-400" /> ISRO / ISSDC PRADAN
+              <Icon.Database className="h-4 w-4 text-teal-300" /> ISRO / ISSDC PRADAN
             </p>
             <p className="mt-1 text-xs text-muted">
               Chandrayaan-2 science data archive — OHRC (~0.25 m/px) &amp; TMC-2 (~5 m/px).
@@ -229,6 +271,10 @@ export default function Data({ notify, onNavigate }) {
             <p className="text-xs text-muted">
               {status.pairs_registered} registered · {status.pairs_valid} valid · {status.pairs_confirmed_overlap} confirmed overlap
             </p>
+            <p className="mt-1 text-[11px] text-muted">
+              M2 validation: {m2Status?.counts?.VALID ?? 0} valid · {m2Status?.counts?.OVERLAP_UNCONFIRMED ?? 0} unconfirmed · {m2Status?.counts?.INVALID ?? 0} invalid · {m2Status?.counts?.NOT_RUN ?? 0} not run
+              <span className="ml-2 text-slate-400">{m2Status?.real_data_gate?.status ?? "..."}</span>
+            </p>
           </div>
           <Badge tone={status.pairs_registered > 0 ? "ok" : "neutral"}>
             <StatusDot state={status.pairs_registered > 0 ? "ok" : "neutral"} /> {(status.first_pair_status?.pair_id ?? "none").replace("none", "no pair yet")}
@@ -258,28 +304,35 @@ export default function Data({ notify, onNavigate }) {
                   <th>Dimensions</th>
                   <th>GSD (nominal)</th>
                   <th>Overlap</th>
+                  <th>Source</th>
                   <th>Metadata</th>
                   <th>Status</th>
+                  <th>M2</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {pairs.map((p) => (
+                {pairs.map((p) => {
+                  const m2Row = m2Status?.pairs?.find((x) => x.pair_id === p.pair_id);
+                  return (
                   <tr key={p.pair_id} className="cursor-pointer" onClick={() => openDetail(p.pair_id)}>
                     <td className="font-mono text-xs font-semibold text-lunar-300">{p.pair_id}</td>
                     <td className="text-xs text-slate-200">{p.sensor_a} → {p.sensor_b}</td>
                     <td className="font-mono text-xs text-slate-300">{p.dimensions_a} · {p.dimensions_b}</td>
                     <td className="font-mono text-xs text-slate-300">{trimGsd(p.nominal_gsd_a)} · {trimGsd(p.nominal_gsd_b)}</td>
                     <td><OverlapBadge value={p.overlap_status} /></td>
+                    <td><SourceBadge value={p.data_source_gate} /></td>
                     <td className="font-mono text-xs text-slate-300">{Math.round((p.metadata_completeness?.fraction ?? 0) * 100)}%</td>
                     <td><Badge tone={p.validation_status === "VALID" ? "ok" : "neutral"}>{p.validation_status}</Badge></td>
+                    <td><M2Badge value={m2Row?.m2_validation ?? "NOT_RUN"} /></td>
                     <td className="text-right">
                       <button className="btn-ghost !px-2 !py-1 text-xs" onClick={(e) => { e.stopPropagation(); openDetail(p.pair_id); }}>
                         Inspect
                       </button>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -287,7 +340,7 @@ export default function Data({ notify, onNavigate }) {
       </section>
 
       {/* C+D+E. PAIR DETAIL */}
-      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} trust={trust} spatial={spatial} registration={registration} onValidate={runValidate} onNavigate={onNavigate} />}
+      {selected && detail && <PairInspection detail={detail} validation={validation} processing={processing} matching={matching} trust={trust} spatial={spatial} registration={registration} m2Detail={m2Detail} m2Row={m2Status?.pairs?.find((x) => x.pair_id === selected) ?? null} onValidate={runValidate} onRunM2Validate={runM2Validate} onRecomputeOverlap={recomputeOverlap} onPreprocess={runPreprocess} onNavigate={onNavigate} />}
 
       {/* Ingestion wizard */}
       {wizard && (
@@ -321,11 +374,33 @@ function OverlapBadge({ value }) {
   return <Badge tone={m.tone}>{m.label}</Badge>;
 }
 
+function M2Badge({ value }) {
+  const map = {
+    VALID: { tone: "ok", label: "M2 VALID" },
+    OVERLAP_UNCONFIRMED: { tone: "warn", label: "UNCONFIRMED" },
+    INVALID: { tone: "danger", label: "INVALID" },
+    NOT_RUN: { tone: "neutral", label: "not run" },
+  };
+  const m = map[value] ?? { tone: "neutral", label: value };
+  return <Badge tone={m.tone}>{m.label}</Badge>;
+}
+
+function SourceBadge({ value }) {
+  const map = {
+    PATH_A_REAL_DATA: { tone: "ok", label: "REAL PRADAN DATA" },
+    PATH_B_SYNTHETIC_ONLY: { tone: "warn", label: "SYNTHETIC TEST FIXTURE" },
+    PATH_UNKNOWN: { tone: "neutral", label: "Source unknown" },
+  };
+  const m = map[value] ?? map.PATH_UNKNOWN;
+  return <Badge tone={m.tone}>{m.label}</Badge>;
+}
+
 /* ------------------------------------------------------------------ */
 /* Pair inspection workspace                                           */
 /* ------------------------------------------------------------------ */
 
 function PairInspection({ detail, validation, processing, matching, trust, spatial, registration, onValidate, onNavigate }) {
+  const { canMutate } = useAuth();
   const r = detail.record;
   const comp = detail.completeness;
   const overlap = validation?.overlap ?? { status: r.overlap_status, evidence: r.overlap_evidence || "No evidence recorded." };
@@ -365,6 +440,7 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <SourceBadge value={r.data_source_gate} />
           <Badge tone={detail.record.validation_status === "VALID" ? "ok" : "warn"}>
             <StatusDot state={detail.record.validation_status === "VALID" ? "ok" : "warn"} /> {detail.record.validation_status}
           </Badge>
@@ -431,6 +507,19 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
           </p>
         )}
       </div>
+
+      {/* G. M2 VALIDATION */}
+      <M2ValidationCard
+        pairId={r.pair_id}
+        detail={m2Detail}
+        row={m2Row}
+        preprocessState={pState}
+        canMutate={canMutate}
+        opsCount={processing?.preprocessing_ops?.operation_count}
+        onRunM2Validate={onRunM2Validate}
+        onRecomputeOverlap={onRecomputeOverlap}
+        onPreprocess={onPreprocess}
+      />
 
       {rgState === "COMPLETE" && (
         <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
@@ -536,6 +625,72 @@ function PairInspection({ detail, validation, processing, matching, trust, spati
         </p>
       </div>
     </section>
+  );
+}
+
+function M2ValidationCard({ pairId, detail, row, preprocessState, canMutate, opsCount, onRunM2Validate, onRecomputeOverlap, onPreprocess }) {
+  const status = detail?.validation_status ?? row?.m2_validation ?? "NOT_RUN";
+  const tone = status === "VALID" ? "ok" : status === "INVALID" ? "danger" : status === "OVERLAP_UNCONFIRMED" ? "warn" : "neutral";
+  const overlapMethod = detail?.overlap_method ?? row?.overlap_method ?? "none";
+  const overlapReason = detail?.overlap_reason ?? "Not computed yet — run M2 validation.";
+
+  const cells = [
+    ["Raw integrity", detail?.raw_integrity ?? row?.raw_integrity ?? "NOT_RUN"],
+    ["Metadata validity", detail?.metadata_validity ?? "NOT_RUN"],
+    ["Footprint", detail?.footprint_status ?? "NOT_RUN"],
+    ["Binary A", detail?.product_a?.binary_consistency?.status ?? "—"],
+    ["Binary B", detail?.product_b?.binary_consistency?.status ?? "—"],
+    ["Preprocessing", preprocessState ?? "NOT_STARTED"],
+    ["Overlap method", overlapMethod || "none"],
+    ["Op log", opsCount != null ? `${opsCount} ops` : "—"],
+  ];
+
+  const warnings = detail?.validation_errors?.length
+    ? detail.validation_errors.map((e) => `${e.check}: ${e.detail}`)
+    : detail?.warnings ?? [];
+
+  return (
+    <div className="card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h4 className="text-sm font-bold text-slate-100">M2 validation</h4>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={tone}><StatusDot state={status === "VALID" ? "ok" : status === "INVALID" ? "fail" : status === "OVERLAP_UNCONFIRMED" ? "warn" : "neutral"} /> M2 {status}</Badge>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={onRunM2Validate} disabled={!canMutate}>
+            <Icon.Activity className="h-3.5 w-3.5" /> Run M2 validation
+          </button>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={onRecomputeOverlap} disabled={!canMutate}>
+            <Icon.Activity className="h-3.5 w-3.5" /> Recompute overlap
+          </button>
+          <button className="btn-ghost !px-3 !py-1.5 text-xs" onClick={onPreprocess} disabled={!canMutate}>
+            <Icon.Activity className="h-3.5 w-3.5" /> Preprocess only
+          </button>
+        </div>
+      </div>
+      <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+        {cells.map(([k, v]) => (
+          <li key={k} className="flex items-center justify-between gap-2 border-b border-white/[0.04] pb-1.5 text-xs">
+            <span className="text-muted">{k}</span>
+            <span className="font-mono text-slate-200">{v ?? "—"}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-[11px] leading-relaxed text-muted">
+        Overlap: <strong className="text-slate-200">{overlapMethod}</strong> — {overlapReason}
+      </p>
+      {warnings.length > 0 && (
+        <div className="mt-3 max-h-28 space-y-1 overflow-y-auto rounded-lg border border-warn/30 bg-warn/[0.06] p-3 text-[11px] leading-relaxed text-warn">
+          {warnings.map((w, i) => <p key={i}>· {w}</p>)}
+        </div>
+      )}
+      {!detail && status === "NOT_RUN" && (
+        <p className="mt-3 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-space-900/50 p-3 text-[11px] leading-relaxed text-muted">
+          <Icon.Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          No explicit M2 validation has been run for {pairId}. Run it to verify PDS4 label identity,
+          IMG/XML byte consistency, footprint evidence and structural overlap — results are persisted
+          under <code className="font-mono">data/metadata/m2_validation/</code>.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -792,7 +947,7 @@ function IngestionWizard({ notify, onClose, onRegistered }) {
               <ReviewProduct title="B · TMC-2" p={probing.b} />
             </div>
             <label className="flex items-center gap-2 text-[11px] text-muted">
-              <input type="checkbox" defaultChecked className="accent-lunar-400" /> I confirm these are the intended official products and the raw files remain unmodified.
+              <input type="checkbox" defaultChecked className="accent-teal-300" /> I confirm these are the intended official products and the raw files remain unmodified.
             </label>
             <button className="btn-primary w-full justify-center" onClick={register}>
               <Icon.Check className="h-4 w-4" /> Register {nextId} &amp; validate

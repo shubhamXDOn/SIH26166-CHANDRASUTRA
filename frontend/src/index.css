@@ -2,11 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    color-scheme: dark;
-  }
+/* ============================================================
+   CHANDRA SUTRA — mission design tokens (centralised)
+   Single source of truth for the cinematic research interface.
+   ============================================================ */
+:root {
+  --cs-bg: #030709;
+  --cs-surface: #081018;
+  --cs-surface-elevated: #0d1a23;
+  --cs-border: #1a3a3f;
+  --cs-text-primary: #e7f4f0;
+  --cs-text-secondary: #b0c4cb;
+  --cs-text-muted: #75858f;
+  --cs-teal: #1dab97;
+  --cs-teal-bright: #74e2cc;
+  --cs-cyan: #33b7dc;
+  --cs-green: #38d69c;
+  --cs-warning: #e8b25c;
+  --cs-danger: #f26d6d;
+  --cs-blocked: #c98a3d;
+  --cs-abstain: #6f7d8a;
+  --cs-glow: rgba(29, 171, 151, 0.35);
+  color-scheme: dark;
+}
 
+@layer base {
   html,
   body,
   #root {
@@ -16,32 +36,44 @@
   body {
     @apply bg-space-950 text-slate-200 antialiased;
     background-image:
-      radial-gradient(1100px 600px at 85% -10%, rgba(31, 41, 89, 0.35), transparent 60%),
-      radial-gradient(900px 500px at -10% 110%, rgba(88, 58, 24, 0.18), transparent 55%),
-      radial-gradient(1200px 700px at 50% 120%, rgba(12, 24, 48, 0.45), transparent 60%);
+      radial-gradient(1100px 620px at 85% -10%, rgba(23, 48, 63, 0.55), transparent 60%),
+      radial-gradient(900px 520px at -10% 110%, rgba(14, 60, 52, 0.26), transparent 55%),
+      radial-gradient(1200px 720px at 50% 120%, rgba(7, 18, 26, 0.5), transparent 60%);
     background-attachment: fixed;
   }
 
   ::selection {
-    background: rgba(230, 177, 87, 0.3);
+    background: rgba(29, 171, 151, 0.32);
     color: #fff;
   }
 
   /* Thin, subtle scrollbars */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #1b2a4c transparent;
+    scrollbar-color: #17303f transparent;
   }
   *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   *::-webkit-scrollbar-thumb {
-    background: #1b2a4c;
+    background: #17303f;
     border-radius: 8px;
   }
   *::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  /* Motion safety: never fight the user's OS setting. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -51,21 +83,30 @@
   }
 
   .card-hover {
-    @apply transition-all duration-200 hover:border-lunar-500/30 hover:shadow-glow;
+    @apply transition-all duration-200 hover:border-teal-400/35 hover:shadow-glow;
+  }
+
+  /* Instrument-panel frame used by the mission workstations */
+  .panel {
+    @apply rounded-xl border border-teal-500/15 bg-space-900/50 backdrop-blur;
+  }
+
+  .panel-ornament {
+    @apply border border-b-0 border-teal-500/15 bg-gradient-to-b from-space-800 to-space-900;
   }
 
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition
-      duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-lunar-400/70
+      duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
       active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-primary {
-    @apply btn bg-lunar-500 text-space-950 hover:bg-lunar-400;
+    @apply btn bg-teal-500 text-space-950 hover:bg-teal-400;
   }
 
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/[0.02] text-slate-200 hover:border-lunar-500/40
+    @apply btn border border-white/10 bg-white/[0.02] text-slate-200 hover:border-teal-400/40
       hover:bg-white/[0.05];
   }
 
@@ -74,17 +115,17 @@
   }
 
   .eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-lunar-400/90;
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-teal-400/90;
   }
 
   .input {
     @apply w-full rounded-lg border border-white/10 bg-space-900/70 px-3 py-2 text-sm text-slate-100
-      placeholder:text-muted/60 focus:border-lunar-500/50 focus:outline-none focus:ring-2
-      focus:ring-lunar-500/20;
+      placeholder:text-muted/60 focus:border-teal-400/50 focus:outline-none focus:ring-2
+      focus:ring-teal-400/20;
   }
 
   .skeleton {
-    @apply animate-shimmer rounded-md bg-[linear-gradient(90deg,#101a2e_0%,#1b2a4c_40%,#101a2e_80%)]
+    @apply animate-shimmer rounded-md bg-[linear-gradient(90deg,#0d1a23_0%,#17303f_40%,#0d1a23_80%)]
       bg-[length:200%_100%];
   }
 
@@ -102,6 +143,16 @@
 
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 18px rgba(230, 177, 87, 0.35);
+    text-shadow: 0 0 18px rgba(29, 171, 151, 0.35);
+  }
+  .text-glow-cyan {
+    text-shadow: 0 0 18px rgba(51, 183, 220, 0.35);
+  }
+  /* Faint mission grid texture for hero/prose surfaces */
+  .grid-texture {
+    background-image:
+      linear-gradient(rgba(29, 171, 151, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(29, 171, 151, 0.05) 1px, transparent 1px);
+    background-size: 34px 34px;
   }
 }

@@ -1,0 +1,67 @@
+{
+  "run_id": "m10-7fd1f100",
+  "created_at": "2026-09-23T12:37:52Z",
+  "registry": "M10-BMK-001",
+  "pair_id": "CS-P999",
+  "variant_id": "V4",
+  "state": "BLOCKED",
+  "stage": "registration",
+  "evidence": {
+    "pair_id": "CS-P999",
+    "stages": {
+      "input_gate": {
+        "stage": "input_gate",
+        "stage_observed": true
+      },
+      "matching": {
+        "stage": "matching",
+        "stage_observed": false,
+        "candidate_count": null,
+        "state": null,
+        "matcher_family": null,
+        "run_id": null
+      },
+      "trust_gate": {
+        "stage": "trust_gate",
+        "stage_observed": false,
+        "verified_count": null,
+        "inlier_count": null,
+        "state": null,
+        "run_id": null
+      },
+      "spatial_selection": {
+        "stage": "spatial_selection",
+        "stage_observed": false,
+        "selected_count": null,
+        "state": null,
+        "run_id": null
+      },
+      "registration": {
+        "stage": "registration",
+        "stage_observed": false,
+        "registered_count": null,
+        "registration_rmse_px": null,
+        "registration_p95_px": null,
+        "state": null,
+        "run_id": null
+      }
+    }
+  },
+  "metrics": {
+    "candidate_count": null,
+    "verified_count": null,
+    "inlier_count": null,
+    "selected_count": null,
+    "registered_count": null,
+    "registration_rmse_px": null,
+    "registration_p95_px": null
+  },
+  "ablation": "none",
+  "availability": "AVAILABLE",
+  "notes": null,
+  "reference_status": {
+    "value": "REFERENCE_UNAVAILABLE",
+    "note": "No real OHRC/TMC-2 PRADAN products provisioned; benchmark is BLOCKED_PENDING_OPERATOR_DATA until they exist."
+  },
+  "no_claim": true
+}

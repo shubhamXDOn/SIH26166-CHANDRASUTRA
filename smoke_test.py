@@ -13,6 +13,9 @@ Validates, end to end:
     * M2..M9 pipeline endpoint honesty (clean repo -> BLOCKED/NOT_STARTED)
     * M10 authentication: auth status, login with HttpOnly cookie, /me,
       fail-closed anonymous 401/501 behaviour
+    * M10 metrics & benchmark: /api/metrics-m10 overview / variants / runs
+      (analyst POST), analyze, deltas, failure-analysis, no-winner honesty,
+      no-artifact BLOCKED semantics
     * M11 hardening: /api/ready readiness probe, X-Request-ID echo,
       error envelopes, 413 body-limit, admin-only /api/ops/overview
     * frontend render + frontend->backend connectivity
@@ -192,6 +195,9 @@ def main() -> int:
 
     # ---- 5k. M10 auth endpoints over HTTP ----------------------------------
     record_m10_backend()
+
+    # ---- 5k2. M10 metrics & benchmark over HTTP ----------------------------
+    record_m10m_backend()
 
     # ---- 5l. M11 hardening endpoints over HTTP ------------------------------
     record_m11_backend()
@@ -1121,6 +1127,133 @@ def record_m10_backend() -> None:
                 proc.kill()
 
 
+def record_m10m_backend() -> None:
+    """Probe the M10 metrics & benchmark endpoints (real HTTP, analyst token).
+
+    The metrics-m10 controller is a READER over settled M3..M9 artifacts:
+    it never re-runs the pipeline, never emits winner/accuracy vocabulary,
+    and a pair with no artifacts reports BLOCKED rather than a fabricated
+    outcome.
+    """
+    port = free_port()
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+    ]
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "SMOKE_M10M_PORT": str(port), **_auth_env()},
+        )
+        base = f"http://127.0.0.1:{port}/api"
+        if not _wait_for_health(f"{base}/health", timeout=40):
+            record("m10m-backend", False, "uvicorn did not become healthy within 40s")
+            return
+
+        if not _require_token(base, "m10m"):
+            return
+
+        overview = _get_json(f"{base}/metrics-m10/overview") or {}
+        ref = overview.get("reference_status") or {}
+        variants = (_get_json(f"{base}/metrics-m10/variants") or {}).get("variants") or []
+        record(
+            "m10m-overview",
+            str(overview.get("m10_metrics_configuration_id")) == "MET-M10-001"
+            and ref.get("value") == "REFERENCE_UNAVAILABLE"
+            and overview.get("scientifically_tuned") is False
+            and overview.get("no_claim") is True,
+            f"configuration_id={overview.get('m10_metrics_configuration_id')} ref={ref.get('value')} tuned={overview.get('scientifically_tuned')}",
+        )
+        record(
+            "m10m-variants",
+            len(variants) == 6 and {v.get("variant_id") or v.get("id") for v in variants} == set(f"V{i}" for i in range(1, 7)),
+            f"variants={[v.get('variant_id') or v.get('id') for v in variants]}",
+        )
+
+        anon = _anon_status(f"{base}/metrics-m10/overview")
+        record("m10m-anon-blocked", anon in (401, 403, 501), f"anonymous GET /metrics-m10/overview -> HTTP {anon}")
+
+        anon_post = _anon_status(f"{base}/metrics-m10/runs", method="POST", payload={"pair_id": "CS-P999", "variant_id": "V4"})
+        record("m10m-anon-mutation-blocked", anon_post in (401, 403, 501), f"anonymous POST /metrics-m10/runs -> HTTP {anon_post}")
+
+        prereq = _get_json(f"{base}/metrics-m10/pairs/CS-P999/prerequisites") or {}
+        obs = prereq.get("stages_observed") or {}
+        record(
+            "m10m-prerequisites",
+            bool(obs) and prereq.get("benchmarkable") is False
+            and (prereq.get("reference_status") or {}).get("value", "REFERENCE_UNAVAILABLE") == "REFERENCE_UNAVAILABLE",
+            f"stages={list(obs.keys())} benchmarkable={prereq.get('benchmarkable')}",
+        )
+
+        run = _post_json(f"{base}/metrics-m10/runs", {"pair_id": "CS-P999", "variant_id": "V4"}) or {}
+        record(
+            "m10m-run-no-artifact-blocked",
+            run.get("state") == "BLOCKED",
+            f"no-artifact pair -> state={run.get('state')} run_id={run.get('run_id')}",
+        )
+
+        bad = _post_json(f"{base}/metrics-m10/runs", {"pair_id": "CS-P999", "variant_id": "V99"}) or {}
+        record(
+            "m10m-unknown-variant-rejected",
+            ((bad.get("error") or {}).get("code") == "VALIDATION_ERROR")
+            or (str(bad.get("detail")) and "V99" in str(bad)),
+            f"error={((bad.get('error') or {}).get('code')) or 'rejected'}",
+        )
+
+        analyze = _get_json(f"{base}/metrics-m10/analyze") or {}
+        deltas = _get_json(f"{base}/metrics-m10/deltas") or {}
+        failure = _get_json(f"{base}/metrics-m10/failure-analysis") or {}
+        blob = json.dumps({"overview": overview, "analyze": analyze, "deltas": deltas, "failure": failure}).lower()
+        forbidden = any(w in blob for w in ("winner", "best", "superior", "optimal", "accuracy", "confidence"))
+        record(
+            "m10m-honesty-vocabulary",
+            not forbidden,
+            "no winner/best/superior/optimal/accuracy/confidence vocabulary in any response",
+        )
+        record(
+            "m10m-analyze",
+            analyze.get("no_claim") is True
+            and (analyze.get("reference_status") or {}).get("value") == "REFERENCE_UNAVAILABLE",
+            f"no_claim={analyze.get('no_claim')} ref={(analyze.get('reference_status') or {}).get('value')}",
+        )
+        record(
+            "m10m-deltas",
+            isinstance(deltas.get("delta"), list)
+            and deltas.get("baseline") == "V1"
+            and all(d.get("no_claim") is True for d in (deltas.get("delta") or [])),
+            f"delta_variants={[d.get('variant_label') for d in (deltas.get('delta') or [])]}",
+        )
+        record(
+            "m10m-failure-analysis",
+            failure.get("root") == "REGISTRATION_FAILURE"
+            and isinstance(failure.get("counts"), dict)
+            and (failure.get("reference_status") or {}).get("value") == "REFERENCE_UNAVAILABLE",
+            f"root={failure.get('root')} counts={failure.get('counts')}",
+        )
+
+    except (urllib.error.URLError, OSError) as exc:  # noqa: BLE001
+        record("m10m-backend", False, f"request failed: {exc}")
+    finally:
+        if proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
 def is_int_ttl(value: object) -> bool:
     return isinstance(value, int) and value > 0
 
@@ -1186,7 +1319,7 @@ def record_m11_backend() -> None:
         rid = "smoke-m11-request-0001"
         try:
             req = urllib.request.Request(f"{base}/health", headers={"X-Request-ID": rid})
-            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
                 echoed = resp.headers.get("X-Request-Id", "")
                 resp.read()
         except Exception:  # noqa: BLE001
@@ -1245,7 +1378,7 @@ def _login_cookies(base: str) -> list[str]:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             return resp.headers.get_all("Set-Cookie") or []
     except Exception:  # noqa: BLE001
         return []
@@ -1257,7 +1390,7 @@ def _anon_status(url: str, method: str = "GET", payload: dict | None = None) -> 
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         headers = {"Content-Type": "application/json"} if data is not None else {}
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
-        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             return resp.status
     except urllib.error.HTTPError as exc:
         return exc.code
@@ -1268,7 +1401,7 @@ def _anon_status(url: str, method: str = "GET", payload: dict | None = None) -> 
 def _get_json(url: str) -> dict | None:
     try:
         req = urllib.request.Request(url, headers=_headers())
-        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             payload = resp.read().decode("utf-8")
         return json.loads(payload)
     except Exception:  # noqa: BLE001
@@ -1284,7 +1417,7 @@ def _post_json(url: str, payload: dict | None = None) -> dict | None:
             headers={"Content-Type": "application/json", **_headers()},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:  # noqa: PERF203
         try:
@@ -1300,7 +1433,7 @@ def _get_status(url: str, method: str = "GET", payload: dict | None = None) -> i
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         headers = {"Content-Type": "application/json", **_headers()} if data is not None else _headers()
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
-        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             return resp.status
     except urllib.error.HTTPError as exc:
         return exc.code

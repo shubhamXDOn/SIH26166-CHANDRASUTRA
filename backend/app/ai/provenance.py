@@ -39,10 +39,14 @@ def build_m9_provenance(
     pipeline_state: dict[str, str] | None = None,
     evidence_packet_schema: str | None = None,
     executed_by: dict[str, str] | None = None,
+    source_gate: dict[str, str] | None = None,
+    reference_status: str | None = None,
+    validation_result: str | None = None,
+    milestone: str = "M9",
 ) -> dict[str, Any]:
     """Return a serializable provenance node (no file I/O)."""
     node: dict[str, Any] = {
-        "milestone": "M9",
+        "milestone": milestone,
         "pair_id": pair_id,
         "request_id": request_id,
         "configuration_id": ai_config.configuration_id,
@@ -67,6 +71,12 @@ def build_m9_provenance(
         },
         "pipeline_state": dict(pipeline_state) if pipeline_state else {},
     }
+    if source_gate:
+        node["source_gate"] = dict(source_gate)
+    if reference_status:
+        node["reference_status"] = str(reference_status)
+    if validation_result:
+        node["validation_result"] = str(validation_result)
     if executed_by:
         # identity is contextual provenance, never part of scientific digests
         node["executed_by"] = {

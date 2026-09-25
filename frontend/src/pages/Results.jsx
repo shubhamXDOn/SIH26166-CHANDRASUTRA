@@ -3,21 +3,25 @@ import { Badge, EmptyState, Icon } from "../components/ui.jsx";
 export default function Results() {
   return (
     <div className="space-y-6">
-      <section className="max-w-3xl space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">Results</h2>
-        <p className="text-sm leading-relaxed text-muted">
-          Registration outcomes, matched-candidate observations, Trust Gate states, spatial
-          reliability results and metrics will be reported here — only from real experiments, never
-          fabricated or edited by hand. M3 records{" "}
-          <strong className="text-slate-200">candidate correspondences as observations</strong>; how many
-          survive explicit filtering, which strategy was routed and why. M4 then applies the{" "}
-          <strong className="text-slate-200">Trust Gate</strong> — deterministic geometric verification — and
-          either accepts a tile as verified spatial evidence or rejects it with structured reasons.
-          M5 represents the overlap scene as a{" "}
-          <strong className="text-slate-200">spatial reliability grid</strong> and selects a supported
-          reliability region; M6 fits and validates a transform on that evidence and produces the{" "}
-          <strong className="text-slate-200">registered product</strong>.
-        </p>
+      <section className="panel relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 grid-texture opacity-40" aria-hidden />
+        <div className="relative max-w-3xl space-y-2">
+          <p className="eyebrow">Experiment Results · Outcomes</p>
+          <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">Results</h2>
+          <p className="text-sm leading-relaxed text-muted">
+            Registration outcomes, matched-candidate observations, Trust Gate states, spatial
+            reliability results and metrics will be reported here — only from real experiments, never
+            fabricated or edited by hand. M3 records{" "}
+            <strong className="text-slate-200">candidate correspondences as observations</strong>; how many
+            survive explicit filtering, which strategy was routed and why. M4 then applies the{" "}
+            <strong className="text-slate-200">Trust Gate</strong> — deterministic geometric verification — and
+            either accepts a tile as verified spatial evidence or rejects it with structured reasons.
+            M5 represents the overlap scene as a{" "}
+            <strong className="text-slate-200">spatial reliability grid</strong> and selects a supported
+            reliability region; M6 fits and validates a transform on that evidence and produces the{" "}
+            <strong className="text-slate-200">registered product</strong>.
+          </p>
+        </div>
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

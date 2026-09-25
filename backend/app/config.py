@@ -228,6 +228,7 @@ class PipelineConfig(BaseModel):
     m1: dict[str, Any] = Field(default_factory=dict)
     m2: dict[str, Any] = Field(default_factory=dict)
     m3: dict[str, Any] = Field(default_factory=dict)
+    m3_baseline: dict[str, Any] = Field(default_factory=dict)
     m4: dict[str, Any] = Field(default_factory=dict)
     m5: dict[str, Any] = Field(default_factory=dict)
     m6: dict[str, Any] = Field(default_factory=dict)
@@ -267,6 +268,7 @@ def load_pipeline_config(path: Path | None = None) -> PipelineConfig:
     raw.setdefault("m1", {})
     raw.setdefault("m2", {})
     raw.setdefault("m3", {})
+    raw.setdefault("m3_baseline", {})
     raw.setdefault("m4", {})
     raw.setdefault("m5", {})
     raw.setdefault("m6", {})
@@ -463,6 +465,81 @@ _M3_DEFAULTS: dict[str, Any] = {
 }
 
 
+@lru_cache(maxsize=1)
+def m3_baseline_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M3 BASELINE settings from configs/app.yaml.
+
+    Mirrors ``m3_config``: cached per process, falls back to documented
+    defaults when the YAML is unavailable, and never raises on parse.
+    The embedded ``configuration_id`` is the stable M3 Baseline Matcher
+    Configuration ID (MB-M3-001).
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m3_baseline") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "configuration_id": _M3B_DEFAULTS["configuration_id"],
+        "configuration_version": _M3B_DEFAULTS["configuration_version"],
+        "name": _M3B_DEFAULTS["name"],
+        "derived_rel": _M3B_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M3B_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    return merged
+
+
+_M3B_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "MB-M3-001",
+    "configuration_version": 1,
+    "name": "Classical Baseline Matcher — Candidate Correspondences (SIFT · AKAZE · ORB)",
+    "derived_rel": "metadata/m3_matching",
+    "defaults": {
+        "execution": {
+            "max_runtime_seconds": 60,
+            "max_image_dimension": 2048,
+            "max_features": 4000,
+            "border_margin_px": 0,
+        },
+        "visualization": {
+            "enabled": True,
+            "max_lines": 120,
+            "max_side_px": 960,
+        },
+        "sift": {
+            "detector": {
+                "nfeatures": 2000, "n_octave_layers": 3,
+                "contrast_threshold": 0.04, "edge_threshold": 10, "sigma": 1.6,
+            },
+            "matching": {"cross_check": True, "ratio_threshold": 0.8, "max_distance": 350},
+        },
+        "akaze": {
+            "detector": {
+                "descriptor": "MLDB", "descriptor_size": 0, "descriptor_channels": 3,
+                "threshold": 0.001, "n_octaves": 4, "n_octave_layers": 4,
+                "diffusivity": "PM_G2",
+            },
+            "matching": {"cross_check": True, "ratio_threshold": 0.8, "max_distance": 100},
+        },
+        "orb": {
+            "detector": {
+                "nfeatures": 2000, "scale_factor": 1.2, "nlevels": 8,
+                "edge_threshold": 31, "fast_threshold": 20,
+            },
+            "matching": {"cross_check": True, "ratio_threshold": 0.85, "max_distance": 60},
+        },
+    },
+}
+
+
 _M4_DEFAULTS: dict[str, Any] = {
     "trust_configuration_id": "TG-M4-001",
     "trust_configuration_version": 1,
@@ -581,6 +658,105 @@ def m5_config(path: Path | None = None) -> dict[str, Any]:
     return merged
 
 
+_M5C_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "CE-M5-001",
+    "configuration_version": 1,
+    "name": "Condition Estimator — Pair-Level Condition & Difficulty Characterization (Pre-Matcher-Selection Layer)",
+    "source_reference": "SIH26166 M5 spec — engineering defaults; no scientifically tuned thresholds. Evaluated before any matcher selection; this layer never selects, recommends or routes a matcher.",
+    "derived_rel": "metadata/m5_condition",
+    "scientifically_tuned": False,
+    "defaults": {
+        "execution": {"max_runtime_seconds": 120},
+        "sampling": {
+            "window_size_px": 256, "stride_px": 128,
+            "seed": 20260922, "max_windows": 1024,
+            "require_full_windows": False,
+        },
+        "texture": {
+            "sobel_kernel_size_px": 3,
+            "canny": {
+                "enabled": True, "min_threshold": 50, "max_threshold": 150,
+                "aperture_size_px": 3, "l2gradient": False,
+            },
+            "laplacian_kernel_size_px": 3,
+        },
+        "appearance": {
+            "histogram_bins": 256,
+            "robust_percentiles": [5, 50, 95],
+            "normalise": "l1",
+            "constant_std_dn_tolerance": 1.0,
+            "constant_range_dn_tolerance": 4.0,
+        },
+        "invalid_mask": {"enabled": True},
+        "saturation": {"enabled": True},
+        "histogram_distance": {"enabled": True, "metric": "chi_square"},
+        "scale": {
+            "native_dimensions": True,
+            "effective_processing_dimensions": True,
+            "gsd": {
+                "enabled": True,
+                "source_order": ["RECORDED_GEOMETRY", "PDS4_LABEL", "NOMINAL_SENSOR"],
+                "fallback": "UNKNOWN",
+            },
+        },
+        "matcher_observations": {
+            "enabled": True,
+            "latest_baseline": True,
+            "baseline_configuration": "MB-M3-001",
+        },
+        "data_gate": {"require_real": False},
+        "classification": {
+            "scientifically_tuned": False,
+            "note": "Engineering-level ordinal bins (LOW/MEDIUM/HIGH) with explicit thresholds recorded in every artifact. Reproducible labels for engineering use only — never a scientific quality verdict and never an input to matcher selection in this layer.",
+            "textural_complexity": {
+                "enabled": True, "metric": "laplacian_variance",
+                "low_lt": 25.0, "high_ge": 150.0,
+            },
+            "dynamic_range": {
+                "enabled": True, "metric": "p95_minus_p5_dn",
+                "low_lt": 40.0, "high_ge": 300.0,
+            },
+            "invalid_fraction": {
+                "enabled": True, "low_lt": 0.05, "high_ge": 0.30,
+            },
+        },
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m5_condition_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M5 CONDITION ESTIMATOR settings.
+
+    Mirrors ``m4_deep_config``/``m5_config``: cached per process, falls back
+    to documented defaults when the YAML is unavailable, and never raises on
+    parse. The embedded ``configuration_id`` is the stable Condition
+    Estimator Configuration ID (CE-M5-001), distinct from the M5 spatial
+    reliability configuration (SR-M5-001).
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m5_condition") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged: dict[str, Any] = {
+        "configuration_id": _M5C_DEFAULTS["configuration_id"],
+        "configuration_version": _M5C_DEFAULTS["configuration_version"],
+        "name": _M5C_DEFAULTS["name"],
+        "derived_rel": _M5C_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M5C_DEFAULTS["defaults"], section.get("defaults") or {}),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
+    return merged
+
+
 _M6_DEFAULTS: dict[str, Any] = {
     "registration_configuration_id": "RG-M6-001",
     "registration_configuration_version": 1,
@@ -653,6 +829,224 @@ def m6_config(path: Path | None = None) -> dict[str, Any]:
     }
     merged.update({k: v for k, v in section.items() if k != "defaults"})
     merged["source"] = str(config_path)
+    return merged
+
+
+_M6R_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "AR-M6-001",
+    "configuration_version": 1,
+    "name": "Adaptive Matcher Router — Deterministic, Evidence-based Matcher Selection",
+    "source_reference": "SIH26166 M6 spec - deterministic rule-driven routing over M5 condition facts; engineering/policy defaults (scientifically_tuned: false); never a scientific accuracy claim.",
+    "derived_rel": "metadata/m6_routing",
+    "scientifically_tuned": False,
+    "defaults": {
+        "modes": ["ADAPTIVE", "FIXED_BASELINE"],
+        "default_mode": "ADAPTIVE",
+        "forbidden_vocabulary": [
+            "selected_matcher", "recommended_matcher", "best_matcher",
+            "routing_decision", "confidence",
+        ],
+        "execution": {"max_runtime_seconds": 60, "max_fallback_attempts": 1},
+        "fallback": {
+            "resolved_by": "capability",
+            "primary_unavailable_action": "USE_CONFIGURED_FALLBACK",
+            "empty_candidate_output_action": "USE_CONFIGURED_FALLBACK",
+            "failed_run_action": "USE_CONFIGURED_FALLBACK",
+        },
+        "policy": {
+            "appearance": {"difference_low_lt": 0.25, "difference_high_ge": 0.55},
+            "scale": {"gsd_ratio_medium_ge": 1.35, "gsd_ratio_large_ge": 2.0},
+        },
+        "matchers": {
+            "classical": {"sift": True, "orb": True, "akaze": True},
+            "deep": {"superpoint_superglue": True, "loftr": True},
+        },
+        "rules": [
+            {
+                "id": "R-PRE-A", "priority": 100,
+                "modes": ["ADAPTIVE", "FIXED_BASELINE"], "match": "all",
+                "when": [{"field": "processing_ready", "operator": "equals", "value": False}],
+                "action": "BLOCKED", "error_code": "PROCESSING_NOT_RUN",
+                "explanation": "M2 validated products are not READY_FOR_MATCHING; routing cannot consume non-existent validated products.",
+            },
+            {
+                "id": "R-PRE-B", "priority": 90,
+                "modes": ["ADAPTIVE"], "match": "all",
+                "when": [{"field": "condition_profile_available", "operator": "equals", "value": False}],
+                "action": "BLOCKED", "error_code": "CONDITION_NOT_AVAILABLE",
+                "explanation": "ADAPTIVE routing requires a SUCCESS M5 condition profile; the decision is blocked until one exists.",
+            },
+            {
+                "id": "R-FX-001", "priority": 70,
+                "modes": ["FIXED_BASELINE"], "match": "all",
+                "when": [],
+                "action": "ROUTED", "primary_matcher": "sift", "fallback_matcher": "orb",
+                "explanation": "Fixed-baseline ablation arm: the matcher route is predetermined and condition facts are intentionally not inspected.",
+            },
+            {
+                "id": "R-DEEP-001", "priority": 50,
+                "modes": ["ADAPTIVE"], "match": "any",
+                "when": [
+                    {"field": "pair.texture_complexity_high", "operator": "equals", "value": True},
+                    {"field": "pair.appearance_difference_high", "operator": "equals", "value": True},
+                    {"field": "pair.gsd_ratio_large", "operator": "equals", "value": True},
+                ],
+                "action": "ROUTED", "primary_matcher": "superpoint_superglue", "fallback_matcher": "sift",
+                "explanation": "High textural complexity, large appearance difference or a large recorded scale gap -> strong deep matcher with a classical fallback.",
+            },
+            {
+                "id": "R-CLASS-001", "priority": 40,
+                "modes": ["ADAPTIVE"], "match": "all",
+                "when": [
+                    {"field": "pair.texture_complexity_low", "operator": "equals", "value": True},
+                    {"field": "pair.appearance_difference_low", "operator": "equals", "value": True},
+                    {"field": "pair.gsd_ratio_large", "operator": "equals", "value": False},
+                ],
+                "action": "ROUTED", "primary_matcher": "sift", "fallback_matcher": "orb",
+                "explanation": "Low textural complexity, low appearance difference and no large recorded scale gap -> classical baseline route.",
+            },
+            {
+                "id": "R-DFT-001", "priority": 10,
+                "modes": ["ADAPTIVE"], "match": "all",
+                "when": [],
+                "action": "ROUTED", "primary_matcher": "sift", "fallback_matcher": "orb",
+                "explanation": "Deterministic default route when no more specific rule matches.",
+            },
+        ],
+        "route_reasons": {
+            "primary_unavailable": "PRIMARY_MATCHER_UNAVAILABLE",
+            "empty_candidate_output": "EMPTY_CANDIDATE_OUTPUT",
+            "failed_run": "FAILED_RUN",
+            "no_available_matcher": "NO_AVAILABLE_MATCHER",
+        },
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m6_routing_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M6 ADAPTIVE ROUTER settings.
+
+    Mirrors ``m5_condition_config``: cached per process, falls back to the
+    documented ``_M6R_DEFAULTS`` when the YAML is unavailable, and never
+    raises on parse. The embedded ``configuration_id`` is the stable M6
+    Adaptive Router Configuration ID (AR-M6-001).
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m6_routing") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged: dict[str, Any] = {
+        "configuration_id": _M6R_DEFAULTS["configuration_id"],
+        "configuration_version": _M6R_DEFAULTS["configuration_version"],
+        "name": _M6R_DEFAULTS["name"],
+        "source_reference": _M6R_DEFAULTS["source_reference"],
+        "derived_rel": _M6R_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M6R_DEFAULTS["defaults"], section.get("defaults") or {}),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
+    return merged
+
+
+_M7T_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "TG-M7-001",
+    "configuration_version": 1,
+    "name": "Trust Gate — Geometric Verification of Candidate Correspondences",
+    "source_reference": (
+        "SIH26166 M7 spec - conservative, reproducible, auditable gate over M3/M4/M6 "
+        "matcher run candidate correspondences; engineering defaults "
+        "(scientifically_tuned: false); never a physical-accuracy or registration claim."
+    ),
+    "derived_rel": "metadata/m7_trust",
+    "scientifically_tuned": False,
+    "defaults": {
+        "decision": {
+            "zero_candidates": "ABSTAIN",
+            "min_candidates": 8,
+            "min_inliers": 8,
+            "min_inlier_ratio": 0.30,
+            "max_residual_rmse_px": 8.0,
+            "max_residual_median_px": 5.0,
+            "max_residual_p95_px": 12.0,
+            "max_runtime_seconds": 60,
+            "scientifically_tuned": False,
+        },
+        "geometry": {
+            "models": ["affine", "homography"],
+            "preferred_model": "affine",
+            "attempt_hierarchy": True,
+            "ransac": {
+                "max_iterations": 2000,
+                "inlier_threshold_px": 4.0,
+                "confidence_parameter": 0.99,
+                "seed": 20260923,
+            },
+        },
+        "degeneracy": {
+            "min_unique_points": 6,
+            "max_condition_number": 1e6,
+        },
+        "spatial_sanity": {
+            "min_extent_px": 5.0,
+            "strip_ratio_warn": 0.02,
+        },
+        "duplicates": {
+            "policy": "keep_first_record_counts",
+        },
+        "resource": {
+            "max_candidates": 500000,
+        },
+        "reference_status": "REFERENCE_UNAVAILABLE",
+        "forbidden_vocabulary": [
+            "confidence",
+            "final_confidence",
+            "best",
+            "winner",
+            "superior",
+        ],
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m7_trust_gate_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M7 TRUST GATE settings from configs/app.yaml.
+
+    Mirrors ``m6_routing_config``: cached per process, falls back to the
+    documented ``_M7T_DEFAULTS`` when the YAML is unavailable, and never
+    raises on parse. The embedded ``configuration_id`` is the stable M7
+    Trust Gate Configuration ID (TG-M7-001). Every threshold carries
+    ``scientifically_tuned: false``.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m7_trust_gate") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged: dict[str, Any] = {
+        "configuration_id": _M7T_DEFAULTS["configuration_id"],
+        "configuration_version": _M7T_DEFAULTS["configuration_version"],
+        "name": _M7T_DEFAULTS["name"],
+        "source_reference": _M7T_DEFAULTS["source_reference"],
+        "derived_rel": _M7T_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M7T_DEFAULTS["defaults"], section.get("defaults") or {}),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
     return merged
 
 
@@ -791,6 +1185,248 @@ def m8_config(path: Path | None = None) -> dict[str, Any]:
     return merged
 
 
+_M8S_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "SR-M8-001",
+    "configuration_version": 1,
+    "name": "Spatial Reliability & Balanced Correspondence Selection",
+    "source_reference": (
+        "SIH26166 M8 spec — deterministic spatial bookkeeping over ACCEPTED M7 "
+        "trusted correspondences; engineering defaults (scientifically_tuned: false); "
+        "never an accuracy, probability or registration claim and never an override "
+        "of the M7 verdict."
+    ),
+    "derived_rel": "metadata/m8_spatial",
+    "scientifically_tuned": False,
+    "defaults": {
+        "grid": {"rows": 8, "cols": 8, "edge_policy": "REPORT_ONLY"},
+        "selection": {
+            "policy": "GRID_BALANCED",
+            "max_selected": 4000,
+            "min_trusted": 4,
+            "min_selected": 1,
+            "min_per_occupied_cell": 1,
+            "min_occupied_cells": 4,
+            "tie_break": "residual_then_original_index",
+            "limit_applied_warning": True,
+        },
+        "coverage": {
+            "low_coverage_ratio": 0.25,
+            "concentration_ratio": 0.60,
+        },
+        "execution": {"max_runtime_seconds": 60},
+        "reference_status": "REFERENCE_UNAVAILABLE",
+        "forbidden_vocabulary": [
+            "confidence",
+            "final_confidence",
+            "best",
+            "winner",
+            "superior",
+        ],
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m8_spatial_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M8 SPATIAL SELECTION settings.
+
+    Mirrors ``m7_trust_gate_config``: cached per process, falls back to the
+    documented ``_M8S_DEFAULTS`` when the YAML is unavailable, and never
+    raises on parse. The embedded ``configuration_id`` is the stable M8
+    Spatial Selection Configuration ID (SR-M8-001) — distinct from the M5
+    spatial reliability configuration (SR-M5-001) and the deep matcher
+    configuration (DM-M8-001).
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m8_spatial") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged: dict[str, Any] = {
+        "configuration_id": _M8S_DEFAULTS["configuration_id"],
+        "configuration_version": _M8S_DEFAULTS["configuration_version"],
+        "name": _M8S_DEFAULTS["name"],
+        "source_reference": _M8S_DEFAULTS["source_reference"],
+        "derived_rel": _M8S_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M8S_DEFAULTS["defaults"], section.get("defaults") or {}),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
+    return merged
+
+
+_M9R_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "RG-M9-001",
+    "configuration_version": 1,
+    "name": "Registration & Image Alignment — smallest-valid declared transform over M8-selected correspondences",
+    "source_reference": (
+        "SIH26166 M9 spec — engineering defaults; no scientifically calibrated lunar "
+        "thresholds; never a physical accuracy or geolocation claim."
+    ),
+    "derived_rel": "metadata/m9_registration",
+    "scientifically_tuned": False,
+    "defaults": {
+        "model": {
+            "preference": "smallest_valid",
+            "min_points_affine": 4,
+            "min_points_homography": 5,
+            "normalized_dlt": True,
+        },
+        "validation": {
+            "max_rmse_px": 3.0,
+            "max_p95_px": 5.0,
+            "max_residual_max_px": 10.0,
+            "max_transform_condition": 1e6,
+            "min_abs_determinant": 1e-4,
+            "max_abs_coefficient": 1e4,
+            "min_homography_denominator": 1e-6,
+            "max_scale_change": 20.0,
+            "min_scale_factor": 1e-3,
+        },
+        "warp": {
+            "interpolation": "linear",
+            "border_mode": "constant",
+            "fill_value": 0,
+            "dtype": "uint16",
+            "output_dimensions": "target_b_frame",
+            "max_output_rows": 32768,
+            "max_output_cols": 32768,
+        },
+        "execution": {"max_runtime_seconds": 120},
+        "reference_status": "REFERENCE_UNAVAILABLE",
+        "forbidden_vocabulary": [
+            "confidence",
+            "final_confidence",
+            "best",
+            "winner",
+            "superior",
+            "perfect",
+            "accurate",
+        ],
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m9_registration_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M9 Registration/Alignment settings.
+
+    Mirrors ``m8_spatial_config``: cached per process, falls back to the
+    documented ``_M9R_DEFAULTS`` when the YAML is unavailable, and never
+    raises on parse. The embedded ``configuration_id`` is the stable M9
+    Registration Configuration ID (RG-M9-001), distinct from the legacy
+    M6 registration (RG-M6-001) and the Gemini ``m9`` AI settings (AI-M9-001).
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m9_registration") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged: dict[str, Any] = {
+        "configuration_id": _M9R_DEFAULTS["configuration_id"],
+        "configuration_version": _M9R_DEFAULTS["configuration_version"],
+        "name": _M9R_DEFAULTS["name"],
+        "source_reference": _M9R_DEFAULTS["source_reference"],
+        "derived_rel": _M9R_DEFAULTS["derived_rel"],
+        "defaults": _deep_merge(_M9R_DEFAULTS["defaults"], section.get("defaults") or {}),
+    }
+    merged.update({k: v for k, v in section.items() if k != "defaults"})
+    merged["source"] = str(config_path)
+    merged["scientifically_tuned"] = bool(merged.get("scientifically_tuned", False))
+    return merged
+
+
+_M4D_DEFAULTS: dict[str, Any] = {
+    "configuration_id": "DM-M4-001",
+    "configuration_version": 1,
+    "name": "Strong Deep Matcher — SuperPoint + SuperGlue Candidate Correspondences",
+    "source_reference": (
+        "SIH26166 M4 spec; SuperPoint (Detone et al., NeurIPS 2018) + SuperGlue "
+        "(Sarlin et al., CVPR 2020) reference graphs with official pretrained "
+        "checkpoints; engineering defaults; no scientifically tuned thresholds."
+    ),
+    "derived_rel": "metadata/m4_deep_matching",
+    "checkpoints": {
+        "superpoint": {
+            "filename": "superpoint_v1.pth",
+            "source_url": "https://github.com/magicleap/SuperGluePretrainedNetwork/models/weights/superpoint_v1.pth",
+            "sha256": "52b6708629640ca883673b5d5c097c4ddad37d8048b33f09c8ca0d69db12c40e",
+        },
+        "superglue": {
+            "filename": "superglue_outdoor.pth",
+            "source_url": "https://github.com/magicleap/SuperGluePretrainedNetwork/models/weights/superglue_outdoor.pth",
+            "sha256": "2f5f5e9bb3febf07b69df633c4c3ff7a17f8af26a023aae2b9303d22339195bd",
+        },
+    },
+    "defaults": {
+        "execution": {
+            "max_runtime_seconds": 180,
+            "max_image_dimension": 1024,
+            "max_keypoints": 2048,
+            "nms_radius": 4,
+            "device": "cpu",
+            "torch_threads": 8,
+        },
+        "superglue": {
+            "sinkhorn_iterations": 100,
+            "match_threshold": 0.2,
+            "gnn_layers_self_cross_pairs": 9,
+        },
+        "visualization": {
+            "enabled": True,
+            "max_lines": 120,
+            "max_side_px": 960,
+        },
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def m4_deep_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M4-DEEP settings from configs/app.yaml.
+
+    Mirrors ``m8_config``: cached per process, falls back to documented
+    defaults, and never raises on parse. The embedded ``configuration_id``
+    is the stable Deep Matcher Configuration ID (DM-M4-001). The
+    ``checkpoints`` block records the manual provisioning source + pinned
+    SHA-256 for the official SuperPoint/SuperGlue weights; the service
+    verifies files against these pins and never auto-downloads.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m4_deep") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    defaults = section.get("defaults") or {}
+    merged: dict[str, Any] = {
+        "configuration_id": _M4D_DEFAULTS["configuration_id"],
+        "configuration_version": _M4D_DEFAULTS["configuration_version"],
+        "name": _M4D_DEFAULTS["name"],
+        "derived_rel": _M4D_DEFAULTS["derived_rel"],
+        "checkpoints": _deep_merge(_M4D_DEFAULTS["checkpoints"], section.get("checkpoints") or {}),
+        "defaults": _deep_merge(_M4D_DEFAULTS["defaults"], defaults),
+    }
+    merged.update({k: v for k, v in section.items() if k not in ("defaults", "checkpoints")})
+    merged["source"] = str(config_path)
+    return merged
+
+
 _M9_DEFAULTS: dict[str, Any] = {
     "ai_configuration_id": "AI-M9-001",
     "ai_configuration_version": 1,
@@ -912,6 +1548,137 @@ def m10_config(path: Path | None = None) -> dict[str, Any]:
 
     merged = dict(_M10_DEFAULTS)
     merged.update(section or {})
+    merged["source"] = str(config_path)
+    return merged
+
+
+# ============================================================================
+# M10-M-odes — Metrics & Benchmark / Ablation / Failure Analysis
+# ----------------------------------------------------------------------------
+# Configuration id MET-M10-001 (distinct from the authentication milestone
+# ``m10_config``/AU-M10-001). Engineering-only engineering defaults; every
+# knob registers as ``scientifically_tuned: false``. The benchmark never
+# declares a best/ superior/trusted/accuracy verdict and never fabricates
+# a reference when real PRADAN data is unavailable.
+_M10O_DEFAULTS: dict[str, Any] = {
+    "m10_metrics_configuration_id": "MET-M10-001",
+    "m10_metrics_configuration_version": 1,
+    "metric_definition_version": "MET-M10D-001",
+    "failure_taxonomy_version": "FT-M10-001",
+    "name": "M10 Metrics, Benchmark, Ablation & Failure Analysis controller",
+    "source_reference": "SIH26166 M10 spec — engineering defaults; no scientific calibration.",
+    "derived_rel": "metadata/m10_metrics",
+    "scientifically_tuned": False,
+    "reference_status": {
+        "value": "REFERENCE_UNAVAILABLE",
+        "note": "No real OHRC/TMC-2 PRADAN products provisioned; benchmark is "
+                "BLOCKED_PENDING_OPERATOR_DATA until they exist.",
+    },
+    "variants": {
+        "version": 1,
+        "ids": [
+            {"id": "V1", "name": "FIXED_CLASSICAL_BASELINE",
+             "routing": "FIXED_CLASSICAL", "trust_gate": "ENABLED",
+             "spatial_selection": "ENABLED", "pipeline_variant": "FIXED_CLASSICAL"},
+            {"id": "V2", "name": "FIXED_ALTERNATE_CLASSICAL",
+             "routing": "FIXED_ALTERNATE_CLASSICAL", "trust_gate": "ENABLED",
+             "spatial_selection": "ENABLED", "pipeline_variant": "FIXED_ALTERNATE_CLASSICAL"},
+            {"id": "V3", "name": "FIXED_DEEP",
+             "routing": "FIXED_DEEP", "trust_gate": "ENABLED",
+             "spatial_selection": "ENABLED", "pipeline_variant": "FIXED_DEEP"},
+            {"id": "V4", "name": "ROUTED_FULL_ADAPTIVE_RELIABILITY",
+             "routing": "ROUTED", "trust_gate": "ENABLED",
+             "spatial_selection": "ENABLED", "pipeline_variant": "FULL_ADAPTIVE_RELIABILITY"},
+            {"id": "V5", "name": "TRUST_DISABLED_ABLATION",
+             "routing": "ROUTED", "trust_gate": "DISABLED_FOR_ABLATION",
+             "spatial_selection": "ENABLED", "pipeline_variant": "FULL_ADAPTIVE_RELIABILITY"},
+            {"id": "V6", "name": "SPATIAL_DISABLED_ABLATION",
+             "routing": "ROUTED", "trust_gate": "ENABLED",
+             "spatial_selection": "DISABLED_FOR_ABLATION", "pipeline_variant": "FULL_ADAPTIVE_RELIABILITY"},
+        ],
+    },
+    "funnel": {
+        "stage_order": [
+            "input_gate", "processing", "matching", "trust_gate", "spatial_selection",
+            "registration",
+        ],
+        "stage_labels": {
+            "input_gate": "M1 pair registration + data source gate",
+            "processing": "M2 product processing (PREPARE)",
+            "matching": "M3/M4 candidate correspondence generation",
+            "trust_gate": "M7 trust gate (verified/trusted evidence)",
+            "spatial_selection": "M8 spatial selection",
+            "registration": "M9 registration / transform estimation",
+        },
+    },
+    "aggregation": {
+        "metrics": ["candidate_count", "verified_count", "inlier_count", "selected_count",
+                    "registration_rmse_px", "registration_p95_px", "runtime_ms"],
+        "operators": ["count", "sum", "mean", "median", "p90", "p95", "min", "max"],
+        "report_vocabulary": {
+            "norths": ["candidate_count", "registered_count", "verified_count"],
+            "smaller_is_better_note": "Smaller residuals are reported as smaller; "
+                                      "no lower-is-better verdict is applied.",
+            "never_winner": True,
+            "forbidden_vocabulary": [
+                "winner", "best", "superior", "optimal", "accuracy", "success_rate",
+                "perfect", "outperformed", "superp ''", "geolocation_accuracy", "CE90",
+                "LE90", "confidence",
+            ],
+        },
+    },
+    "failure_taxonomy": {
+        "version": "FT-M10-001",
+        "root": "REGISTRATION_FAILURE",
+        "branches": {
+            "failed": ["TRANSFORM_FIT_ERROR", "VALUES_NOT_FINITE", "SPATIAL_NOT_AVAILABLE",
+                       "TRUST_NOT_AVAILABLE", "MATCH_RUN_NOT_AVAILABLE"],
+            "abstain": ["SPARSE_EVIDENCE", "MARGINAL_EVIDENCE", "BUDGET_EXCEEDED"],
+            "failed_vs_abstain_policy": ("A failed run never abstains and an abstaining "
+                                         "run never fails; a blocked run is never "
+                                         "recorded as an outcome."),
+        },
+    },
+    "runtime_limits": {
+        "max_runtime_seconds": 120,
+        "max_variants_per_run": 6,
+    },
+    "visualization": {"enabled": True, "max_series": 6, "max_bars": 20},
+}
+
+
+@lru_cache(maxsize=1)
+def m10_metrics_config(path: Path | None = None) -> dict[str, Any]:
+    """Engineering (non-scientific) M10 metrics/benchmark settings.
+
+    Reads the ``m10_metrics:`` block of ``configs/app.yaml``, merges over
+    ``_M10O_DEFAULTS``, and is cached per process. It is intentionally
+    separate from ``m10_config()`` (the M10 authentication milestone,
+    ``AU-M10-001``) so the two milestone sections never collide.
+    """
+    config_path = path or CONFIG_FILE_DEFAULT
+    section: dict[str, Any] = {}
+    if config_path.is_file():
+        try:
+            with open(config_path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+            section = raw.get("m10_metrics") or {}
+        except (OSError, yaml.YAMLError):
+            section = {}
+
+    merged = dict(_M10O_DEFAULTS)
+    raw_variants = section.get("variants") or {}
+    if isinstance(raw_variants, list):
+        variant_ids = raw_variants
+        variant_version = 1
+    else:
+        variant_ids = raw_variants.get("ids") or []
+        variant_version = raw_variants.get("version", 1)
+    merged["variants"] = {
+        "version": variant_version,
+        "ids": variant_ids or _M10O_DEFAULTS["variants"]["ids"],
+    }
+    merged.update({k: v for k, v in section.items() if k not in ("variants",)})
     merged["source"] = str(config_path)
     return merged
 

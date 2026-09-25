@@ -28,6 +28,14 @@ _ALLOWED_MILESTONES: frozenset[str] = frozenset(
     {"M2", "M3", "M4", "M5", "M6", "M7", "M8", "REFERENCE", "PIPELINE"}
 )
 
+# Full M1..M10 pipeline keys that may appear in the M11 evidence packet. A
+# milestone is only citable when it actually exists in the packet that was
+# sent (legacy packets keep rejecting M1/M9/M10 exactly as the M9 contract
+# asserts; full M11 packets expose all ten).
+_MILESTONE_KEYS: tuple[str, ...] = (
+    "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10",
+)
+
 _GOOGLE_KEY = re.compile(r"AIza[0-9A-Za-z_\-]{20,}")
 _CREDENTIAL = re.compile(r"(?i)(access_token|api_key|apikey|authorization|auth)\s*[:=]\s*\S+")
 _ABS_WINDOWS = re.compile(r"[A-Za-z]:[\\/][^\s\"{},]+")
@@ -93,7 +101,7 @@ class ResponseValidator:
             metric = ref.get("source_metric")
             if not isinstance(claim, str) or not claim.strip():
                 return self._invalid("An evidence reference has no non-empty claim.", "MALFORMED_EVIDENCE", response_digest)
-            if not isinstance(milestone, str) or milestone.strip() not in _ALLOWED_MILESTONES:
+            if not isinstance(milestone, str) or milestone.strip() not in self._allowed_milestones(packet):
                 return self._invalid(
                     f"Evidence reference cites unknown source_milestone: {milestone!r}.",
                     "UNKNOWN_EVIDENCE_MILESTONE", response_digest)
@@ -208,15 +216,33 @@ class ResponseValidator:
         )
 
     @staticmethod
+    def _allowed_milestones(packet: dict[str, Any]) -> set[str]:
+        """Static + any milestone whose key is present in the packet."""
+        allowed = set(_ALLOWED_MILESTONES)
+        for key in _MILESTONE_KEYS:
+            if isinstance(packet.get(key), dict):
+                allowed.add(key.upper())
+        state = packet.get("pipeline_state")
+        if isinstance(state, dict):
+            for label in state:
+                label = str(label)
+                if label in _MILESTONE_KEYS or label.upper() in {k.upper() for k in _MILESTONE_KEYS}:
+                    allowed.add(label.upper())
+        return allowed
+
+    @staticmethod
     def _metric_universe(packet: dict[str, Any]) -> set[str]:
         allowed: set[str] = {"PHYSICAL_TRUTH_AVAILABLE", "PHYSICAL_ACCURACY"}
-        for key in ("m2", "m3", "m4", "m5", "m6", "m7", "m8"):
+        for key in _MILESTONE_KEYS:
             entry = packet.get(key)
             if not isinstance(entry, dict):
                 continue
             for metric in entry.get("metrics", []):
                 if isinstance(metric, dict) and isinstance(metric.get("metric_id"), str):
                     allowed.add(metric["metric_id"])
+        reference = packet.get("reference")
+        if isinstance(reference, dict) and isinstance(reference.get("metric_id"), str):
+            allowed.add(reference["metric_id"])
         return allowed
 
 

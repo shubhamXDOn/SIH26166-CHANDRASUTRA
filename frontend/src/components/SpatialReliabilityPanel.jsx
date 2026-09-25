@@ -144,12 +144,13 @@ export default function SpatialReliabilityPanel({ pairId, notify }) {
 
   return (
     <section className="space-y-4">
-      <div className="card p-5">
+      <div className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
+            <p className="eyebrow">M5 · Spatial Reliability Grid</p>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-100">
-                Spatial Reliability — <span className="font-mono text-lunar-300">{pairId}</span>
+                Spatial Reliability — <span className="font-mono text-teal-300">{pairId}</span>
               </h3>
               <Badge tone={gateTone(status?.gate_state ?? "NOT_STARTED")}>
                 {status?.gate_state ?? "NOT_STARTED"}

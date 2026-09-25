@@ -31,8 +31,9 @@ from ..errors import (
 from ..logging_conf import get_logger
 from .audit import AuditRecorder
 from .client import GeminiClient, GeminiResult
-from .config import AIConfig, load_ai_config
+from .config import AIConfig, DEFAULT_POSSIBLE_MILESTONES, load_ai_config
 from .evidence import EvidenceBuilder
+from .evidence_full import FullEvidenceBuilder
 from .models import AIRequest, AIResponse
 from .prompts import PromptBuilder
 from .provenance import build_m9_provenance, write_m9_provenance
@@ -62,6 +63,7 @@ class GeminiAssistant:
         self._settings = settings
         self._ai_config = load_ai_config(settings)
         self._evidence = EvidenceBuilder(settings, self._ai_config)
+        self._full_evidence = FullEvidenceBuilder(settings, self._ai_config)
         self._prompt = PromptBuilder(self._ai_config)
         self._client = GeminiClient(settings, self._ai_config)
         self._validator = ResponseValidator(self._ai_config)
@@ -101,6 +103,12 @@ class GeminiAssistant:
             "configuration_version": self._ai_config.configuration_version,
             "prompt_version": self._ai_config.prompt_version,
             "evidence_schema_version": self._ai_config.evidence_schema_version,
+            "evidence_schema_versions": [
+                self._ai_config.evidence_schema_version,
+                FullEvidenceBuilder.schema_version,
+            ],
+            "possible_milestones": list(DEFAULT_POSSIBLE_MILESTONES) + ["M1", "M9", "M10"],
+            "full_pipeline_supported": True,
             "timeout_seconds": self._ai_config.timeout_seconds,
             "max_output_tokens": self._ai_config.max_output_tokens,
             "max_input_chars": self._ai_config.max_input_chars,
@@ -108,9 +116,11 @@ class GeminiAssistant:
             "policy": {
                 "explanatory_only": True,
                 "core_science_source": "backend scientific pipeline (M2..M8)",
+                "full_pipeline_source": "backend scientific pipeline (M1..M10, M11-EVIDENCE-001)",
                 "no_fabricated_responses": True,
                 "never_authorizes_registration": True,
                 "never_produces_scientific_numbers": True,
+                "reference_unavailable": True,
             },
         }
 
@@ -132,7 +142,8 @@ class GeminiAssistant:
     def execute(self, *, task: str, pair_id: str, scope: str = "",
                 question: str = "", session_id: str = "",
                 experiment_id: str = "",
-                executed_by: dict[str, str] | None = None) -> dict[str, Any]:
+                executed_by: dict[str, str] | None = None,
+                full_evidence: bool = False) -> dict[str, Any]:
         if not self.configured:
             raise NotConfiguredError(
                 "Gemini is not configured (GEMINI_API_KEY is empty).",
@@ -164,7 +175,16 @@ class GeminiAssistant:
             raise AIBlockedError(str(exc), details={"request_id": request_id, "pair_id": pair_id})
 
         # evidence + prompt
-        evidence_build = self._evidence.build(pair_id)
+        evidence_build = (
+            self._full_evidence.build(pair_id, experiment_id=experiment_id or None)
+            if full_evidence
+            else self._evidence.build(pair_id)
+        )
+        evidence_schema = (
+            FullEvidenceBuilder.schema_version
+            if full_evidence
+            else self._ai_config.evidence_schema_version
+        )
         q = question
         if session.recent_questions:
             ctx = "\n".join(
@@ -219,7 +239,7 @@ class GeminiAssistant:
             experiment_id=experiment_id or evidence_build.experiment_id,
             model=self._settings.gemini_model,
             prompt_version=self._ai_config.prompt_version,
-            evidence_schema_version=self._ai_config.evidence_schema_version,
+            evidence_schema_version=evidence_schema,
             status=state.value,
             latency_ms=latency_ms,
             executed_by_user_id=(executed_by or {}).get("user_id"),
@@ -228,6 +248,17 @@ class GeminiAssistant:
 
         # provenance
         try:
+            source_gate = None
+            m1 = evidence_build.packet.get("m1")
+            if isinstance(m1, dict):
+                gate = next((m.get("value") for m in m1.get("metrics", []) if isinstance(m, dict)
+                             and m.get("metric_id") == "PAIR_DATA_SOURCE_GATE"), None)
+                if gate:
+                    source_gate = {"value": str(gate)}
+            reference_status = None
+            reference = evidence_build.packet.get("reference")
+            if isinstance(reference, dict) and reference.get("status"):
+                reference_status = str(reference["status"])
             provenance = build_m9_provenance(
                 settings=self._settings,
                 ai_config=self._ai_config,
@@ -241,7 +272,13 @@ class GeminiAssistant:
                 status=state.value,
                 created_at=created_at,
                 pipeline_state=evidence_build.pipeline_state,
+                evidence_packet_schema=evidence_schema,
                 executed_by=executed_by,
+                source_gate=source_gate,
+                reference_status=reference_status,
+                validation_result=(
+                    "PASS" if state is AIServiceState.COMPLETE else state.value
+                ),
             )
             write_m9_provenance(provenance, self._settings)
         except OSError:
@@ -287,9 +324,11 @@ class GeminiAssistant:
             ai={
                 "configuration_id": self._ai_config.configuration_id,
                 "prompt_version": self._ai_config.prompt_version,
-                "evidence_schema_version": self._ai_config.evidence_schema_version,
+                "evidence_schema_version": evidence_schema,
                 "evidence_digest": built.digest_used,
+                "full_pipeline": full_evidence,
             },
+            evidence_states=evidence_build.pipeline_state,
             created_at=created_at,
         )
         return response.as_dict()

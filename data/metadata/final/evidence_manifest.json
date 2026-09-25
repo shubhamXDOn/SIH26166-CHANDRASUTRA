@@ -1,0 +1,43 @@
+{
+  "experiment_id": "EXP-FINAL-SYNTHETIC_STRUCTURAL-53b50b49",
+  "created_at": "2026-09-23T14:35:05Z",
+  "evidence_sources": [
+    {
+      "path": "backend/app/ai/evidence_full.py",
+      "purpose": "M11 full-pipeline packet/prompt/validator/service/API/tests"
+    },
+    {
+      "path": "backend/app/ai/prompts.py",
+      "purpose": "M11 full-pipeline packet/prompt/validator/service/API/tests"
+    },
+    {
+      "path": "backend/app/ai/validator.py",
+      "purpose": "M11 full-pipeline packet/prompt/validator/service/API/tests"
+    },
+    {
+      "path": "backend/app/ai/service.py",
+      "purpose": "M11 full-pipeline packet/prompt/validator/service/API/tests"
+    },
+    {
+      "path": "backend/app/api/ai.py",
+      "purpose": "M11 full-pipeline packet/prompt/validator/service/API/tests"
+    },
+    {
+      "path": "tests/test_m11_ai.py",
+      "purpose": "M11 full-pipeline packet/prompt/validator/service/API/tests"
+    }
+  ],
+  "commitments": [
+    "Evidence-grounded answers only",
+    "Unrun milestones reported NOT_STARTED",
+    "Reference status honest REFERENCE_UNAVAILABLE"
+  ],
+  "final_metric_ids": [
+    "M2_STATE",
+    "FUNNEL_M3_TILES",
+    "M6_DECISION",
+    "M7_TRUST",
+    "M9_REGISTRATION",
+    "M10_STATE"
+  ]
+}

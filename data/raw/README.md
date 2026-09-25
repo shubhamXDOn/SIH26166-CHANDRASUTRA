@@ -41,3 +41,33 @@ sensor directory above, then register the pair through the Data workspace
 
 Remote downloads happen in M1+ through documented, reproducible commands —
 never as ad-hoc copies of unknown provenance.
+
+## Real-data activation (PATH A)
+
+Once genuine `.img` + `.xml` products are copied into the sensor directories
+above, activate them:
+
+```
+.\.venv\Scripts\python.exe scripts\activate_real_data.py --data-root data
+```
+
+The script (read-only on this tree) classifies every product honestly
+(`REAL_PRADAN` / `TEST_FIXTURE` / `UNKNOWN`), selects the first genuine OHRC
+and TMC-2 product, derives overlap from their PDS4 footprint boxes, and
+registers the pair. Nothing here is copied, moved, or modified.
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | one REAL PRADAN pair registered |
+| 1 | real products present but registration/validation failed |
+| 2 | **BLOCKED** — no genuine PRADAN data placed yet |
+
+Equivalent API surface (analyst/admin):
+
+```
+GET  /api/pairs/real-data/scan     # inventory + source classification
+POST /api/pairs/auto-register     # register the first real OHRC x TMC-2 pair
+```
+
+State is surfaced in `/api/data/status` under `data_source` (REAL_PRADAN /
+TEST_FIXTURE / UNKNOWN counts, `requirements_met`, `pairs_by_gate`).

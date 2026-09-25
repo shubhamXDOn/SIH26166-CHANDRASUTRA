@@ -139,12 +139,13 @@ export default function TrustPanel({ pairId, notify }) {
   return (
     <section className="space-y-4">
       {/* header + controls */}
-      <div className="card p-5">
+      <div className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
+            <p className="eyebrow">M7 · Geometric Validation Gate</p>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-100">
-                Trust Gate — <span className="font-mono text-lunar-300">{pairId}</span>
+                Trust Gate — <span className="font-mono text-teal-300">{pairId}</span>
               </h3>
               <Badge tone={gateTone(status?.gate_state ?? "NOT_STARTED")}>
                 {status?.gate_state ?? "NOT_STARTED"}

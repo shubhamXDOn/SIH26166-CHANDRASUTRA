@@ -43,7 +43,28 @@ Engineering determinism proof: the same pair + configuration IDs reproduce the
 same funnel (`100 → 84 → 19 → 19`), the same transform matrix hash and the same
 metrics report hash across three independent runs.
 
-## 3. What is new in M13
+## 3. What is new in the final AI integration (M11)
+
+- **Full-pipeline evidence grounding** — a new evidence packet
+  `M11-EVIDENCE-001` covers the complete pipeline M1..M10 (pairs → funnel →
+  deep matcher gating → condition → routing → registration → reference →
+  metrics). Unrun stages are reported honestly (`NOT_STARTED`, `NOT_AVAILABLE`,
+  `BLOCKED`); the reference stays `REFERENCE_UNAVAILABLE` without certified
+  real data.
+- **New M11 tasks** — `explain-pipeline`, `summarize-pipeline`, `explain-trust`,
+  `explain-spatial`, `explain-registration`, `explain-benchmark`,
+  `explain-abstention` (POST `/api/ai/<task>`). Answers are validated against
+  the exact packet sent: milestones and metrics cited must exist in that packet,
+  else the response is rejected (`AI_INVALID_RESPONSE`) — no hallucinated
+  citations reach the user.
+- **Packet-derived validation** — the validator accepts M1..M10 only when those
+  keys are actually present in the packet, so the legacy M9 contract (rejecting
+  `source_milestone M1` against M9 packets) is preserved unchanged.
+- **Science UI badges** — AI results render `AI-GROUNDED`, `AI BLOCKED`,
+  `VALIDATION FAILED` / `AI FAILED` badges with the evidence-state strip,
+  schema badge and full-pipeline gold badge.
+
+## 4. What is new in M13
 
 - **Final release surface** — `GET /api/m13/status` (aggregate release stance),
   evidence explorer endpoints, report centre, reproducibility record, honest
@@ -65,7 +86,7 @@ metrics report hash across three independent runs.
   `VERIFIED`; the *release* version `1.0.0`/M13 is exposed separately and
   never enters the frozen fingerprint.
 
-## 4. Honest status table (read before presenting)
+## 5. Honest status table (read before presenting)
 
 | Question | Answer |
 | --- | --- |
@@ -78,7 +99,7 @@ metrics report hash across three independent runs.
 | Is there a public hosted URL? | No public deployment exists in this environment; hosted latency is `NOT_MEASURED`, never estimated. |
 | Configuration fingerprint change | None — the recorded fingerprint is byte-for-byte the released one. |
 
-## 5. Known limitations (unchanged from M12, still true)
+## 6. Known limitations (unchanged from M12, still true)
 
 - Matcher(s) are explainable, condition-routed heuristics; deep-matcher
   (M8) weights are not present and no per-pair M8 run exists.
@@ -87,7 +108,7 @@ metrics report hash across three independent runs.
 - Full end-to-end scientific validation on real OHRC–TMC-2 imagery is pending
   real-data onboarding (see `REAL_DATA_ONBOARDING.md`).
 
-## 6. Getting started at v1.0.0
+## 7. Getting started at v1.0.0
 
 1. `README.md` — setup, run, test.
 2. `DEPLOYMENT.md` — Docker deployment, `.env`, seeding, hosting notes.
@@ -95,7 +116,7 @@ metrics report hash across three independent runs.
 4. `M13_FINAL_RELEASE_REPORT.md` — the milestone report with the full status
    matrix and regression numbers.
 
-## 7. Signature block
+## 8. Signature block
 
 ```
 RELEASE              CHANDRASUTRA v1.0.0  (engineering build 0.11.0)

@@ -71,6 +71,52 @@ _TASK_BODY: dict[str, str] = {
         "the evidence. If the evidence cannot answer it, say so directly and "
         "suggest a recorded inspection artifact."
     ),
+    "explain-pipeline": (
+        "Explain the recorded analysis for this pair across the FULL M1..M10 "
+        "pipeline using only the evidence: intake, processing, matching, deep "
+        "matching, condition, routing, trust gate, spatial selection, "
+        "registration and the M10 benchmark. Describe which milestones ran, "
+        "their recorded state, the data-source gate, and what remains blocked "
+        "or unavailable. Never imply accuracy or confidence beyond the record."
+    ),
+    "summarize-pipeline": (
+        "Summarize the recorded pipeline evidence for this pair using only "
+        "the evidence: M1..M10 states, the M10 benchmark funnel, registration "
+        "diagnostics, reference status (REFERENCE_UNAVAILABLE) and recorded "
+        "limitations. Distinguish measurements from unavailable reference "
+        "values."
+    ),
+    "explain-trust": (
+        "Explain the recorded M7 trust-gate decision for this pair using only "
+        "the evidence: decision hash, candidate/verified/inlier counts and "
+        "inlier ratio. The trust gate never asserts scientific accuracy; the "
+        "explanation must stay within the recorded decision vocabulary."
+    ),
+    "explain-spatial": (
+        "Explain the recorded M8 spatial-selection decision for this pair "
+        "using only the evidence: decision hash, trusted/selected/excluded "
+        "counts and coverage ratios. Selection is a coverage policy, never a "
+        "quality verdict."
+    ),
+    "explain-registration": (
+        "Explain the recorded M9 registration result for this pair using only "
+        "the evidence: decision hash, accepted status, selected count, "
+        "residual RMSE and warp availability. Distinguish measurements from "
+        "reference availability."
+    ),
+    "explain-benchmark": (
+        "Explain the recorded M10 benchmark observations for this pair using "
+        "only the evidence: stage, funnel counts, registration residual "
+        "metrics and reference status. The benchmark is descriptive and "
+        "REFERENCE_UNAVAILABLE; never report accuracy, winner or confidence."
+    ),
+    "explain-abstention": (
+        "Explain the recorded failure or abstention(s) for this pair using "
+        "only the evidence across M1..M10. Identify the recorded failure and "
+        "abstention codes and stages. If the recorded evidence does not "
+        "establish a cause, state exactly: 'Cause is not established by the "
+        "recorded evidence.'"
+    ),
 }
 
 _JSON_CONTRACT = (
@@ -141,8 +187,9 @@ class PromptBuilder:
         used_packet, dropped = self._fit(packet, digest, budget)
 
         payload = json.dumps(used_packet, sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str)
+        schema_label = str(used_packet.get("schema_version") or self._cfg.evidence_schema_version)
         evidence_block = (
-            f"Evidence packet ({self._cfg.evidence_schema_version}):\n"
+            f"Evidence packet ({schema_label}):\n"
             f"{begin}\n{payload}\n{end}\n"
         )
         parts.append(evidence_block)
@@ -174,7 +221,7 @@ class PromptBuilder:
             if _size(used) <= budget:
                 break
             removable: list[tuple[int, str, str]] = []
-            for ms in ("m2", "m3", "m4", "m5", "m6", "m7", "m8"):
+            for ms in ("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10"):
                 entry = used.get(ms)
                 if not isinstance(entry, dict):
                     continue

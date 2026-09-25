@@ -37,19 +37,25 @@ export function AuthProvider({ children }) {
     let alive = true;
     (async () => {
       // Silent bootstrap: an HttpOnly refresh cookie survives reloads. Try a
-      // lightweight refresh, then confirm the account via /me.
-      const body = await refreshSession();
-      if (!alive) return;
-      if (body?.access_token) {
-        try {
-          const me = await apiGet("/auth/me");
-          if (!alive) return;
-          setUser(me.user);
-          setStatus("authed");
-        } catch {
+      // lightweight refresh, then confirm the account via /me. Any failure
+      // (network, backend down) must degrade to the sign-in screen, never an
+      // unhandled rejection that leaves the app stuck on the booting splash.
+      try {
+        const body = await refreshSession();
+        if (!alive) return;
+        if (body?.access_token) {
+          try {
+            const me = await apiGet("/auth/me");
+            if (!alive) return;
+            setUser(me.user);
+            setStatus("authed");
+          } catch {
+            if (alive) becomeAnon();
+          }
+        } else {
           if (alive) becomeAnon();
         }
-      } else {
+      } catch {
         if (alive) becomeAnon();
       }
       refreshAuthStatus();
@@ -108,8 +114,9 @@ export function AuthProvider({ children }) {
       signIn,
       signUp,
       signOut,
+      refreshAuthStatus,
     }),
-    [status, user, auth, signIn, signUp, signOut]
+    [status, user, auth, signIn, signUp, signOut, refreshAuthStatus]
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

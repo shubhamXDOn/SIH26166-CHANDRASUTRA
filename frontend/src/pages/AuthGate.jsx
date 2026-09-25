@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Badge, Icon, ToastProvider, useToast } from "../components/ui.jsx";
+import { MissionStamp, OrbitalRings, StarField } from "../components/space.jsx";
 import { useAuth } from "../auth.jsx";
 
 function Field({ label, type = "text", value, onChange, placeholder, autoComplete, children }) {
@@ -83,12 +84,15 @@ function AuthRequiredGate() {
   const regEnabled = auth?.registration_enabled === true;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-space-950 px-4">
-      <div className="w-full max-w-md space-y-5">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-space-950 px-4">
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <StarField className="absolute inset-0 h-full w-full opacity-60" />
+        <OrbitalRings className="absolute -left-40 -top-40 h-[34rem] w-[34rem] max-w-none opacity-50" />
+        <OrbitalRings className="absolute -bottom-44 -right-44 h-[38rem] w-[38rem] max-w-none opacity-40" accent="#33b7dc" />
+      </div>
+      <div className="relative w-full max-w-md space-y-5">
         <div className="text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-lunar-400">
-            CHANDRASUTRA · SIH26166
-          </p>
+          <MissionStamp className="mb-3" />
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-100">
             Sign in to the lunar intelligence workspace
           </h1>
@@ -120,7 +124,7 @@ function AuthRequiredGate() {
               type="button"
               onClick={() => { setMode("signin"); setError(null); }}
               className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                mode === "signin" ? "bg-lunar-500/15 text-lunar-300" : "text-muted hover:text-slate-200"
+                mode === "signin" ? "bg-teal-500/15 text-teal-200" : "text-muted hover:text-slate-200"
               }`}
             >
               Sign in
@@ -131,7 +135,7 @@ function AuthRequiredGate() {
               disabled={!regEnabled}
               title={regEnabled ? "Create an account" : "Self-registration is disabled by the administrator"}
               className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                mode === "register" ? "bg-lunar-500/15 text-lunar-300" : "text-muted hover:text-slate-200"
+                mode === "register" ? "bg-teal-500/15 text-teal-200" : "text-muted hover:text-slate-200"
               } disabled:cursor-not-allowed disabled:opacity-40`}
             >
               Register

@@ -24,5 +24,22 @@ PyJWT==2.14.0
 # --- HTTP client (tests + future AI calls) ---
 httpx==0.28.1
 
+# --- M4 deep matcher (SuperPoint + SuperGlue) — OPTIONAL runtime ---
+# The deep matcher probes torch/torchvision at runtime; without them it
+# honestly reports BLOCKED_RUNTIME (and a missing kornia leaves LoFTR
+# NOT_AVAILABLE). These are NOT installed by default. Versions verified on
+# Python 3.14 / Windows (CPU only) in this environment:
+#   torch==2.10.0+cpu
+#   torchvision==0.25.0+cpu
+# Install manually from https://download.pytorch.org/whl/cpu, then verify:
+#   .venv\Scripts\python.exe -c "import torch, torchvision; print(torch.__version__, torchvision.__version__)"
+# Official checkpoints (superpoint_v1.pth, superglue_outdoor.pth) must be
+# provisioned under data/models/m8 with the SHA-256 pins in configs/app.yaml.
+#
+# Beacon Checkpoint: ONEHOUR-4-SINGULARITY is NOT a dependency of this project.
+# It exists solely as a hypothetical example in M4 reports for the "singularity"
+# warning; this project never downloads, references or requires any weights from
+# that beacon, and all deep weights here come from magicleap/SuperGlue on GitHub.
+
 # --- Testing ---
 pytest==9.1.1

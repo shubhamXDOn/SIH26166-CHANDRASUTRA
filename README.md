@@ -497,6 +497,18 @@ see `reports/M1_REPORT.md`).
   exposed to browser code.
 - Without a key the service reports `NOT_CONFIGURED` and the application runs
   normally. No fake AI answers are ever produced.
+- Evidence grounding: every answer is validated against the evidence packet
+  that was sent with the request (`M9-EVIDENCE-001` for M9 tasks,
+  `M11-EVIDENCE-001` for full-pipeline M11 tasks covering M1..M10). Citations
+  must reference milestones/metrics present in the sent packet or the response
+  is rejected (`AI_INVALID_RESPONSE`).
+- Full-pipeline M11 tasks: `explain-pipeline`, `summarize-pipeline`,
+  `explain-trust`, `explain-spatial`, `explain-registration`,
+  `explain-benchmark`, `explain-abstention` (POST `/api/ai/<task>`). They build
+  the full M11 evidence packet (`M11-EVIDENCE-001`) before prompting.
+- Honest state reporting: unrun milestones are reported as `NOT_STARTED`/
+  `NOT_AVAILABLE`/`BLOCKED`; the reference is `REFERENCE_UNAVAILABLE` without
+  provisioned real data; the AI never invents scientific results.
 
 ## Limitations
 

@@ -175,22 +175,25 @@ export default function MetricsPanel({ pairId, notify }) {
   return (
     <div className="space-y-4">
       {/* controls */}
-      <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-slate-200">
-            State · <span className="font-mono text-lunar-300">{status?.state ?? "NOT_STARTED"}</span>
-          </p>
-          <p className="text-[11px] text-muted">
-            Metrics are measurements of pipeline evidence, never proof of physical accuracy.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button className="btn-primary" disabled={busy || !canMutate} title={canMutate ? "Run reproducible metrics" : "Analyst or admin required"} onClick={runMetrics}>
-            <Icon.Activity className="h-4 w-4" /> {busy ? "Running…" : "Run metrics"}
-          </button>
-          <button className="btn-ghost" disabled={busy || !canMutate} title={canMutate ? "Reset pair state" : "Analyst or admin required"} onClick={resetMetrics}>
-            <Icon.Refresh className="h-4 w-4" /> Reset
-          </button>
+      <div className="panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="eyebrow">M10 · Metrics Bench</p>
+            <p className="text-xs font-semibold text-slate-200">
+              State · <span className="font-mono text-teal-300">{status?.state ?? "NOT_STARTED"}</span>
+            </p>
+            <p className="text-[11px] text-muted">
+              Metrics are measurements of pipeline evidence, never proof of physical accuracy.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="btn-primary" disabled={busy || !canMutate} title={canMutate ? "Run reproducible metrics" : "Analyst or admin required"} onClick={runMetrics}>
+              <Icon.Activity className="h-4 w-4" /> {busy ? "Running…" : "Run metrics"}
+            </button>
+            <button className="btn-ghost" disabled={busy || !canMutate} title={canMutate ? "Reset pair state" : "Analyst or admin required"} onClick={resetMetrics}>
+              <Icon.Refresh className="h-4 w-4" /> Reset
+            </button>
+          </div>
         </div>
       </div>
 

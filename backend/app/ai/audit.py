@@ -44,6 +44,10 @@ class AuditRecorder:
         latency_ms: float | None = None,
         executed_by_user_id: str | None = None,
         executed_by_role: str | None = None,
+        evidence_digest: str | None = None,
+        validation_result: str | None = None,
+        source_gate: dict[str, str] | None = None,
+        reference_status: str | None = None,
     ) -> dict[str, Any]:
         entry: dict[str, Any] = {
             "request_id": request_id,
@@ -57,6 +61,14 @@ class AuditRecorder:
             "latency_ms": round(latency_ms, 1) if isinstance(latency_ms, (int, float)) else "NOT_AVAILABLE",
             "created_at": rfc3339_now(),
         }
+        if evidence_digest:
+            entry["evidence_digest"] = str(evidence_digest)
+        if validation_result:
+            entry["validation_result"] = str(validation_result)
+        if source_gate:
+            entry["source_gate"] = dict(source_gate)
+        if reference_status:
+            entry["reference_status"] = str(reference_status)
         if executed_by_user_id:
             entry["executed_by_user_id"] = str(executed_by_user_id)
         if executed_by_role:

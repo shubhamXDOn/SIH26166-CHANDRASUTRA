@@ -202,9 +202,11 @@ export default function Evidence({ notify }) {
 
   return (
     <div className="space-y-6">
-      <section className="card border-white/[0.08] p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="panel relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 grid-texture opacity-40" aria-hidden />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl space-y-2.5">
+            <p className="eyebrow">Frozen Evidence Vault · M13</p>
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="gold">CHANDRASUTRA v{status.app?.release_version ?? "1.0.0"}</Badge>
               <Badge tone="gold">M13 Final Release</Badge>

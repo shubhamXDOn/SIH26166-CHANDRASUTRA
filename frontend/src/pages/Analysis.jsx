@@ -2,11 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 
 import Pipeline, { STAGE_STYLE } from "../components/Pipeline.jsx";
 import { Badge, EmptyState, Icon, Modal, PageSkeleton } from "../components/ui.jsx";
+import { OrbitalRings } from "../components/space.jsx";
 import MatchingPanel from "../components/MatchingPanel.jsx";
+import BaselineMatchingCard from "../components/BaselineMatchingCard.jsx";
+import DeepMatchingCard from "../components/DeepMatchingCard.jsx";
+import ConditionAnalysisCard from "../components/ConditionAnalysisCard.jsx";
+import AdaptiveRoutingCard from "../components/AdaptiveRoutingCard.jsx";
+import TrustGateCard from "../components/TrustGateCard.jsx";
+import M8SpatialReliabilityCard from "../components/M8SpatialReliabilityCard.jsx";
+import M9RegistrationCard from "../components/M9RegistrationCard.jsx";
 import TrustPanel from "../components/TrustPanel.jsx";
 import SpatialReliabilityPanel from "../components/SpatialReliabilityPanel.jsx";
 import RegistrationPanel from "../components/RegistrationPanel.jsx";
 import MetricsPanel from "../components/MetricsPanel.jsx";
+import M10MetricsBenchmarkCard from "../components/M10MetricsBenchmarkCard.jsx";
 import M8Workspace from "../components/M8Workspace.jsx";
 import { apiGet, apiPost } from "../api.js";
 import { useAuth } from "../auth.jsx";
@@ -75,6 +84,20 @@ const MODULE_PLAN = [
     label: "Deep matcher expansion",
     desc: "Adaptive expansion over deep + classical matchers with honest capability probing; benchmark rows are measurement comparisons — no winner, no accuracy claim.",
     milestone: "M8",
+    implemented: true,
+  },
+  {
+    id: "spatial-m8",
+    label: "Spatial selection (SR)",
+    desc: "Deterministic GRID_BALANCED selection over the M7 trusted set with per-side coverage, occupancy and entropy bookkeeping evidence in the effective matcher plane — a state, never a confidence or accuracy claim.",
+    milestone: "M8",
+    implemented: true,
+  },
+  {
+    id: "registration-m9",
+    label: "Registration & image alignment",
+    desc: "Consumes ONE usable M8 spatial-selection artifact, estimates and independently validates a declared geometric transform (smallest-valid affine-first), records px residuals and produces a derived aligned output — a state + geometric measurements, never a physical-registration claim.",
+    milestone: "M9",
     implemented: true,
   },
 ];
@@ -268,17 +291,26 @@ export default function Analysis({ notify, onNavigate }) {
 
   return (
     <div className="space-y-6">
-      <section className="max-w-3xl space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">Analysis workspace</h2>
-        <p className="text-sm leading-relaxed text-muted">
-          M2 executes a reproducible PREPARE run: raw-integrity re-verification, invalid-data masks,
-          overlap evidence, sensor-native crops and per-tile scene conditions. Once preparatory
-          readiness is met, M3 runs the <strong className="text-slate-200">adaptive matcher</strong> — an explainable
-          per-tile strategy decision, explicit candidate filters and observable correspondences
-          (which remain observations, never verified truth). M4 then independently verifies each
-          candidate set geometrically and applies the Trust Gate. BLOCKED is a normal
-          result — <strong className="text-slate-200">nothing is simulated and nothing is guessed</strong>.
-        </p>
+      <section className="panel relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 grid-texture opacity-40" aria-hidden />
+        <div className="pointer-events-none absolute -right-16 top-1/2 hidden -translate-y-1/2 lg:block">
+          <OrbitalRings className="h-[20rem] w-[20rem] max-w-none opacity-50" accent="#43cdb5" />
+        </div>
+        <div className="relative max-w-3xl space-y-2">
+          <p className="eyebrow">Orbital Correspondence Lab</p>
+          <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">
+            Analysis workspace
+          </h2>
+          <p className="text-sm leading-relaxed text-muted">
+            M2 executes a reproducible PREPARE run: raw-integrity re-verification, invalid-data masks,
+            overlap evidence, sensor-native crops and per-tile scene conditions. Once preparatory
+            readiness is met, M3 runs the <strong className="text-slate-200">adaptive matcher</strong> — an explainable
+            per-tile strategy decision, explicit candidate filters and observable correspondences
+            (which remain observations, never verified truth). M4 then independently verifies each
+            candidate set geometrically and applies the Trust Gate. BLOCKED is a normal
+            result — <strong className="text-slate-200">nothing is simulated and nothing is guessed</strong>.
+          </p>
+        </div>
       </section>
 
       {overview?.blocked && (
@@ -466,6 +498,116 @@ export default function Analysis({ notify, onNavigate }) {
         </section>
       )}
 
+      {/* M3 baseline classical matching workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Classical baseline matching · M3</h3>
+              <p className="text-xs text-muted">
+                SIFT (primary) · AKAZE (recommended) · ORB (auxiliary) through one explicit matcher
+                contract. Candidate correspondences only — no trust gate, no adaptive routing.
+              </p>
+            </div>
+            <Badge tone="gold">MB-M3-001 config</Badge>
+          </div>
+          <BaselineMatchingCard key={`${sel}-baseline`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M5 CONDITION ESTIMATOR workspace — pair-level condition & difficulty
+          characterization (evaluated before any matcher selection). Separate
+          from the M5 SPATIAL reliability workspace and the M2 per-tile
+          condition analysis. */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Condition estimator · M5</h3>
+              <p className="text-xs text-muted">
+                Pair-level condition and difficulty characterization from the M2 validated products — texture,
+                appearance, invalid-mask coverage and recorded scale/GSD relationships. Never selects or routes a
+                matcher.
+              </p>
+            </div>
+            <Badge tone="gold">CE-M5-001 config</Badge>
+          </div>
+          <ConditionAnalysisCard key={`${sel}-condition`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M6 adaptive matcher router workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Adaptive matcher router · M6</h3>
+              <p className="text-xs text-muted">
+                Deterministic, evidence-based routing of matcher strategy from the M5 condition profile and
+                honest capability probes. Routing is a what-to-try decision — never a matcher selection
+                verdict and never a confidence/accuracy claim.
+              </p>
+            </div>
+            <Badge tone="gold">AR-M6-001 config</Badge>
+          </div>
+          <AdaptiveRoutingCard key={`${sel}-routing`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M7 trust gate workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Trust Gate · M7</h3>
+              <p className="text-xs text-muted">
+                Deterministic geometric verification of candidate correspondences from M3/M4 (and M6
+                routing) run artifacts. The verdict is a gate state — never a confidence or accuracy claim;
+                no M8 spatial selection, no M9 registration semantics.
+              </p>
+            </div>
+            <Badge tone="gold">TG-M7-001 config</Badge>
+          </div>
+          <TrustGateCard key={`${sel}-trustgate`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M8 spatial selection workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Spatial selection · M8</h3>
+              <p className="text-xs text-muted">
+                Runs when an ACCEPTED M7 trust run exists: deterministic recovery of the trusted
+                correspondence set, per-side coverage/occupancy/entropy evidence and the balanced
+                selection in the declared matcher plane. The result is a state + selection evidence —
+                never a confidence, accuracy or registration claim; the M7 verdict is never overridden.
+              </p>
+            </div>
+            <Badge tone="gold">SR-M8-001 config</Badge>
+          </div>
+          <M8SpatialReliabilityCard key={`${sel}-spatial-m8`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M4 deep matching workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Deep matching · M4</h3>
+              <p className="text-xs text-muted">
+                SuperPoint + SuperGlue through the SAME candidate-correspondence contract as the
+                classical baseline. Model-native scores are observations — never a trust verdict.
+              </p>
+            </div>
+            <Badge tone="blue">DM-M4-001 config</Badge>
+          </div>
+          <DeepMatchingCard key={`${sel}-deep`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
       {/* M4 trust gate workspace */}
       {sel && (
         <section className="space-y-3">
@@ -555,6 +697,30 @@ export default function Analysis({ notify, onNavigate }) {
           <M8Workspace key={`${sel}-m8`} pairId={sel} notify={notify} />
         </section>
       )}
+
+      {/* M9 registration / image alignment workspace */}
+      {sel && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Registration &amp; image alignment · M9</h3>
+              <p className="text-xs text-muted">
+                Runs when a usable M8 spatial-selection artifact exists: declared geometric transform
+                estimate (smallest-valid affine-first, homography only on explicit escalation),
+                independent validation, px residuals in the effective matcher plane and a derived
+                aligned/warped output. Residuals are geometric measurements — never a confidence,
+                accuracy or physical-registration claim; the M7 verdict and M8 status are never
+                overridden.
+              </p>
+            </div>
+            <Badge tone="gold">RG-M9-001 config</Badge>
+          </div>
+          <M9RegistrationCard key={`${sel}-registration-m9`} pairId={sel} notify={notify} />
+        </section>
+      )}
+
+      {/* M10 metrics & benchmark / ablation / failure analysis */}
+      {sel && <M10MetricsBenchmarkCard key={`${sel}-m10-metrics`} notify={notify} />}
 
       {/* module roadmap */}
       <section className="space-y-3">

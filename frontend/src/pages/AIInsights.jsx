@@ -4,11 +4,26 @@ import { Badge, EmptyState, Icon, PageSkeleton, StatusDot } from "../components/
 import { apiGet, apiPost } from "../api.js";
 
 const TASKS = [
+  { id: "explain", label: "Explain this run" },
+  { id: "explain-pipeline", label: "Explain full pipeline (M1..M10)" },
+  { id: "summarize-pipeline", label: "Summarize pipeline evidence" },
+  { id: "explain-trust", label: "Explain trust decision (M7)" },
+  { id: "explain-spatial", label: "Explain spatial selection (M8)" },
+  { id: "explain-registration", label: "Explain registration (M9)" },
+  { id: "explain-benchmark", label: "Explain benchmark (M10)" },
   { id: "summarize-experiment", label: "Summarize experiment" },
   { id: "explain-failure", label: "Explain failures / blockers" },
+  { id: "explain-abstention", label: "Explain abstention / failure (M1..M10)" },
   { id: "explain-routing", label: "Explain matcher routing" },
   { id: "chat", label: "Chat about the pair" },
 ];
+
+const RESULT_BADGES = {
+  COMPLETE: { text: "AI-GROUNDED", tone: "ok" },
+  BLOCKED: { text: "AI BLOCKED", tone: "warn" },
+  INVALID_RESPONSE: { text: "VALIDATION FAILED", tone: "danger" },
+  FAILED: { text: "AI FAILED", tone: "danger" },
+};
 
 export default function AIInsights() {
   const [status, setStatus] = useState(null);
@@ -33,20 +48,29 @@ export default function AIInsights() {
 
   return (
     <div className="space-y-6">
-      <section className="max-w-3xl space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">
-          AI Copilot
-        </h2>
-        <p className="text-sm leading-relaxed text-muted">
-          A{" "}
-          <strong className="text-slate-200">
-            live, evidence-grounded Gemini copilot
-          </strong>{" "}
-          over the validated Chandrasutra pipeline (M2..M8). Every answer is built from the recorded
-          artifact evidence, cross-checked against the canonical metric registry, and never
-          fabricated. It explains what the system found; it never authorizes a registration and never
-          produces scientific numbers.
-        </p>
+      <section className="panel relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 grid-texture opacity-40" aria-hidden />
+        <div className="relative max-w-3xl space-y-2">
+          <p className="eyebrow">Mission Copilot · Evidence-Grounded</p>
+          <h2 className="text-xl font-extrabold tracking-tight text-slate-100 sm:text-2xl">
+            AI Copilot
+          </h2>
+          <p className="text-sm leading-relaxed text-muted">
+            A{" "}
+            <strong className="text-slate-200">
+              live, evidence-grounded Gemini copilot
+            </strong>{" "}
+            over the validated Chandrasutra pipeline (M1..M10). Every answer is built from the recorded
+            artifact evidence, cross-checked against the canonical metric registry, and never
+            fabricated. It explains what the system found; it never authorizes a registration and never
+            produces scientific numbers. Reference status stays REFERENCE_UNAVAILABLE until real data
+            is provisioned.
+          </p>
+          <p className="text-xs leading-relaxed text-muted">
+            Full-pipeline tasks use the M11-EVIDENCE-001 packet; legacy tasks use M9-EVIDENCE-001.
+            Unrun milestones are reported honestly as NOT_STARTED.
+          </p>
+        </div>
       </section>
 
       {/* Service card */}
@@ -219,12 +243,56 @@ function ExplainPanel({ configured, status }) {
 
       {result && (
         <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={RESULT_BADGES[result.status]?.tone || "neutral"}>
+              <StatusDot
+                state={
+                  result.status === "COMPLETE"
+                    ? "ok"
+                    : result.status === "BLOCKED"
+                      ? "warn"
+                      : "bad"
+                }
+              />
+              {RESULT_BADGES[result.status]?.text || result.status}
+            </Badge>
+            <Badge tone="neutral">{result.ai?.evidence_schema_version || "M9-EVIDENCE-001"}</Badge>
+            {result.ai?.full_pipeline && (
+              <Badge tone="gold">Full pipeline · M1..M10</Badge>
+            )}
+            <span className="text-[11px] text-muted">{result.request_id}</span>
+          </div>
+
           <div className="rounded-lg border border-white/[0.06] bg-space-900/50 p-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
-              Answer · {result.task} · {result.request_id}
+              Answer · {result.task}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-slate-100">{result.answer}</p>
           </div>
+
+          {result.evidence_states && (
+            <div className="rounded-lg border border-white/[0.06] bg-space-900/50 p-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Pipeline evidence state
+              </p>
+              <ul className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">
+                {Object.entries(result.evidence_states).map(([ms, state]) => (
+                  <li key={ms} className="flex items-center gap-2 font-mono">
+                    <StatusDot
+                      state={
+                        state === "COMPLETE" || state === "REGISTERED" || state === "ACCEPT"
+                          ? "ok"
+                          : state === "NOT_STARTED" || state === "NOT_AVAILABLE"
+                            ? "warn"
+                            : "bad"
+                      }
+                    />
+                    {ms} · {state}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {(result.evidence || []).length > 0 && (
             <div className="rounded-lg border border-white/[0.06] bg-space-900/50 p-3">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Icon, ToastProvider, useToast } from "./components/ui.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
+import { OrbitalBackground } from "./components/space.jsx";
 import { apiGet } from "./api.js";
 import { AuthProvider, useAuth } from "./auth.jsx";
 import AuthGate from "./pages/AuthGate.jsx";
@@ -62,20 +63,26 @@ function Shell() {
 
   return (
     <div className="min-h-screen">
+      <OrbitalBackground />
       <Sidebar page={page} onNavigate={navigate} backend={backend} />
 
       <main className="pl-16 lg:pl-64">
         <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-white/[0.06] bg-space-950/60 px-5 backdrop-blur-xl sm:px-8">
           <div className="flex items-center gap-3">
-            <h1 className="text-base font-bold tracking-tight text-slate-100">{title}</h1>
+            <h1 className="flex items-center gap-2.5 text-base font-bold tracking-tight text-slate-100">
+              <span className="h-4 w-1 rounded-full bg-teal-400/80" aria-hidden />
+              {title}
+            </h1>
             {page !== "overview" && (
-              <span className="hidden text-xs text-muted sm:inline">/ {title.toLowerCase()}</span>
+              <span className="hidden text-xs text-muted sm:inline">
+                <span className="text-teal-400">—</span> {title.toLowerCase()}
+              </span>
             )}
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] font-medium text-muted md:flex">
               <Icon.Check className="h-3 w-3 text-ok" />
-              {user?.username} · <span className="capitalize text-lunar-300">{user?.role}</span>
+              {user?.username} · <span className="capitalize text-teal-300">{user?.role}</span>
             </span>
             <button
               onClick={() => {

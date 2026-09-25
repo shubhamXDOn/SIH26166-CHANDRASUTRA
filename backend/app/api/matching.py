@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
 
 from ..config import Settings
 from ..errors import NotFoundError
@@ -89,6 +90,177 @@ def list_capabilities() -> dict:
 @router.get("/overview")
 def overview(settings: Settings = Depends(get_settings)) -> dict:
     return matching_overview(settings)
+
+
+# ---------------------------------------------------------------------------
+# M3 BASELINE — classical baseline matcher (SIFT · AKAZE · ORB).
+# Candidate correspondences only; AKAZE reports NOT_AVAILABLE when the OpenCV
+# build lacks it. Declared before /{pair_id} routes so route matching never
+# swallows them.
+# ---------------------------------------------------------------------------
+def _baseline_service(settings: Settings):
+    from ..matching.baseline import BaselineMatcherService
+
+    return BaselineMatcherService(settings)
+
+
+def _deep_service(settings: Settings):
+    from ..matching.deep.service import DeepMatcherService
+
+    return DeepMatcherService(settings)
+
+
+class BaselineRunRequest(BaseModel):
+    matcher: str = "sift"
+    configuration_id: str | None = None
+
+
+@router.get("/baseline/capabilities")
+def baseline_capabilities(settings: Settings = Depends(get_settings)) -> dict:
+    from ..matching.baseline import capabilities_public
+
+    return capabilities_public()
+
+
+@router.get("/runs/{run_id}")
+def matching_run(run_id: str, settings: Settings = Depends(get_settings)) -> dict:
+    payload = _baseline_service(settings).read(run_id)
+    if payload is not None:
+        return payload
+    payload = _deep_service(settings).read(run_id)
+    if payload is not None:
+        return payload
+    raise NotFoundError(f"No M3 baseline or M4 deep run with id {run_id}.")
+
+
+@router.get("/runs/{run_id}/visualization")
+def matching_run_visualization(run_id: str, settings: Settings = Depends(get_settings)) -> FileResponse:
+    path = _baseline_service(settings).visualization_path(run_id)
+    if path is None:
+        path = _deep_service(settings).visualization_path(run_id)
+    if path is None:
+        raise NotFoundError(f"No M3 baseline or M4 deep visualization for run {run_id}.")
+    return FileResponse(str(path), media_type="image/png")
+
+
+@router.post("/{pair_id}/baseline/run")
+def run_baseline(pair_id: str, current: AnalystUser, req: BaselineRunRequest,
+                 settings: Settings = Depends(get_settings)) -> dict:
+    del current
+    _require_pair(settings, pair_id)
+    service = _baseline_service(settings)
+    return guard_run(
+        settings, derived_stage="matches", pair_id=pair_id,
+        configuration_id=req.configuration_id, tag="m3_baseline",
+        fn=lambda: service.run(pair_id, req.matcher),
+    )
+
+
+@router.get("/{pair_id}/baseline/status")
+def baseline_pair_status(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+    from ..matching.baseline import real_data_gate
+
+    _require_pair(settings, pair_id)
+    service = _baseline_service(settings)
+    latest = service.latest_for_pair(pair_id)
+    return {
+        "pair_id": pair_id,
+        "configuration_id": service.cfg.get("configuration_id"),
+        "has_run": latest is not None,
+        "latest_run": latest,
+        "matchers": service.capabilities_public(),
+        "data_gate": real_data_gate(settings),
+        "note": (
+            "Candidate correspondences are observations, not verified alignment. "
+            "AKAZE is registered but truthfully reports NOT_AVAILABLE when the "
+            "OpenCV build lacks it."
+        ),
+    }
+
+
+@router.get("/{pair_id}/baseline/runs")
+def baseline_pair_runs(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+    _require_pair(settings, pair_id)
+    service = _baseline_service(settings)
+    return {"pair_id": pair_id, "runs": service.list_runs(pair_id)}
+
+
+# ---------------------------------------------------------------------------
+# M4-DEEP — strong deep matcher (SuperPoint + SuperGlue) through the SAME
+# M3 candidate-correspondence contract. Availability is probed live at run
+# time; missing runtimes/weights produce an honest BLOCKED outcome. Model
+# scores are observations, never a confidence or trust verdict.
+# ---------------------------------------------------------------------------
+class DeepRunRequest(BaseModel):
+    matcher: str = "superpoint_superglue"
+    configuration_id: str | None = None
+
+
+@router.get("/deep/capabilities")
+def deep_capabilities(settings: Settings = Depends(get_settings)) -> dict:
+    from ..matching.deep.probe import capabilities_public
+
+    return capabilities_public(model_dir=settings.m8_model_path)
+
+
+@router.post("/{pair_id}/deep/run")
+def run_deep(pair_id: str, current: AnalystUser, req: DeepRunRequest,
+             settings: Settings = Depends(get_settings)) -> dict:
+    del current
+    _require_pair(settings, pair_id)
+    service = _deep_service(settings)
+    return guard_run(
+        settings, derived_stage="matches", pair_id=pair_id,
+        configuration_id=req.configuration_id, tag="m4_deep",
+        fn=lambda: service.run(pair_id, req.matcher),
+    )
+
+
+@router.get("/{pair_id}/deep/status")
+def deep_pair_status(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+    from ..matching.baseline import real_data_gate
+
+    _require_pair(settings, pair_id)
+    service = _deep_service(settings)
+    latest = service.latest_for_pair(pair_id)
+    return {
+        "pair_id": pair_id,
+        "configuration_id": service.cfg.get("configuration_id"),
+        "has_run": latest is not None,
+        "latest_run": latest,
+        "matchers": service.capabilities_public(),
+        "data_gate": real_data_gate(settings),
+        "note": (
+            "Deep candidate correspondences are observations, not verified alignment; "
+            "model-native scores (matching_score / log_assignment_score / "
+            "model_probability) are observations, never confidence and never a trust "
+            "verdict."
+        ),
+    }
+
+
+@router.get("/{pair_id}/deep/runs")
+def deep_pair_runs(pair_id: str, settings: Settings = Depends(get_settings)) -> dict:
+    _require_pair(settings, pair_id)
+    service = _deep_service(settings)
+    return {"pair_id": pair_id, "runs": service.list_runs(pair_id)}
+
+
+# ---------------------------------------------------------------------------
+# M5 CONDITION ESTIMATOR — pair-level condition & difficulty characterization.
+# Explicitly NOT a matcher-selection layer: it describes the pair and records
+# optional latest-baseline observations in a separated, labelled section.
+# Declared before /{pair_id} routes so route matching never swallows it.
+# ---------------------------------------------------------------------------
+def _conditions_service(settings: Settings):
+    from ..conditions.service import ConditionEstimationService
+
+    return ConditionEstimationService(settings)
+
+
+@router.get("/conditions/capabilities")
+def conditions_capabilities(settings: Settings = Depends(get_settings)) -> dict:
+    return _conditions_service(settings).capabilities_public()
 
 
 @router.get("/{pair_id}/status")

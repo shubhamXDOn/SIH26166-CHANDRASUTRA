@@ -214,3 +214,168 @@ def write_correlated_fixtures(root: Path) -> dict:
     img_a, lab_a = write(CORRELATED_OHRC, ohrc_img)
     img_b, lab_b = write(CORRELATED_TMC2, tmc2_img)
     return {"ohrc_img": img_a, "ohrc_label": lab_a, "tmc2_img": img_b, "tmc2_label": lab_b}
+
+
+# --------------------------------------------------------------------------
+# REAL-SHAPED structure labels (M1 PATH A software validation)
+# --------------------------------------------------------------------------
+# These mimic the IDENTIFICATION/GEOMETRY SHAPE of genuine ISRO PRADAN PDS4
+# labels (official urn:isro:ch2 namespace, Geographic_Extent bounding boxes,
+# Footprint_Geometry vertices, illumination angles, orbit numbers) so the
+# real-data intake path can be exercised. They are written ONLY inside pytest
+# tmp dirs — never in the repo, never committed, and never usable as science.
+
+OHRC_REAL_SHAPED_BBOX = {"west": 34.0, "east": 34.6, "north": 13.0, "south": 12.5}
+TMC2_REAL_SHAPED_BBOX = {"west": 34.2, "east": 34.9, "north": 13.2, "south": 12.6}
+
+OHRC_REAL_SHAPED = {
+    "dir": "raw/ohrc",
+    "stem": "ch2_ohr_ncp_20211228T2209123959_c_img_d18",
+    "product_id": "urn:isro:ch2:ohrc:sci:ch2_ohr_ncp_20211228T2209123959_c_img_d18",
+    "lines": 200,
+    "samples": 256,
+    "dtype": "UnsignedMSB2",
+    "numpy_dtype": ">u2",
+    "start": "2021-12-28T22:09:12.395Z",
+    "stop": "2021-12-28T22:09:13.100Z",
+    "title": "Chandrayaan-2 OHRC calibrated image product",
+    "description": "Simulated CH-2 product used for software structure validation.",
+}
+
+TMC2_REAL_SHAPED = {
+    "dir": "raw/tmc2",
+    "stem": "ch2_tmc_ncn_20200207T0716469418_c_img_d18",
+    "product_id": "urn:isro:ch2:tmc2:sci:ch2_tmc_ncn_20200207T0716469418_c_img_d18",
+    "lines": 300,
+    "samples": 384,
+    "dtype": "UnsignedMSB2",
+    "numpy_dtype": ">u2",
+    "start": "2020-02-07T07:16:46.418Z",
+    "stop": "2020-02-07T07:16:47.200Z",
+    "title": "Chandrayaan-2 TMC-2 nadir map image product",
+    "description": "Simulated CH-2 product used for software structure validation.",
+}
+
+
+def _real_shaped_label_xml(f: dict, bbox: dict) -> str:
+    from textwrap import dedent
+
+    verts = []
+    poly = [
+        (bbox["south"], bbox["west"]),
+        (bbox["south"], bbox["east"]),
+        (bbox["north"], bbox["east"]),
+        (bbox["north"], bbox["west"]),
+    ]
+    for lat, lon in poly:
+        verts.append(f"          <Vertex unit='deg' latitude='{lat}' longitude='{lon}'>{lat} {lon} 0.0</Vertex>")
+    return dedent(f"""\
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1">
+          <Identification_Area>
+            <logical_identifier>{f['product_id']}</logical_identifier>
+            <title>{f['title']}</title>
+            <information_model_version>1.15.0.0</information_model_version>
+            <Product_class>Product_Observational</Product_class>
+            <Modification_History>
+              <Modification_Detail>
+                <description>{f['description']}</description>
+              </Modification_Detail>
+            </Modification_History>
+          </Identification_Area>
+          <Observation_Area>
+            <Time_Coordinates>
+              <start_date_time>{f['start']}</start_date_time>
+              <stop_date_time>{f['stop']}</stop_date_time>
+            </Time_Coordinates>
+            <Investigation_Area>
+              <name>Chandrayaan-2</name>
+            </Investigation_Area>
+            <Observing_System>
+              <Observing_System_Component>
+                <name>Orbiter High Resolution Camera</name>
+                <type>Instrument</type>
+                <instrument_id>OHRC</instrument_id>
+              </Observing_System_Component>
+            </Observing_System>
+            <Geometry_Header>
+              <orbit_number>8842</orbit_number>
+              <Geometry_1D_Header>
+                <solar_zenith_angle>67.5</solar_zenith_angle>
+                <incidence_angle>68.1</incidence_angle>
+                <emission_angle>22.4</emission_angle>
+                <phase_angle>86.2</phase_angle>
+                <sensor_azimuth>141.7</sensor_azimuth>
+              </Geometry_1D_Header>
+            </Geometry_Header>
+            <Spatial_Extent>
+              <Geographic_Extent>
+                <west_bounding_coordinate unit='deg'>{bbox['west']}</west_bounding_coordinate>
+                <east_bounding_coordinate unit='deg'>{bbox['east']}</east_bounding_coordinate>
+                <north_bounding_coordinate unit='deg'>{bbox['north']}</north_bounding_coordinate>
+                <south_bounding_coordinate unit='deg'>{bbox['south']}</south_bounding_coordinate>
+              </Geographic_Extent>
+            </Spatial_Extent>
+            <Footprint_Geometry>
+              <coordinate_source_type>FOOTPRINT_GENERATION_SYSTEM</coordinate_source_type>
+              <Footprint>
+                <Footprint_Polygon>
+                  <Vertex unit='deg' latitude='0' longitude='0'>0.0 0.0 0.0</Vertex>
+    {chr(10).join(verts)}
+                </Footprint_Polygon>
+              </Footprint>
+            </Footprint_Geometry>
+          </Observation_Area>
+          <File_Area_Observational>
+            <File>
+              <file_name>{f['stem']}.img</file_name>
+              <record_type>UNDEFINED</record_type>
+              <encoding_type>BINARY</encoding_type>
+            </File>
+            <Array_2D>
+              <offset unit="byte">0</offset>
+              <axes>2</axes>
+              <Axis_Array>
+                <axis_name>Line</axis_name>
+                <sequence_number>1</sequence_number>
+                <elements>{f['lines']}</elements>
+              </Axis_Array>
+              <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <sequence_number>2</sequence_number>
+                <elements>{f['samples']}</elements>
+              </Axis_Array>
+              <Element_Array>
+                <data_type>{f['dtype']}</data_type>
+              </Element_Array>
+            </Array_2D>
+          </File_Area_Observational>
+        </Product_Observational>
+        """)
+
+
+def write_real_shaped_pair(
+    root: Path,
+    *,
+    ohrc_bbox: dict | None = None,
+    tmc2_bbox: dict | None = None,
+) -> dict:
+    """Write a REAL-SHAPED structure pair (both sides urn:isro:ch2 identities).
+
+    Default bounding boxes overlap -> the intake path should derive
+    CONFIRMED_OVERLAP. Provide disjoint bboxes to exercise the unconfirmed
+    path. These files are for pytest tmp dirs only, never committed.
+    """
+    ohrc_bbox = ohrc_bbox or OHRC_REAL_SHAPED_BBOX
+    tmc2_bbox = tmc2_bbox or TMC2_REAL_SHAPED_BBOX
+    img_a = root / OHRC_REAL_SHAPED["dir"] / f"{OHRC_REAL_SHAPED['stem']}.img"
+    lab_a = root / OHRC_REAL_SHAPED["dir"] / f"{OHRC_REAL_SHAPED['stem']}.xml"
+    img_b = root / TMC2_REAL_SHAPED["dir"] / f"{TMC2_REAL_SHAPED['stem']}.img"
+    lab_b = root / TMC2_REAL_SHAPED["dir"] / f"{TMC2_REAL_SHAPED['stem']}.xml"
+    img_a.parent.mkdir(parents=True, exist_ok=True)
+    img_b.parent.mkdir(parents=True, exist_ok=True)
+    img_a.write_bytes(_array_bytes(OHRC_REAL_SHAPED, seed=11))
+    img_b.write_bytes(_array_bytes(TMC2_REAL_SHAPED, seed=29))
+    lab_a.write_text(_real_shaped_label_xml(OHRC_REAL_SHAPED, ohrc_bbox), encoding="utf-8")
+    lab_b.write_text(_real_shaped_label_xml(TMC2_REAL_SHAPED, tmc2_bbox), encoding="utf-8")
+    return {"ohrc_img": img_a, "ohrc_label": lab_a, "tmc2_img": img_b, "tmc2_label": lab_b}

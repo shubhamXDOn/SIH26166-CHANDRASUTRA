@@ -1,7 +1,8 @@
-"""AI subpackage — real Gemini assistant (M9)."""
+"""AI subpackage — evidence-grounded Gemini assistant (M9 legacy + M11 full pipeline)."""
 
 from .config import AIConfig, load_ai_config
 from .evidence import EvidenceBuild, EvidenceBuilder, Sanitizer, canonical_digest
+from .evidence_full import FullEvidenceBuild, FullEvidenceBuilder, M11_EVIDENCE_SCHEMA_VERSION
 from .models import AIAnswer, AIRequest, AIResponse
 from .service import (
     AIServiceState,
@@ -22,7 +23,10 @@ __all__ = [
     "AITask",
     "EvidenceBuild",
     "EvidenceBuilder",
+    "FullEvidenceBuild",
+    "FullEvidenceBuilder",
     "GeminiAssistant",
+    "M11_EVIDENCE_SCHEMA_VERSION",
     "ResponseValidator",
     "Sanitizer",
     "ValidationResult",

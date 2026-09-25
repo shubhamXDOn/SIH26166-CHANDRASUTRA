@@ -80,6 +80,7 @@ class AIResponse:
     suggested_inspections: list[str] = field(default_factory=list)
     usage: dict[str, Any] = field(default_factory=dict)
     ai: dict[str, Any] = field(default_factory=dict)
+    evidence_states: dict[str, str] = field(default_factory=dict)
     error: dict[str, Any] | None = None
     created_at: str = ""
 
@@ -95,6 +96,7 @@ class AIResponse:
             "suggested_inspections": list(self.suggested_inspections),
             "usage": dict(self.usage),
             "ai": dict(self.ai),
+            "evidence_states": dict(self.evidence_states),
             "created_at": self.created_at,
         }
         if self.error:
